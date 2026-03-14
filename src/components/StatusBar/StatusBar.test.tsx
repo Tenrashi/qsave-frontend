@@ -13,10 +13,9 @@ const renderStatusBar = (overrides: Partial<StatusBarProps> = {}) => {
 };
 
 describe("StatusBar", () => {
-  it("shows game and save counts", () => {
+  it("shows game count", () => {
     renderStatusBar({ games: twoGames, watchedCount: 2 });
     expect(screen.getByText("2 games")).toBeInTheDocument();
-    expect(screen.getByText("3 saves")).toBeInTheDocument();
   });
 
   it("shows watching active when watchedCount > 0", () => {

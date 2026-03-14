@@ -21,10 +21,7 @@
     "parsing": "Analisando banco de jogos...",
     "resolving": "Resolvendo caminhos ({{current}}/{{total}})...",
     "scanningDisk": "Escaneando disco ({{current}}/{{total}})...",
-    "save_one": "{{count}} save",
-    "save_other": "{{count}} saves",
-    "syncAll": "Sincronizar tudo",
-    "syncToDrive": "Sincronizar ao Drive"
+    "sync": "Sincronizar"
   },
   "history": {
     "title": "Histórico recente"
@@ -33,9 +30,7 @@
     "watchingActive": "Monitoramento ativo",
     "watchingInactive": "Monitoramento inativo",
     "game_one": "{{count}} jogo",
-    "game_other": "{{count}} jogos",
-    "save_one": "{{count}} save",
-    "save_other": "{{count}} saves"
+    "game_other": "{{count}} jogos"
   },
   "settings": {
     "language": "Idioma"

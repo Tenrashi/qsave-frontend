@@ -21,10 +21,7 @@
     "parsing": "ゲームデータベースを解析中...",
     "resolving": "セーブパスを解決中 ({{current}}/{{total}})...",
     "scanningDisk": "ディスクをスキャン中 ({{current}}/{{total}})...",
-    "save_one": "{{count}}件のセーブ",
-    "save_other": "{{count}}件のセーブ",
-    "syncAll": "すべて同期",
-    "syncToDrive": "Driveに同期"
+    "sync": "同期"
   },
   "history": {
     "title": "最近の履歴"
@@ -33,9 +30,7 @@
     "watchingActive": "監視中",
     "watchingInactive": "監視停止中",
     "game_one": "{{count}}ゲーム",
-    "game_other": "{{count}}ゲーム",
-    "save_one": "{{count}}セーブ",
-    "save_other": "{{count}}セーブ"
+    "game_other": "{{count}}ゲーム"
   },
   "settings": {
     "language": "言語"

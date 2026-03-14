@@ -21,11 +21,7 @@
     "parsing": "Анализ базы игр...",
     "resolving": "Разрешение путей ({{current}}/{{total}})...",
     "scanningDisk": "Сканирование диска ({{current}}/{{total}})...",
-    "save_one": "{{count}} сохранение",
-    "save_few": "{{count}} сохранения",
-    "save_many": "{{count}} сохранений",
-    "syncAll": "Синхронизировать всё",
-    "syncToDrive": "Синхронизировать в Drive"
+    "sync": "Синхронизировать"
   },
   "history": {
     "title": "Недавняя история"
@@ -35,10 +31,7 @@
     "watchingInactive": "Мониторинг неактивен",
     "game_one": "{{count}} игра",
     "game_few": "{{count}} игры",
-    "game_many": "{{count}} игр",
-    "save_one": "{{count}} сохранение",
-    "save_few": "{{count}} сохранения",
-    "save_many": "{{count}} сохранений"
+    "game_many": "{{count}} игр"
   },
   "settings": {
     "language": "Язык"

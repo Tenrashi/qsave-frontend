@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Eye, Gamepad2, FileText } from "lucide-react";
+import { Eye, Gamepad2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import type { Game } from "@/domain/types";
 
@@ -10,7 +10,6 @@ export type StatusBarProps = {
 
 export const StatusBar = ({ games, watchedCount }: StatusBarProps) => {
   const { t } = useTranslation();
-  const totalFiles = games.reduce((sum, g) => sum + g.saveFiles.length, 0);
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-t text-xs text-muted-foreground">
@@ -24,11 +23,6 @@ export const StatusBar = ({ games, watchedCount }: StatusBarProps) => {
       <div className="flex items-center gap-1.5">
         <Gamepad2 className="w-3 h-3" />
         <span>{t("status.game", { count: games.length })}</span>
-      </div>
-      <Separator orientation="vertical" className="h-3" />
-      <div className="flex items-center gap-1.5">
-        <FileText className="w-3 h-3" />
-        <span>{t("status.save", { count: totalFiles })}</span>
       </div>
     </div>
   );

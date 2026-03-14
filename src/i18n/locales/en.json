@@ -21,10 +21,7 @@
     "parsing": "Parsing game database...",
     "resolving": "Resolving save paths ({{current}}/{{total}})...",
     "scanningDisk": "Scanning disk ({{current}}/{{total}})...",
-    "save_one": "{{count}} save",
-    "save_other": "{{count}} saves",
-    "syncAll": "Sync All",
-    "syncToDrive": "Sync to Drive"
+    "sync": "Sync"
   },
   "history": {
     "title": "Recent history"
@@ -33,9 +30,7 @@
     "watchingActive": "Watching active",
     "watchingInactive": "Watching inactive",
     "game_one": "{{count}} game",
-    "game_other": "{{count}} games",
-    "save_one": "{{count}} save",
-    "save_other": "{{count}} saves"
+    "game_other": "{{count}} games"
   },
   "settings": {
     "language": "Language"

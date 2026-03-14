@@ -21,10 +21,7 @@
     "parsing": "正在解析游戏数据库...",
     "resolving": "正在解析存档路径 ({{current}}/{{total}})...",
     "scanningDisk": "正在扫描磁盘 ({{current}}/{{total}})...",
-    "save_one": "{{count}}个存档",
-    "save_other": "{{count}}个存档",
-    "syncAll": "全部同步",
-    "syncToDrive": "同步到Drive"
+    "sync": "同步"
   },
   "history": {
     "title": "最近记录"
@@ -33,9 +30,7 @@
     "watchingActive": "监控中",
     "watchingInactive": "监控已停止",
     "game_one": "{{count}}个游戏",
-    "game_other": "{{count}}个游戏",
-    "save_one": "{{count}}个存档",
-    "save_other": "{{count}}个存档"
+    "game_other": "{{count}}个游戏"
   },
   "settings": {
     "language": "语言"

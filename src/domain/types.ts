@@ -35,5 +35,5 @@ export type SyncStatus = "idle" | "syncing" | "success" | "error";
 
 export type GameSyncState = {
   gameName: string;
-  files: Record<string, SyncStatus>;
+  status: SyncStatus;
 };

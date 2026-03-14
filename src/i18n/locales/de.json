@@ -21,10 +21,7 @@
     "parsing": "Spieldatenbank wird analysiert...",
     "resolving": "Pfade werden aufgelöst ({{current}}/{{total}})...",
     "scanningDisk": "Festplatte wird gescannt ({{current}}/{{total}})...",
-    "save_one": "{{count}} Spielstand",
-    "save_other": "{{count}} Spielstände",
-    "syncAll": "Alle synchronisieren",
-    "syncToDrive": "Zu Drive synchronisieren"
+    "sync": "Synchronisieren"
   },
   "history": {
     "title": "Verlauf"
@@ -33,9 +30,7 @@
     "watchingActive": "Überwachung aktiv",
     "watchingInactive": "Überwachung inaktiv",
     "game_one": "{{count}} Spiel",
-    "game_other": "{{count}} Spiele",
-    "save_one": "{{count}} Spielstand",
-    "save_other": "{{count}} Spielstände"
+    "game_other": "{{count}} Spiele"
   },
   "settings": {
     "language": "Sprache"

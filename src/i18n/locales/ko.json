@@ -21,10 +21,7 @@
     "parsing": "게임 데이터베이스 분석 중...",
     "resolving": "세이브 경로 확인 중 ({{current}}/{{total}})...",
     "scanningDisk": "디스크 스캔 중 ({{current}}/{{total}})...",
-    "save_one": "세이브 {{count}}개",
-    "save_other": "세이브 {{count}}개",
-    "syncAll": "전체 동기화",
-    "syncToDrive": "Drive에 동기화"
+    "sync": "동기화"
   },
   "history": {
     "title": "최근 기록"
@@ -33,9 +30,7 @@
     "watchingActive": "감시 중",
     "watchingInactive": "감시 중지",
     "game_one": "게임 {{count}}개",
-    "game_other": "게임 {{count}}개",
-    "save_one": "세이브 {{count}}개",
-    "save_other": "세이브 {{count}}개"
+    "game_other": "게임 {{count}}개"
   },
   "settings": {
     "language": "언어"
