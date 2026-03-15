@@ -1,6 +1,6 @@
 import { fetch } from "@tauri-apps/plugin-http";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { getValidToken } from "@/services/auth.service";
+import { getValidToken } from "@/services/auth";
 import { getDriveFolderId, setDriveFolderId } from "@/lib/store";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
@@ -9,6 +9,13 @@ const UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 const authHeaders = async (): Promise<Record<string, string>> => {
   const token = await getValidToken();
   return { Authorization: `Bearer ${token}` };
+};
+
+const assertOk = async (res: Response, context: string) => {
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`${context}: ${res.status} ${res.statusText} ${body}`);
+  }
 };
 
 const createFolder = async (name: string, parentId: string): Promise<string> => {
@@ -26,6 +33,7 @@ const createFolder = async (name: string, parentId: string): Promise<string> => 
     }),
   });
 
+  await assertOk(res, "Failed to create folder");
   const data = await res.json() as { id: string };
   const key = parentId === "root" ? "__root__" : name;
   await setDriveFolderId(key, data.id);
@@ -38,8 +46,10 @@ export const ensureQSaveFolder = async (): Promise<string> => {
     try {
       const headers = await authHeaders();
       const res = await fetch(`${DRIVE_API}/files/${existing}?fields=id,trashed`, { headers });
-      const data = await res.json() as { id: string; trashed: boolean };
-      if (!data.trashed) return existing;
+      if (res.ok) {
+        const data = await res.json() as { id: string; trashed: boolean };
+        if (!data.trashed) return existing;
+      }
     } catch {
       // Folder gone, recreate
     }
@@ -67,6 +77,7 @@ export const findFileInFolder = async (
     { headers },
   );
 
+  await assertOk(res, "Failed to search files");
   const data = await res.json() as { files: { id: string }[] };
   return data.files.length > 0 ? data.files[0].id : null;
 };
@@ -121,6 +132,7 @@ export const uploadFile = async (
       body: fileBytes,
     });
 
+    await assertOk(res, "Failed to update file");
     const data = await res.json() as { id: string };
     return { fileId: data.id, isUpdate: true };
   } else {
@@ -141,6 +153,7 @@ export const uploadFile = async (
       body: body as unknown as BodyInit,
     });
 
+    await assertOk(res, "Failed to upload file");
     const data = await res.json() as { id: string };
     return { fileId: data.id, isUpdate: false };
   }
@@ -152,6 +165,7 @@ export const getRevisionCount = async (fileId: string): Promise<number> => {
     const res = await fetch(`${DRIVE_API}/files/${fileId}/revisions?fields=revisions(id)`, {
       headers,
     });
+    if (!res.ok) return 1;
     const data = await res.json() as { revisions: { id: string }[] };
     return data.revisions?.length ?? 1;
   } catch {

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Upload, CheckCircle, AlertCircle, Loader2, Gamepad2, FolderOpen } from "lucide-react";
@@ -8,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import type { Game, SyncStatus } from "@/domain/types";
-import { syncGame } from "@/services/sync.service";
+import { syncGame } from "@/services/sync";
 import { dateFnsLocales } from "@/lib/date-locales";
 import { formatSize } from "./utils/formatSize";
 
@@ -29,7 +30,7 @@ export type GameCardProps = {
   game: Game;
 };
 
-export const GameCard = ({ game }: GameCardProps) => {
+export const GameCard = memo(({ game }: GameCardProps) => {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { auth } = useAuthStore();
@@ -47,9 +48,13 @@ export const GameCard = ({ game }: GameCardProps) => {
 
   const handleSync = async () => {
     setGameStatus(game.name, "syncing");
-    const results = await syncGame(game);
-    const hasError = results.some((r) => r.status === "error");
-    setGameStatus(game.name, hasError ? "error" : "success");
+    try {
+      const results = await syncGame(game);
+      const hasError = results.some((r) => r.status === "error");
+      setGameStatus(game.name, hasError ? "error" : "success");
+    } catch {
+      setGameStatus(game.name, "error");
+    }
     queryClient.invalidateQueries({ queryKey: ["syncHistory"] });
   };
 
@@ -87,4 +92,4 @@ export const GameCard = ({ game }: GameCardProps) => {
       </div>
     </Card>
   );
-};
+});

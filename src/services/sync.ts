@@ -4,7 +4,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import type { Game, SaveFile, SyncRecord } from "@/domain/types";
-import { uploadFile, getRevisionCount } from "@/services/drive.service";
+import { uploadFile, getRevisionCount } from "@/services/drive";
 import { addSyncRecord } from "@/lib/store";
 
 const notify = async (title: string, body: string) => {

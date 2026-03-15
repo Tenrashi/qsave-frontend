@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useDeferredValue } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ const App = () => {
   const games = useGames();
   const history = useSyncHistory();
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { init(); }, [init]);
 
@@ -33,10 +35,10 @@ const App = () => {
 
   const filteredGames = useMemo(() => {
     if (!games.data) return [];
-    if (!search.trim()) return games.data;
-    const query = search.toLowerCase();
+    if (!deferredSearch.trim()) return games.data;
+    const query = deferredSearch.toLowerCase();
     return games.data.filter((g) => g.name.toLowerCase().includes(query));
-  }, [games.data, search]);
+  }, [games.data, deferredSearch]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -59,33 +61,36 @@ const App = () => {
 
       <AuthStatus />
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
-          <SearchBar value={search} onChange={setSearch} />
+      <div className="px-4 pt-4 pb-2">
+        <SearchBar value={search} onChange={setSearch} />
+      </div>
 
-          {games.error && (
-            <div className="px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-              {games.error.message}
-            </div>
-          )}
+      {games.error && (
+        <div className="mx-4 mb-2 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+          {games.error.message}
+        </div>
+      )}
 
+      <ScrollArea className="flex-1 overflow-hidden" viewportRef={scrollRef}>
+        <div className="px-4 pb-4">
           {games.isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
               <span className="ml-2 text-sm text-muted-foreground">{t("games.scanning")}</span>
             </div>
           ) : (
-            <SavesList games={filteredGames} />
-          )}
-
-          {(history.data?.length ?? 0) > 0 && (
-            <>
-              <Separator />
-              <SyncHistory />
-            </>
+            <SavesList games={filteredGames} scrollRef={scrollRef} />
           )}
         </div>
       </ScrollArea>
+
+      {(history.data?.length ?? 0) > 0 && (
+        <div className="border-t">
+          <div className="px-4 py-3">
+            <SyncHistory />
+          </div>
+        </div>
+      )}
 
       <StatusBar games={games.data ?? []} watchedCount={games.data?.length ?? 0} />
     </div>

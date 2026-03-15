@@ -35,6 +35,8 @@ export const exchangeCodeForTokens = async (code: string): Promise<AuthState> =>
     }).toString(),
   });
 
+  if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`);
+
   const data = await res.json() as {
     access_token: string;
     refresh_token?: string;
@@ -44,6 +46,7 @@ export const exchangeCodeForTokens = async (code: string): Promise<AuthState> =>
   const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
     headers: { Authorization: `Bearer ${data.access_token}` },
   });
+  if (!userRes.ok) throw new Error(`Failed to fetch user info: ${userRes.status}`);
   const user = await userRes.json() as { email: string };
 
   const auth: AuthState = {
@@ -72,6 +75,8 @@ export const refreshAccessToken = async (): Promise<AuthState> => {
       grant_type: "refresh_token",
     }).toString(),
   });
+
+  if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
 
   const data = await res.json() as { access_token: string; expires_in: number };
 

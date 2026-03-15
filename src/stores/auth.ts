@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { AuthState } from "@/domain/types";
 import { getAuthState, clearAuth } from "@/lib/store";
-import { startOAuthFlow, exchangeCodeForTokens } from "@/services/auth.service";
+import { startOAuthFlow, exchangeCodeForTokens } from "@/services/auth";
 
 type AuthStore = {
   auth: AuthState;
@@ -17,8 +17,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
   loading: true,
 
   init: async () => {
-    const state = await getAuthState();
-    set({ auth: state, loading: false });
+    try {
+      const state = await getAuthState();
+      set({ auth: state, loading: false });
+    } catch {
+      set({ auth: { isAuthenticated: false }, loading: false });
+    }
   },
 
   login: async () => {
@@ -41,7 +45,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   logout: async () => {
-    await clearAuth();
-    set({ auth: { isAuthenticated: false } });
+    try {
+      await clearAuth();
+    } finally {
+      set({ auth: { isAuthenticated: false } });
+    }
   },
 }));
