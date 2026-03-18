@@ -53,4 +53,26 @@ export const eldenRingGame: Game = {
   saveFiles: [eldenRingSave1],
 };
 
+export const manualGame: Game = {
+  name: "My Custom Game",
+  savePaths: ["/saves/custom"],
+  saveFiles: [
+    {
+      name: "save.dat",
+      path: "/saves/custom/save.dat",
+      sizeBytes: 4096,
+      lastModified: MOCK_DATE,
+      gameName: "My Custom Game",
+    },
+  ],
+  isManual: true,
+};
+
+export const emptyManualGame: Game = {
+  name: "Empty Manual Game",
+  savePaths: ["/saves/empty"],
+  saveFiles: [],
+  isManual: true,
+};
+
 export const twoGames: Game[] = [sims4Game, cyberpunkGame];

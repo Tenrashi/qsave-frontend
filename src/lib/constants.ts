@@ -12,6 +12,7 @@ export const STORE_KEYS = {
   watchedGames: "watchedGames",
   syncFingerprints: "syncFingerprints",
   rootFolder: "__root__",
+  manualGames: "manualGames",
 } as const;
 
 export const TAURI_COMMANDS = {
@@ -20,6 +21,8 @@ export const TAURI_COMMANDS = {
   createZip: "create_zip",
   sendNativeNotification: "send_native_notification",
   scanGames: "scan_games",
+  scanManualGame: "scan_manual_game",
+  pickFolder: "pick_folder",
 } as const;
 
 export const OAUTH_ENDPOINTS = {

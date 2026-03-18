@@ -1,8 +1,6 @@
 {
   "app": {
     "title": "QSave",
-    "successIcon": "同步成功",
-    "errorIcon": "同步失败"
     "refresh": "刷新"
   },
   "auth": {
@@ -25,7 +23,20 @@
     "scanningDisk": "正在扫描磁盘 ({{current}}/{{total}})...",
     "sync": "同步",
     "watchTooltip": "启用自动同步",
-    "unwatchTooltip": "禁用自动同步"
+    "unwatchTooltip": "禁用自动同步",
+    "addGame": "添加游戏",
+    "addGameTitle": "手动添加游戏",
+    "gameNameLabel": "游戏名称",
+    "gameNamePlaceholder": "输入游戏名称...",
+    "savePathsLabel": "存档路径",
+    "addPath": "添加路径",
+    "browsePath": "浏览...",
+    "noPathsAdded": "尚未添加路径",
+    "add": "添加",
+    "cancel": "取消",
+    "removeGame": "移除游戏",
+    "manualBadge": "自定义",
+    "removePath": "移除路径"
   },
   "history": {
     "title": "最近记录",

@@ -2,7 +2,7 @@ mod archive;
 mod oauth;
 mod scanner;
 
-use scanner::DetectedGame;
+use scanner::{DetectedGame, scan_manual_game_blocking};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -49,6 +49,30 @@ fn send_native_notification(app: tauri::AppHandle, title: String, body: String) 
 }
 
 #[tauri::command]
+async fn scan_manual_game(name: String, paths: Vec<String>) -> DetectedGame {
+    let n = name.clone();
+    tokio::task::spawn_blocking(move || scan_manual_game_blocking(n, paths))
+        .await
+        .unwrap_or_else(|_| DetectedGame {
+            name,
+            steam_id: None,
+            save_paths: vec![],
+            save_files: vec![],
+        })
+}
+
+#[tauri::command]
+async fn pick_folder(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog().file().pick_folder(move |path| {
+        let _ = tx.send(path);
+    });
+    let path = rx.await.map_err(|e| e.to_string())?;
+    Ok(path.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
 fn get_oauth_redirect_uri() -> String {
     oauth::get_redirect_uri()
 }
@@ -72,7 +96,8 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![scan_games, create_zip, get_oauth_redirect_uri, start_oauth, send_native_notification])
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![scan_games, create_zip, get_oauth_redirect_uri, start_oauth, send_native_notification, scan_manual_game, pick_folder])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

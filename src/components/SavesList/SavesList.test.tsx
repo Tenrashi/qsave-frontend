@@ -17,11 +17,11 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
-const Wrapper = (props: Omit<SavesListProps, "scrollRef">) => {
+const Wrapper = (props: Omit<SavesListProps, "scrollElement">) => {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div ref={ref} style={{ height: 400, overflow: "auto" }}>
-      <SavesList {...props} scrollRef={ref} />
+      <SavesList {...props} scrollElement={ref.current} />
     </div>
   );
 };
@@ -30,6 +30,11 @@ describe("SavesList", () => {
   it("shows empty state when no games", () => {
     renderWithProviders(<Wrapper games={[]} />);
     expect(screen.getByText("games.noGamesDetected")).toBeInTheDocument();
+  });
+
+  it("shows add game button in empty state", () => {
+    renderWithProviders(<Wrapper games={[]} />);
+    expect(screen.getByText("games.addGame")).toBeInTheDocument();
   });
 
   it("renders game cards for detected games", () => {

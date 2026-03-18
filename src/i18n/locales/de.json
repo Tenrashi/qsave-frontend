@@ -1,8 +1,6 @@
 {
   "app": {
     "title": "QSave",
-    "successIcon": "Sync erfolgreich",
-    "errorIcon": "Sync fehlgeschlagen"
     "refresh": "Aktualisieren"
   },
   "auth": {
@@ -25,7 +23,20 @@
     "scanningDisk": "Festplatte wird gescannt ({{current}}/{{total}})...",
     "sync": "Synchronisieren",
     "watchTooltip": "Auto-Sync aktivieren",
-    "unwatchTooltip": "Auto-Sync deaktivieren"
+    "unwatchTooltip": "Auto-Sync deaktivieren",
+    "addGame": "Spiel hinzufügen",
+    "addGameTitle": "Spiel manuell hinzufügen",
+    "gameNameLabel": "Spielname",
+    "gameNamePlaceholder": "Spielname eingeben...",
+    "savePathsLabel": "Speicherpfade",
+    "addPath": "Pfad hinzufügen",
+    "browsePath": "Durchsuchen...",
+    "noPathsAdded": "Noch keine Pfade hinzugefügt",
+    "add": "Hinzufügen",
+    "cancel": "Abbrechen",
+    "removeGame": "Spiel entfernen",
+    "manualBadge": "Benutzerdefiniert",
+    "removePath": "Pfad entfernen"
   },
   "history": {
     "title": "Verlauf",

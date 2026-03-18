@@ -11,7 +11,7 @@ export const useGameDetectionNotify = (games: Game[] | undefined): void => {
   useEffect(() => {
     if (!games?.length) return;
 
-    const currentNames = new Set(games.map((g) => g.name));
+    const currentNames = new Set(games.map((game) => game.name));
 
     // First load — seed known games without notifying
     if (!knownGamesRef.current) {
@@ -19,7 +19,7 @@ export const useGameDetectionNotify = (games: Game[] | undefined): void => {
       return;
     }
 
-    const newGames = games.filter((g) => !knownGamesRef.current!.has(g.name));
+    const newGames = games.filter((game) => !knownGamesRef.current!.has(game.name));
     knownGamesRef.current = currentNames;
 
     if (newGames.length === 0) return;

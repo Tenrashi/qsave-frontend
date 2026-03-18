@@ -3,7 +3,7 @@ import { renderWithProviders, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
-import { sims4Game, eldenRingGame } from "@/test/mocks/games";
+import { sims4Game, eldenRingGame, manualGame, emptyManualGame } from "@/test/mocks/games";
 import { computeGameHash } from "@/lib/hash";
 import { GameCard, type GameCardProps } from "./GameCard";
 
@@ -101,5 +101,30 @@ describe("GameCard", () => {
 
     renderGameCard();
     expect(screen.queryByRole("img", { name: "synced" })).not.toBeInTheDocument();
+  });
+
+  it("shows custom badge for manual games", () => {
+    renderGameCard({ game: manualGame });
+    expect(screen.getByText("games.manualBadge")).toBeInTheDocument();
+  });
+
+  it("does not show custom badge for auto-detected games", () => {
+    renderGameCard();
+    expect(screen.queryByText("games.manualBadge")).not.toBeInTheDocument();
+  });
+
+  it("shows remove button for manual games", () => {
+    renderGameCard({ game: manualGame });
+    expect(screen.getByRole("button", { name: "games.removeGame" })).toBeInTheDocument();
+  });
+
+  it("does not show remove button for auto-detected games", () => {
+    renderGameCard();
+    expect(screen.queryByRole("button", { name: "games.removeGame" })).not.toBeInTheDocument();
+  });
+
+  it("hides last modified date when game has no save files", () => {
+    renderGameCard({ game: emptyManualGame });
+    expect(screen.queryByText(/ago/)).not.toBeInTheDocument();
   });
 });

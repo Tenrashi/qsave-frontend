@@ -9,11 +9,11 @@ import { startWatching, stopWatching } from "@/lib/watcher";
 import { scheduleAutoSync, cancelAllAutoSyncs } from "@/lib/autoSync";
 import { computeGameHash } from "@/lib/hash";
 import { syncGame } from "@/services/sync";
+import { rescanGame } from "@/services/scanner";
 
 export const useAutoSync = (
   games: Game[] | undefined,
   globalWatchEnabled: boolean,
-  refetch: () => void,
 ): void => {
   const queryClient = useQueryClient();
   const gamesRef = useRef<Game[]>([]);
@@ -50,11 +50,6 @@ export const useAutoSync = (
     const dirs = games.flatMap((g) => g.savePaths);
 
     startWatching(dirs, (changedPaths) => {
-      refetch();
-
-      const store = storeRef.current;
-      if (!store.auth.isAuthenticated) return;
-
       // Find which games were affected
       const affectedGames = new Set<string>();
       for (const changed of changedPaths) {
@@ -64,12 +59,27 @@ export const useAutoSync = (
         }
       }
 
+      // Rescan only affected games and update cache
       for (const gameName of affectedGames) {
+        const game = gamesRef.current.find((game) => game.name === gameName);
+        if (!game) continue;
+
+        rescanGame(game).then((updated) => {
+          gamesRef.current = gamesRef.current.map((game) =>
+            game.name === gameName ? updated : game,
+          );
+          queryClient.setQueryData<Game[]>(QUERY_KEYS.games, (prev = []) =>
+            prev.map((game) => (game.name === gameName ? updated : game)),
+          );
+        });
+
+        const store = storeRef.current;
+        if (!store.auth.isAuthenticated) continue;
         if (!store.isGameWatched(gameName)) continue;
         if (store.gameStatuses[gameName] === SYNC_STATUS.syncing) continue;
 
         scheduleAutoSync(gameName, () => {
-          const currentGame = gamesRef.current.find((g) => g.name === gameName);
+          const currentGame = gamesRef.current.find((game) => game.name === gameName);
           if (!currentGame) return;
 
           const currentStore = storeRef.current;

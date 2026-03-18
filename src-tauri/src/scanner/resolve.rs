@@ -10,8 +10,13 @@ pub fn get_username() -> String {
         .unwrap_or_default()
 }
 
-pub fn resolve_path(raw: &str, home: &str, username: &str) -> Option<String> {
+pub fn resolve_path(raw: &str, home: &str, username: &str, root: Option<&str>) -> Option<String> {
     let mut resolved = raw.to_string();
+
+    if let Some(root) = root {
+        resolved = resolved.replace("<root>", root);
+        resolved = resolved.replace("<Root>", root);
+    }
 
     resolved = resolved.replace("<home>", home);
     resolved = resolved.replace("<Home>", home);
@@ -76,42 +81,54 @@ mod tests {
 
     #[test]
     fn replaces_home() {
-        let result = resolve_path("<home>/saves", "/Users/alice", "alice");
+        let result = resolve_path("<home>/saves", "/Users/alice", "alice", None);
         assert_eq!(result, Some("/Users/alice/saves".to_string()));
     }
 
     #[test]
     fn replaces_username() {
-        let result = resolve_path("<home>/<osUserName>/data", "/Users/bob", "bob");
+        let result = resolve_path("<home>/<osUserName>/data", "/Users/bob", "bob", None);
         assert_eq!(result, Some("/Users/bob/bob/data".to_string()));
     }
 
     #[test]
     fn returns_none_for_unresolved_vars() {
-        let result = resolve_path("<storeUserId>/saves", "/home/user", "user");
+        let result = resolve_path("<storeUserId>/saves", "/home/user", "user", None);
         assert_eq!(result, None);
     }
 
     #[test]
     fn strips_trailing_globs() {
-        let result = resolve_path("<home>/saves/**", "/home/user", "user");
+        let result = resolve_path("<home>/saves/**", "/home/user", "user", None);
         assert_eq!(result, Some("/home/user/saves".to_string()));
 
-        let result = resolve_path("<home>/saves/*", "/home/user", "user");
+        let result = resolve_path("<home>/saves/*", "/home/user", "user", None);
         assert_eq!(result, Some("/home/user/saves".to_string()));
+    }
+
+    #[test]
+    fn replaces_root() {
+        let result = resolve_path("<root>/saves", "/home/user", "user", Some("/games/MyGame"));
+        assert_eq!(result, Some("/games/MyGame/saves".to_string()));
+    }
+
+    #[test]
+    fn root_path_without_root_provided_is_filtered() {
+        let result = resolve_path("<root>/saves", "/home/user", "user", None);
+        assert_eq!(result, None);
     }
 
     #[cfg(not(target_os = "windows"))]
     #[test]
     fn normalizes_backslashes() {
-        let result = resolve_path("<home>\\saves\\game", "/home/user", "user");
+        let result = resolve_path("<home>\\saves\\game", "/home/user", "user", None);
         assert_eq!(result, Some("/home/user/saves/game".to_string()));
     }
 
     #[cfg(target_os = "macos")]
     #[test]
     fn replaces_xdg_data_on_macos() {
-        let result = resolve_path("<xdgData>/GameName", "/Users/alice", "alice");
+        let result = resolve_path("<xdgData>/GameName", "/Users/alice", "alice", None);
         assert_eq!(
             result,
             Some("/Users/alice/Library/Application Support/GameName".to_string())

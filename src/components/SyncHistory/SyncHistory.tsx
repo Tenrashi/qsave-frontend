@@ -18,22 +18,22 @@ export const SyncHistory = () => {
   if (recent.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <History className="w-4 h-4" />
+    <Card size="sm">
+      <CardHeader className="pb-1">
+        <CardTitle className="text-xs font-medium flex items-center gap-1.5">
+          <History className="w-3.5 h-3.5" />
           {t("history.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <ScrollArea className="h-40">
-          <div className="space-y-1">
+        <ScrollArea className="h-[72px]">
+          <div className="space-y-0.5">
             {recent.map((record) => (
-              <div key={record.id} className="flex items-center gap-3 py-1.5 text-sm">
+              <div key={record.id} className="flex items-center gap-2 py-1 text-xs">
                 {record.status === RECORD_STATUS.success ? (
-                  <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" role="img" aria-label={t("history.successIcon")} aria-hidden={false} />
+                  <CheckCircle className="w-3 h-3 text-green-500 shrink-0" role="img" aria-label={t("history.successIcon")} aria-hidden={false} />
                 ) : (
-                  <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" role="img" aria-label={t("history.errorIcon")} aria-hidden={false} />
+                  <AlertCircle className="w-3 h-3 text-destructive shrink-0" role="img" aria-label={t("history.errorIcon")} aria-hidden={false} />
                 )}
                 <span className="truncate">{record.gameName}</span>
                 <span className="text-muted-foreground text-xs ml-auto shrink-0">

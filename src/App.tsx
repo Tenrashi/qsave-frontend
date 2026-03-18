@@ -1,25 +1,19 @@
-import { useMemo, useState, useEffect, useRef, useDeferredValue } from "react";
-import { useTranslation } from "react-i18next";
-import { Loader2, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMemo, useState, useEffect, useDeferredValue } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { useGames } from "@/hooks/useGames";
 import { useSyncHistory } from "@/hooks/useSyncHistory";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import { useGameDetectionNotify } from "@/hooks/useGameDetectionNotify";
-import { APP_NAME } from "@/lib/constants";
+import { AppHeader } from "@/components/AppHeader/AppHeader";
 import { AuthStatus } from "@/components/AuthStatus/AuthStatus";
-import { SearchBar } from "@/components/SearchBar/SearchBar";
-import { SavesList } from "@/components/SavesList/SavesList";
+import { GameToolbar } from "@/components/GameToolbar/GameToolbar";
+import { ErrorBanner } from "@/components/ErrorBanner/ErrorBanner";
+import { GameListPanel } from "@/components/GameListPanel/GameListPanel";
 import { SyncHistory } from "@/components/SyncHistory/SyncHistory";
 import { StatusBar } from "@/components/StatusBar/StatusBar";
-import { LanguageSelector } from "@/components/LanguageSelector/LanguageSelector";
-
 
 const App = () => {
-  const { t } = useTranslation();
   const { init } = useAuthStore();
   const { initWatchPreferences, initSyncFingerprints } = useSyncStore();
   const games = useGames();
@@ -27,7 +21,6 @@ const App = () => {
   const [search, setSearch] = useState("");
   const [watching, setWatching] = useState(true);
   const deferredSearch = useDeferredValue(search);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     init();
@@ -35,68 +28,28 @@ const App = () => {
     initSyncFingerprints();
   }, []);
 
-  useAutoSync(games.data, watching, () => games.refetch());
+  useAutoSync(games.data, watching);
   useGameDetectionNotify(games.data);
 
   const filteredGames = useMemo(() => {
     if (!games.data) return [];
     if (!deferredSearch.trim()) return games.data;
     const query = deferredSearch.toLowerCase();
-    return games.data.filter((g) => g.name.toLowerCase().includes(query));
+    return games.data.filter((game) => game.name.toLowerCase().includes(query));
   }, [games.data, deferredSearch]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h1 className="text-lg font-bold tracking-tight">{APP_NAME}</h1>
-        <div className="flex items-center gap-1">
-          <LanguageSelector />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => games.refetch()}
-            disabled={games.isFetching}
-            title={t("app.refresh")}
-          >
-            <RefreshCw className={`w-4 h-4 ${games.isFetching ? "animate-spin" : ""}`} />
-          </Button>
-        </div>
-      </div>
-
+      <AppHeader isFetching={games.isFetching} onRefresh={() => games.refetch()} />
       <AuthStatus />
-
-      <div className="px-4 pt-4 pb-2">
-        <SearchBar value={search} onChange={setSearch} />
-      </div>
-
-      {games.error && (
-        <div className="mx-4 mb-2 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
-          {games.error.message}
-        </div>
-      )}
-
-      <ScrollArea className="flex-1 overflow-hidden" viewportRef={scrollRef}>
-        <div className="px-4 pb-4">
-          {games.isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
-              <span className="ml-2 text-sm text-muted-foreground">{t("games.scanning")}</span>
-            </div>
-          ) : (
-            <SavesList games={filteredGames} scrollRef={scrollRef} />
-          )}
-        </div>
-      </ScrollArea>
-
+      <GameToolbar search={search} onSearchChange={setSearch} />
+      {games.error && <ErrorBanner message={games.error.message} />}
+      <GameListPanel games={filteredGames} isLoading={games.isLoading} />
       {(history.data?.length ?? 0) > 0 && (
-        <div className="border-t">
-          <div className="px-4 py-3">
-            <SyncHistory />
-          </div>
+        <div className="border-t px-4 py-2">
+          <SyncHistory />
         </div>
       )}
-
       <StatusBar
         games={games.data ?? []}
         watching={watching}

@@ -19,6 +19,7 @@
     "notification:allow-request-permission",
     "notification:allow-is-permission-granted",
     "shell:allow-open",
+    "dialog:default",
     "autostart:default",
     {
       "identifier": "http:default",

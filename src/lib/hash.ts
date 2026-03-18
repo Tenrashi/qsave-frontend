@@ -10,7 +10,7 @@ const simpleHash = (input: string): string => {
 };
 
 export const computeGameHash = (saveFiles: SaveFile[]): string => {
-  const sorted = [...saveFiles].sort((a, b) => a.path.localeCompare(b.path));
+  const sorted = [...saveFiles].sort((fileA, fileB) => fileA.path.localeCompare(fileB.path));
   const parts = sorted.map(
     (f) => `${f.path}:${f.sizeBytes}:${new Date(f.lastModified).getTime()}`,
   );

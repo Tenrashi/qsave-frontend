@@ -3,6 +3,7 @@ export type Game = {
   steamId?: number;
   savePaths: string[];
   saveFiles: SaveFile[];
+  isManual?: boolean;
 };
 
 export type SaveFile = {

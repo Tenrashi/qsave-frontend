@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload, CheckCircle, AlertCircle, Loader2, FolderOpen, Eye, EyeOff } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Loader2, FolderOpen, Eye, EyeOff, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { QUERY_KEYS } from "@/lib/constants";
 import { syncGame } from "@/services/sync";
 import { computeGameHash } from "@/lib/hash";
 import { dateFnsLocales } from "@/lib/date-locales";
+import { removeManualGame } from "@/lib/store";
 import { GameBanner } from "./GameBanner/GameBanner";
 import { formatSize } from "./utils/formatSize";
 
@@ -55,6 +56,17 @@ export const GameCard = memo(({ game }: GameCardProps) => {
     new Date(0),
   );
 
+  const handleRemove = async () => {
+    try {
+      await removeManualGame(game.name);
+      queryClient.setQueryData<Game[]>(QUERY_KEYS.games, (prev = []) =>
+        prev.filter((existing) => existing.name !== game.name),
+      );
+    } catch {
+      // store write failed — ignore
+    }
+  };
+
   const handleSync = async () => {
     setGameStatus(game.name, SYNC_STATUS.syncing);
     try {
@@ -78,13 +90,38 @@ export const GameCard = memo(({ game }: GameCardProps) => {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <span className="font-medium truncate">{game.name}</span>
             <SyncStatusIcon status={status} isSynced={isSynced} />
+            {game.isManual && (
+              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                {t("games.manualBadge")}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <FolderOpen className="w-3 h-3" />
               <span>{formatSize(totalSize)}</span>
             </div>
-            <span>{formatDistanceToNow(lastModified, { addSuffix: true, locale })}</span>
+            {game.saveFiles.length > 0 && (
+              <span>{formatDistanceToNow(lastModified, { addSuffix: true, locale })}</span>
+            )}
+            {game.isManual && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      aria-label={t("games.removeGame")}
+                      onClick={handleRemove}
+                    />
+                  }
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                </TooltipTrigger>
+                <TooltipContent>{t("games.removeGame")}</TooltipContent>
+              </Tooltip>
+            )}
             {auth.isAuthenticated && (
               <>
                 <Tooltip>

@@ -23,7 +23,20 @@
     "scanningDisk": "Scanning disk ({{current}}/{{total}})...",
     "sync": "Sync",
     "watchTooltip": "Enable auto-sync",
-    "unwatchTooltip": "Disable auto-sync"
+    "unwatchTooltip": "Disable auto-sync",
+    "addGame": "Add game",
+    "addGameTitle": "Add game manually",
+    "gameNameLabel": "Game name",
+    "gameNamePlaceholder": "Enter game name...",
+    "savePathsLabel": "Save paths",
+    "addPath": "Add path",
+    "browsePath": "Browse...",
+    "noPathsAdded": "No paths added yet",
+    "add": "Add",
+    "cancel": "Cancel",
+    "removeGame": "Remove game",
+    "manualBadge": "Custom",
+    "removePath": "Remove path"
   },
   "history": {
     "title": "Recent history",

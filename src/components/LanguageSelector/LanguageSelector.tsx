@@ -23,11 +23,11 @@ export const LanguageSelector = () => {
     <div className="relative" ref={ref}>
       <Button
         variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        size="sm"
         onClick={() => setOpen(!open)}
       >
-        <Languages className="w-4 h-4" />
+        <Languages className="w-4 h-4 mr-1.5" />
+        {i18n.language.toUpperCase()}
       </Button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-md border bg-popover p-1 shadow-md">

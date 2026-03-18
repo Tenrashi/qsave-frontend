@@ -7,7 +7,7 @@ import { notify } from "@/lib/notify";
 
 export const syncGame = async (game: Game): Promise<SyncRecord> => {
   const id = `${game.name}-${Date.now()}`;
-  const filePaths = game.saveFiles.map((f) => f.path);
+  const filePaths = game.saveFiles.map((file) => file.path);
 
   try {
     const { fileId } = await uploadGameArchive(game.name, filePaths);

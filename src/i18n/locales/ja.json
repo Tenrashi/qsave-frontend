@@ -1,8 +1,6 @@
 {
   "app": {
     "title": "QSave",
-    "successIcon": "同期成功",
-    "errorIcon": "同期失敗"
     "refresh": "更新"
   },
   "auth": {
@@ -25,7 +23,20 @@
     "scanningDisk": "ディスクをスキャン中 ({{current}}/{{total}})...",
     "sync": "同期",
     "watchTooltip": "自動同期を有効にする",
-    "unwatchTooltip": "自動同期を無効にする"
+    "unwatchTooltip": "自動同期を無効にする",
+    "addGame": "ゲームを追加",
+    "addGameTitle": "ゲームを手動で追加",
+    "gameNameLabel": "ゲーム名",
+    "gameNamePlaceholder": "ゲーム名を入力...",
+    "savePathsLabel": "セーブパス",
+    "addPath": "パスを追加",
+    "browsePath": "参照...",
+    "noPathsAdded": "パスがまだ追加されていません",
+    "add": "追加",
+    "cancel": "キャンセル",
+    "removeGame": "ゲームを削除",
+    "manualBadge": "カスタム",
+    "removePath": "パスを削除"
   },
   "history": {
     "title": "最近の履歴",

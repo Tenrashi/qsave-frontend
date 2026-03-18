@@ -1,8 +1,6 @@
 {
   "app": {
     "title": "QSave",
-    "successIcon": "Синхронизация успешна",
-    "errorIcon": "Ошибка синхронизации"
     "refresh": "Обновить"
   },
   "auth": {
@@ -25,7 +23,20 @@
     "scanningDisk": "Сканирование диска ({{current}}/{{total}})...",
     "sync": "Синхронизировать",
     "watchTooltip": "Включить автосинхронизацию",
-    "unwatchTooltip": "Отключить автосинхронизацию"
+    "unwatchTooltip": "Отключить автосинхронизацию",
+    "addGame": "Добавить игру",
+    "addGameTitle": "Добавить игру вручную",
+    "gameNameLabel": "Название игры",
+    "gameNamePlaceholder": "Введите название игры...",
+    "savePathsLabel": "Пути сохранений",
+    "addPath": "Добавить путь",
+    "browsePath": "Обзор...",
+    "noPathsAdded": "Пути ещё не добавлены",
+    "add": "Добавить",
+    "cancel": "Отмена",
+    "removeGame": "Удалить игру",
+    "manualBadge": "Пользовательский",
+    "removePath": "Удалить путь"
   },
   "history": {
     "title": "Недавняя история",

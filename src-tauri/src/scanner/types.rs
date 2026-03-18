@@ -7,9 +7,15 @@ pub(crate) struct SteamInfo {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct GogInfo {
+    pub id: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
 pub(crate) struct ManifestEntry {
     pub files: Option<HashMap<String, serde_yaml::Value>>,
     pub steam: Option<SteamInfo>,
+    pub gog: Option<GogInfo>,
     #[allow(dead_code)]
     #[serde(flatten)]
     pub _rest: HashMap<String, serde_yaml::Value>,

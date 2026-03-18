@@ -1,18 +1,42 @@
 mod files;
+mod gog;
 mod localized_names;
 mod localized_paths;
 mod manifest;
 mod resolve;
+mod steam;
 mod types;
 
 pub use types::DetectedGame;
 
 use std::collections::HashMap;
+use std::path::Path;
 
-use files::scan_candidates;
+use files::{collect_save_files, scan_candidates};
+use gog::find_gog_app_roots;
 use manifest::{fetch_manifest, resolve_candidates};
 use resolve::{get_home, get_username};
+use steam::{find_steam_app_roots, find_steam_libraries};
 use types::ManifestEntry;
+
+pub fn scan_manual_game_blocking(name: String, paths: Vec<String>) -> DetectedGame {
+    let save_files: Vec<_> = paths
+        .iter()
+        .flat_map(|p| collect_save_files(Path::new(p), &name))
+        .collect();
+
+    let existing_paths = paths
+        .into_iter()
+        .filter(|p| Path::new(p).exists())
+        .collect();
+
+    DetectedGame {
+        name,
+        steam_id: None,
+        save_paths: existing_paths,
+        save_files,
+    }
+}
 
 pub fn scan_games_blocking() -> Result<Vec<DetectedGame>, String> {
     let body = fetch_manifest()?;
@@ -25,6 +49,10 @@ pub fn scan_games_blocking() -> Result<Vec<DetectedGame>, String> {
         .ok_or("Cannot determine home directory")?;
     let username = get_username();
 
-    let candidates = resolve_candidates(manifest, &home, &username);
+    let steam_libraries = find_steam_libraries();
+    let steam_roots = find_steam_app_roots(&steam_libraries);
+    let gog_roots = find_gog_app_roots();
+
+    let candidates = resolve_candidates(manifest, &home, &username, &steam_roots, &gog_roots);
     Ok(scan_candidates(candidates))
 }

@@ -1,8 +1,6 @@
 {
   "app": {
     "title": "QSave",
-    "successIcon": "동기화 성공",
-    "errorIcon": "동기화 실패"
     "refresh": "새로고침"
   },
   "auth": {
@@ -25,7 +23,20 @@
     "scanningDisk": "디스크 스캔 중 ({{current}}/{{total}})...",
     "sync": "동기화",
     "watchTooltip": "자동 동기화 활성화",
-    "unwatchTooltip": "자동 동기화 비활성화"
+    "unwatchTooltip": "자동 동기화 비활성화",
+    "addGame": "게임 추가",
+    "addGameTitle": "수동으로 게임 추가",
+    "gameNameLabel": "게임 이름",
+    "gameNamePlaceholder": "게임 이름 입력...",
+    "savePathsLabel": "저장 경로",
+    "addPath": "경로 추가",
+    "browsePath": "찾아보기...",
+    "noPathsAdded": "추가된 경로 없음",
+    "add": "추가",
+    "cancel": "취소",
+    "removeGame": "게임 제거",
+    "manualBadge": "사용자 지정",
+    "removePath": "경로 제거"
   },
   "history": {
     "title": "최근 기록",

@@ -7,17 +7,17 @@ const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const DEBOUNCE_MS = 2000;
 
-export async function startWatching(
+export const startWatching = async (
   directories: string[],
   onChange: WatchCallback,
-): Promise<void> {
+): Promise<void> => {
   for (const dir of directories) {
     if (watchers.has(dir)) continue;
 
     try {
       const unwatch = await watchImmediate(dir, (event) => {
         const paths = Array.isArray(event.paths) ? event.paths : [event.paths];
-        const changedPaths = paths.filter((p): p is string => typeof p === "string");
+        const changedPaths = paths.filter((path): path is string => typeof path === "string");
         if (changedPaths.length === 0) return;
 
         // Debounce: games often write temp file + rename
@@ -34,13 +34,13 @@ export async function startWatching(
       }, { recursive: true });
 
       watchers.set(dir, unwatch);
-    } catch (err) {
-      console.error(`Failed to watch ${dir}:`, err);
+    } catch {
+      // failed to watch directory — skip silently
     }
   }
-}
+};
 
-export async function stopWatching(directory?: string): Promise<void> {
+export const stopWatching = async (directory?: string): Promise<void> => {
   if (directory) {
     const unwatch = watchers.get(directory);
     if (unwatch) {
@@ -52,18 +52,18 @@ export async function stopWatching(directory?: string): Promise<void> {
       clearTimeout(timer);
       debounceTimers.delete(directory);
     }
-  } else {
-    for (const unwatch of watchers.values()) {
-      unwatch();
-    }
-    watchers.clear();
-    for (const timer of debounceTimers.values()) {
-      clearTimeout(timer);
-    }
-    debounceTimers.clear();
+    return;
   }
-}
 
-export const getWatchedDirectories = (): string[] => {
-  return Array.from(watchers.keys());
+  for (const unwatch of watchers.values()) {
+    unwatch();
+  }
+  watchers.clear();
+  for (const timer of debounceTimers.values()) {
+    clearTimeout(timer);
+  }
+  debounceTimers.clear();
 };
+
+export const getWatchedDirectories = (): string[] =>
+  Array.from(watchers.keys());
