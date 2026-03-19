@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { TAURI_COMMANDS } from "@/lib/constants";
+import { TAURI_COMMANDS } from "@/lib/constants/constants";
 
 export const notify = async (title: string, body: string): Promise<void> => {
   try {

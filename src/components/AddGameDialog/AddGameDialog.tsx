@@ -12,9 +12,9 @@ import {
   DialogPopup,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { addManualGame } from "@/lib/store";
-import { TAURI_COMMANDS, QUERY_KEYS } from "@/lib/constants";
-import { scanManualGame } from "@/services/scanner";
+import { addManualGame } from "@/lib/store/store";
+import { TAURI_COMMANDS, QUERY_KEYS } from "@/lib/constants/constants";
+import { scanManualGame } from "@/services/scanner/scanner";
 import type { Game } from "@/domain/types";
 
 export type AddGameDialogProps = {

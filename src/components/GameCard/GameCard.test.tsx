@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { sims4Game, eldenRingGame, manualGame, emptyManualGame } from "@/test/mocks/games";
-import { computeGameHash } from "@/lib/hash";
+import { computeGameHash } from "@/lib/hash/hash";
 import { GameCard, type GameCardProps } from "./GameCard";
 
 vi.mock("./utils/formatSize", () => ({
@@ -32,6 +32,8 @@ describe("GameCard", () => {
       gameStatuses: {},
       watchedGames: {},
       syncFingerprints: {},
+      backedUpGames: new Set<string>(),
+      backedUpGamesLoaded: false,
     });
   });
 
@@ -121,6 +123,33 @@ describe("GameCard", () => {
   it("does not show remove button for auto-detected games", () => {
     renderGameCard();
     expect(screen.queryByRole("button", { name: "games.removeGame" })).not.toBeInTheDocument();
+  });
+
+  it("opens confirmation dialog when remove button is clicked", async () => {
+    renderGameCard({ game: manualGame });
+    await userEvent.click(screen.getByRole("button", { name: "games.removeGame" }));
+    expect(screen.getByText("games.removeConfirmTitle")).toBeInTheDocument();
+    expect(screen.getByText("games.removeConfirmDescription")).toBeInTheDocument();
+  });
+
+  it("shows restore buttons when game has backup", () => {
+    authenticateUser();
+    useSyncStore.setState({
+      gameStatuses: {},
+      watchedGames: {},
+      syncFingerprints: {},
+      backedUpGames: new Set(["The Sims 4"]),
+      backedUpGamesLoaded: true,
+    });
+    renderGameCard();
+    expect(screen.getByRole("button", { name: "restore.tooltip" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "restore.tooltipPick" })).toBeInTheDocument();
+  });
+
+  it("does not show restore buttons when game has no backup", () => {
+    authenticateUser();
+    renderGameCard();
+    expect(screen.queryByRole("button", { name: "restore.tooltip" })).not.toBeInTheDocument();
   });
 
   it("hides last modified date when game has no save files", () => {

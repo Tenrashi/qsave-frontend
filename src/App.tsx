@@ -1,10 +1,10 @@
 import { useMemo, useState, useEffect, useDeferredValue } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
-import { useGames } from "@/hooks/useGames";
-import { useSyncHistory } from "@/hooks/useSyncHistory";
-import { useAutoSync } from "@/hooks/useAutoSync";
-import { useGameDetectionNotify } from "@/hooks/useGameDetectionNotify";
+import { useGames } from "@/hooks/queries/useGames/useGames";
+import { useSyncHistory } from "@/hooks/queries/useSyncHistory/useSyncHistory";
+import { useAutoSync } from "@/hooks/useAutoSync/useAutoSync";
+import { useGameDetectionNotify } from "@/hooks/useGameDetectionNotify/useGameDetectionNotify";
 import { AppHeader } from "@/components/AppHeader/AppHeader";
 import { AuthStatus } from "@/components/AuthStatus/AuthStatus";
 import { GameToolbar } from "@/components/GameToolbar/GameToolbar";
@@ -14,8 +14,8 @@ import { SyncHistory } from "@/components/SyncHistory/SyncHistory";
 import { StatusBar } from "@/components/StatusBar/StatusBar";
 
 const App = () => {
-  const { init } = useAuthStore();
-  const { initWatchPreferences, initSyncFingerprints } = useSyncStore();
+  const { init, auth } = useAuthStore();
+  const { initWatchPreferences, initSyncFingerprints, loadBackedUpGames } = useSyncStore();
   const games = useGames();
   const history = useSyncHistory();
   const [search, setSearch] = useState("");
@@ -27,6 +27,12 @@ const App = () => {
     initWatchPreferences();
     initSyncFingerprints();
   }, []);
+
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      loadBackedUpGames();
+    }
+  }, [auth.isAuthenticated]);
 
   useAutoSync(games.data, watching);
   useGameDetectionNotify(games.data);

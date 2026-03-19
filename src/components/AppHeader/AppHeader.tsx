@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/LanguageSelector/LanguageSelector";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME } from "@/lib/constants/constants";
 
 export type AppHeaderProps = {
   isFetching: boolean;

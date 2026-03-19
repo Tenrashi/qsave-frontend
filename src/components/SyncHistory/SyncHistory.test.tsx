@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders, screen } from "@/test/test-utils";
 import { SyncHistory } from "./SyncHistory";
 
-vi.mock("@/lib/store", () => ({
+vi.mock("@/lib/store/store", () => ({
   getSyncHistory: vi.fn(() =>
     Promise.resolve([
       {
@@ -13,6 +13,7 @@ vi.mock("@/lib/store", () => ({
         driveFileId: "abc",
         revisionCount: 1,
         status: "success",
+        type: "sync",
       },
       {
         id: "2",
@@ -24,6 +25,16 @@ vi.mock("@/lib/store", () => ({
         status: "error",
         error: "Network error",
       },
+      {
+        id: "3",
+        gameName: "Elden Ring",
+        fileName: "Elden Ring.zip",
+        syncedAt: new Date(),
+        driveFileId: "def",
+        revisionCount: 2,
+        status: "success",
+        type: "restore",
+      },
     ]),
   ),
 }));
@@ -33,12 +44,13 @@ describe("SyncHistory", () => {
     renderWithProviders(<SyncHistory />);
     expect(await screen.findByText("The Sims 4")).toBeInTheDocument();
     expect(screen.getByText("Cyberpunk 2077")).toBeInTheDocument();
+    expect(screen.getByText("Elden Ring")).toBeInTheDocument();
   });
 
   it("shows success icon for successful syncs", async () => {
     renderWithProviders(<SyncHistory />);
     await screen.findByText("The Sims 4");
-    expect(screen.getAllByRole("img", { name: "history.successIcon" })).toHaveLength(1);
+    expect(screen.getAllByRole("img", { name: "history.successIcon" })).toHaveLength(2);
   });
 
   it("shows error icon for failed syncs", async () => {

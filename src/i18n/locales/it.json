@@ -35,6 +35,9 @@
     "add": "Aggiungi",
     "cancel": "Annulla",
     "removeGame": "Rimuovi gioco",
+    "removeConfirmTitle": "Rimuovere questo gioco?",
+    "removeConfirmDescription": "Verrà rimosso solo da QSave. I file di salvataggio e i backup cloud non saranno modificati.",
+    "remove": "Rimuovi",
     "manualBadge": "Personalizzato",
     "removePath": "Rimuovi percorso"
   },
@@ -52,6 +55,21 @@
   "notifications": {
     "gameDetectedOne": "{{name}} rilevato",
     "gameDetectedOther": "{{count}} nuovi giochi rilevati"
+  },
+  "restore": {
+    "title": "Ripristina {{name}}",
+    "noBackups": "Nessun backup trovato",
+    "loading": "Caricamento backup...",
+    "selectBackup": "Seleziona un backup da ripristinare",
+    "warning": "Questo sovrascriverà i file di salvataggio attuali",
+    "restore": "Ripristina",
+    "restoring": "Ripristino...",
+    "success": "{{count}} file ripristinato/i con successo",
+    "error": "Ripristino fallito",
+    "tooltip": "Ripristina ultimo backup",
+    "tooltipPick": "Scegli un backup da ripristinare",
+    "confirmTitle": "Ripristinare l'ultimo backup?",
+    "close": "Chiudi"
   },
   "settings": {
     "language": "Lingua"

@@ -5,7 +5,8 @@ import {
   setWatchedGames,
   getSyncFingerprints,
   setSyncFingerprint,
-} from "@/lib/store";
+} from "@/lib/store/store";
+import { listBackedUpGameNames } from "@/services/drive/drive";
 
 type SyncStore = {
   gameStatuses: Record<string, SyncStatus>;
@@ -19,12 +20,20 @@ type SyncStore = {
   syncFingerprints: Record<string, GameSyncFingerprint>;
   initSyncFingerprints: () => Promise<void>;
   updateSyncFingerprint: (gameName: string, hash: string) => Promise<void>;
+
+  backedUpGames: Set<string>;
+  backedUpGamesLoaded: boolean;
+  loadBackedUpGames: () => Promise<void>;
+  markGameBackedUp: (gameName: string) => void;
+  hasBackup: (gameName: string) => boolean;
 };
 
 export const useSyncStore = create<SyncStore>((set, get) => ({
   gameStatuses: {},
   watchedGames: {},
   syncFingerprints: {},
+  backedUpGames: new Set<string>(),
+  backedUpGamesLoaded: false,
 
   setGameStatus: (gameName, status) =>
     set((state) => ({ gameStatuses: { ...state.gameStatuses, [gameName]: status } })),
@@ -54,6 +63,20 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
     const fingerprints = await getSyncFingerprints();
     set({ syncFingerprints: fingerprints });
   },
+
+  loadBackedUpGames: async () => {
+    if (get().backedUpGamesLoaded) return;
+    const names = await listBackedUpGameNames();
+    set({ backedUpGames: new Set(names), backedUpGamesLoaded: true });
+  },
+
+  markGameBackedUp: (gameName) => {
+    const updated = new Set(get().backedUpGames);
+    updated.add(gameName);
+    set({ backedUpGames: updated });
+  },
+
+  hasBackup: (gameName) => get().backedUpGames.has(gameName),
 
   updateSyncFingerprint: async (gameName, hash) => {
     const fingerprint: GameSyncFingerprint = {

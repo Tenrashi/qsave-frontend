@@ -1,16 +1,16 @@
 import { RECORD_STATUS } from "@/domain/types";
 import type { Game, SyncRecord } from "@/domain/types";
-import { APP_NAME } from "@/lib/constants";
-import { uploadGameArchive } from "@/services/drive";
-import { addSyncRecord } from "@/lib/store";
-import { notify } from "@/lib/notify";
+import { APP_NAME } from "@/lib/constants/constants";
+import { uploadGameArchive } from "@/services/drive/drive";
+import { addSyncRecord } from "@/lib/store/store";
+import { notify } from "@/lib/notify/notify";
 
 export const syncGame = async (game: Game): Promise<SyncRecord> => {
   const id = `${game.name}-${Date.now()}`;
   const filePaths = game.saveFiles.map((file) => file.path);
 
   try {
-    const { fileId } = await uploadGameArchive(game.name, filePaths);
+    const { fileId } = await uploadGameArchive(game.name, game.savePaths, filePaths);
 
     const record: SyncRecord = {
       id,

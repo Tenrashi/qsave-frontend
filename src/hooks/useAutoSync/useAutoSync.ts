@@ -2,14 +2,14 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
-import { QUERY_KEYS } from "@/lib/constants";
+import { QUERY_KEYS } from "@/lib/constants/constants";
 import { useSyncStore } from "@/stores/sync";
 import { useAuthStore } from "@/stores/auth";
-import { startWatching, stopWatching } from "@/lib/watcher";
-import { scheduleAutoSync, cancelAllAutoSyncs } from "@/lib/autoSync";
-import { computeGameHash } from "@/lib/hash";
-import { syncGame } from "@/services/sync";
-import { rescanGame } from "@/services/scanner";
+import { startWatching, stopWatching } from "@/lib/watcher/watcher";
+import { scheduleAutoSync, cancelAllAutoSyncs } from "@/lib/autoSync/autoSync";
+import { computeGameHash } from "@/lib/hash/hash";
+import { syncGame } from "@/services/sync/sync";
+import { rescanGame } from "@/services/scanner/scanner";
 
 export const useAutoSync = (
   games: Game[] | undefined,

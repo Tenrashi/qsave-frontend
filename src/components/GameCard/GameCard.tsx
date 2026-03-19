@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload, CheckCircle, AlertCircle, Loader2, FolderOpen, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Upload, Download, ChevronDown, CheckCircle, AlertCircle, Loader2, FolderOpen, Eye, EyeOff, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,19 @@ import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game, SyncStatus } from "@/domain/types";
-import { QUERY_KEYS } from "@/lib/constants";
-import { syncGame } from "@/services/sync";
-import { computeGameHash } from "@/lib/hash";
-import { dateFnsLocales } from "@/lib/date-locales";
-import { removeManualGame } from "@/lib/store";
+import { QUERY_KEYS } from "@/lib/constants/constants";
+import { syncGame } from "@/services/sync/sync";
+import { computeGameHash } from "@/lib/hash/hash";
+import { dateFnsLocales } from "@/lib/date-locales/date-locales";
+import { removeManualGame } from "@/lib/store/store";
 import { GameBanner } from "./GameBanner/GameBanner";
+import { RemoveGameDialog } from "./RemoveGameDialog/RemoveGameDialog";
+import { RestoreDialog } from "./RestoreDialog/RestoreDialog";
 import { formatSize } from "./utils/formatSize";
 
 const SyncStatusIcon = ({ status, isSynced }: { status: SyncStatus; isSynced: boolean }) => {
   if (status === SYNC_STATUS.syncing) return <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" role="img" aria-label="syncing" aria-hidden={false} />;
+  if (status === SYNC_STATUS.restoring) return <Loader2 className="w-3.5 h-3.5 text-orange-500 animate-spin" role="img" aria-label="restoring" aria-hidden={false} />;
   if (status === SYNC_STATUS.error) return <AlertCircle className="w-3.5 h-3.5 text-destructive" role="img" aria-label="sync error" aria-hidden={false} />;
   if (isSynced) return <CheckCircle className="w-3.5 h-3.5 text-green-500" role="img" aria-label="synced" aria-hidden={false} />;
   return null;
@@ -41,10 +44,12 @@ export const GameCard = memo(({ game }: GameCardProps) => {
     toggleGameWatch,
     syncFingerprints,
     updateSyncFingerprint,
+    hasBackup,
+    markGameBackedUp,
   } = useSyncStore();
   const locale = dateFnsLocales[i18n.language] ?? enUS;
   const status = gameStatuses[game.name] ?? SYNC_STATUS.idle;
-  const isSyncing = status === SYNC_STATUS.syncing;
+  const isBusy = status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
   const watched = isGameWatched(game.name);
 
   const currentHash = computeGameHash(game.saveFiles);
@@ -75,6 +80,7 @@ export const GameCard = memo(({ game }: GameCardProps) => {
       setGameStatus(game.name, newStatus);
       if (newStatus === SYNC_STATUS.success) {
         await updateSyncFingerprint(game.name, currentHash);
+        markGameBackedUp(game.name);
       }
     } catch {
       setGameStatus(game.name, SYNC_STATUS.error);
@@ -106,19 +112,23 @@ export const GameCard = memo(({ game }: GameCardProps) => {
             )}
             {game.isManual && (
               <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      aria-label={t("games.removeGame")}
-                      onClick={handleRemove}
-                    />
+                <RemoveGameDialog
+                  onConfirm={handleRemove}
+                  trigger={
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          aria-label={t("games.removeGame")}
+                        />
+                      }
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </TooltipTrigger>
                   }
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                </TooltipTrigger>
+                />
                 <TooltipContent>{t("games.removeGame")}</TooltipContent>
               </Tooltip>
             )}
@@ -146,16 +156,54 @@ export const GameCard = memo(({ game }: GameCardProps) => {
                     {watched ? t("games.unwatchTooltip") : t("games.watchTooltip")}
                   </TooltipContent>
                 </Tooltip>
+                {hasBackup(game.name) && (
+                  <div className="flex items-center">
+                    <RestoreDialog
+                      game={game}
+                      quick
+                      trigger={
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-r-none border-r-0 h-7 px-2"
+                          disabled={isBusy}
+                          aria-label={t("restore.tooltip")}
+                        >
+                          {status === SYNC_STATUS.restoring ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5 text-orange-500" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5 mr-1.5 text-orange-500" />
+                          )}
+                          {t("restore.restore")}
+                        </Button>
+                      }
+                    />
+                    <RestoreDialog
+                      game={game}
+                      trigger={
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-l-none h-7 px-1"
+                          disabled={isBusy}
+                          aria-label={t("restore.tooltipPick")}
+                        >
+                          <ChevronDown className="w-3 h-3 text-orange-500" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={handleSync}
-                  disabled={isSyncing}
+                  disabled={isBusy}
                 >
-                  {isSyncing ? (
+                  {status === SYNC_STATUS.syncing ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
                   ) : (
-                    <Upload className="w-3.5 h-3.5 mr-1.5" />
+                    <Upload className="w-3.5 h-3.5 mr-1.5 text-blue-500" />
                   )}
                   {t("games.sync")}
                 </Button>

@@ -19,6 +19,8 @@ export const TAURI_COMMANDS = {
   getOAuthRedirectUri: "get_oauth_redirect_uri",
   startOAuth: "start_oauth",
   createZip: "create_zip",
+  extractZip: "extract_zip",
+  readZipMeta: "read_zip_meta",
   sendNativeNotification: "send_native_notification",
   scanGames: "scan_games",
   scanManualGame: "scan_manual_game",

@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { sims4Game, cyberpunkGame, eldenRingGame } from "@/test/mocks/games";
 import { useGameDetectionNotify } from "./useGameDetectionNotify";
 
-vi.mock("@/lib/notify", () => ({
+vi.mock("@/lib/notify/notify", () => ({
   notify: vi.fn(),
 }));
 
@@ -14,7 +14,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-import { notify } from "@/lib/notify";
+import { notify } from "@/lib/notify/notify";
 
 const mockNotify = vi.mocked(notify);
 

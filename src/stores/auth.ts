@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { AuthState } from "@/domain/types";
-import { getAuthState, clearAuth } from "@/lib/store";
-import { startOAuthFlow } from "@/services/auth";
+import { getAuthState, clearAuth } from "@/lib/store/store";
+import { startOAuthFlow } from "@/services/auth/auth";
 
 type AuthStore = {
   auth: AuthState;

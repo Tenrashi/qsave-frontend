@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { scanForGames } from "@/services/scanner";
-import { QUERY_KEYS } from "@/lib/constants";
+import { scanForGames } from "@/services/scanner/scanner";
+import { QUERY_KEYS } from "@/lib/constants/constants";
 
 export const useGames = () => {
   return useQuery({

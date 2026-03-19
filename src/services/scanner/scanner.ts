@@ -1,22 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Game, SaveFile } from "@/domain/types";
-import { TAURI_COMMANDS } from "@/lib/constants";
-import { getManualGames } from "@/lib/store";
-
-type RustSaveFile = {
-  name: string;
-  path: string;
-  sizeBytes: number;
-  lastModified: number;
-  gameName: string;
-};
-
-type RustDetectedGame = {
-  name: string;
-  steamId: number | null;
-  savePaths: string[];
-  saveFiles: RustSaveFile[];
-};
+import { TAURI_COMMANDS } from "@/lib/constants/constants";
+import { getManualGames } from "@/lib/store/store";
+import type { RustDetectedGame } from "./scanner.types";
 
 const toGame = (game: RustDetectedGame, isManual = false): Game => ({
   name: game.name,

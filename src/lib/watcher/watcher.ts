@@ -1,6 +1,5 @@
 import { watchImmediate, type UnwatchFn } from "@tauri-apps/plugin-fs";
-
-type WatchCallback = (paths: string[]) => void;
+import type { WatchCallback } from "./watcher.types";
 
 const watchers = new Map<string, UnwatchFn>();
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();

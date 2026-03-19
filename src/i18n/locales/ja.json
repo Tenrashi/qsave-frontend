@@ -35,6 +35,9 @@
     "add": "追加",
     "cancel": "キャンセル",
     "removeGame": "ゲームを削除",
+    "removeConfirmTitle": "このゲームを削除しますか？",
+    "removeConfirmDescription": "QSaveからのみ削除されます。セーブファイルやクラウドバックアップには影響しません。",
+    "remove": "削除",
     "manualBadge": "カスタム",
     "removePath": "パスを削除"
   },
@@ -52,6 +55,21 @@
   "notifications": {
     "gameDetectedOne": "{{name}} を検出しました",
     "gameDetectedOther": "{{count}} 件の新しいゲームを検出しました"
+  },
+  "restore": {
+    "title": "{{name}} を復元",
+    "noBackups": "バックアップが見つかりません",
+    "loading": "バックアップを読み込み中...",
+    "selectBackup": "復元するバックアップを選択",
+    "warning": "現在のセーブファイルが上書きされます",
+    "restore": "復元",
+    "restoring": "復元中...",
+    "success": "{{count}} 件のファイルを復元しました",
+    "error": "復元に失敗しました",
+    "tooltip": "最新のバックアップを復元",
+    "tooltipPick": "復元するバックアップを選択",
+    "confirmTitle": "最新のバックアップを復元しますか？",
+    "close": "閉じる"
   },
   "settings": {
     "language": "言語"

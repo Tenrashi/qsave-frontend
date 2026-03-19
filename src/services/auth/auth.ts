@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import type { AuthState } from "@/domain/types";
-import { getAuthState, setAuthState, clearAuth } from "@/lib/store";
-import { TAURI_COMMANDS, OAUTH_ENDPOINTS, OAUTH_PARAMS, TOKEN_EXPIRY_BUFFER_MS } from "@/lib/constants";
+import { getAuthState, setAuthState, clearAuth } from "@/lib/store/store";
+import { TAURI_COMMANDS, OAUTH_ENDPOINTS, OAUTH_PARAMS, TOKEN_EXPIRY_BUFFER_MS } from "@/lib/constants/constants";
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;

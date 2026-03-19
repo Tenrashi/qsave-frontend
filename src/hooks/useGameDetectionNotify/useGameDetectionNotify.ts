@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { Game } from "@/domain/types";
-import { notify } from "@/lib/notify";
-import { APP_NAME } from "@/lib/constants";
+import { notify } from "@/lib/notify/notify";
+import { APP_NAME } from "@/lib/constants/constants";
 
 export const useGameDetectionNotify = (games: Game[] | undefined): void => {
   const { t } = useTranslation();

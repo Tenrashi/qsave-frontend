@@ -17,6 +17,7 @@ export type SaveFile = {
 export const SYNC_STATUS = {
   idle: "idle",
   syncing: "syncing",
+  restoring: "restoring",
   success: "success",
   error: "error",
 } as const;
@@ -38,7 +39,14 @@ export type SyncRecord = {
   driveFileId: string;
   revisionCount: number;
   status: RecordStatus;
+  type?: "sync" | "restore";
   error?: string;
+};
+
+export type DriveBackup = {
+  id: string;
+  name: string;
+  createdTime: string;
 };
 
 export type AuthState = {

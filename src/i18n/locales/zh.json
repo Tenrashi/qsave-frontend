@@ -35,6 +35,9 @@
     "add": "添加",
     "cancel": "取消",
     "removeGame": "移除游戏",
+    "removeConfirmTitle": "移除此游戏？",
+    "removeConfirmDescription": "这只会从 QSave 中移除。您的存档文件和云备份不会受到影响。",
+    "remove": "移除",
     "manualBadge": "自定义",
     "removePath": "移除路径"
   },
@@ -52,6 +55,21 @@
   "notifications": {
     "gameDetectedOne": "检测到 {{name}}",
     "gameDetectedOther": "检测到 {{count}} 个新游戏"
+  },
+  "restore": {
+    "title": "恢复 {{name}}",
+    "noBackups": "未找到备份",
+    "loading": "正在加载备份...",
+    "selectBackup": "选择要恢复的备份",
+    "warning": "这将覆盖您当前的存档文件",
+    "restore": "恢复",
+    "restoring": "正在恢复...",
+    "success": "成功恢复 {{count}} 个文件",
+    "error": "恢复失败",
+    "tooltip": "恢复最新备份",
+    "tooltipPick": "选择要恢复的备份",
+    "confirmTitle": "恢复最新备份？",
+    "close": "关闭"
   },
   "settings": {
     "language": "语言"

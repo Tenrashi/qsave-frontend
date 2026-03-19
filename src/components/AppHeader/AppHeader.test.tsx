@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders, screen, userEvent } from "@/test/test-utils";
 import { AppHeader, type AppHeaderProps } from "./AppHeader";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME } from "@/lib/constants/constants";
 
 const defaultProps: AppHeaderProps = {
   isFetching: false,

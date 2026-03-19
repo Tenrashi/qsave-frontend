@@ -2,6 +2,7 @@ mod archive;
 mod oauth;
 mod scanner;
 
+use archive::{ExtractResult, ZipMeta};
 use scanner::{DetectedGame, scan_manual_game_blocking};
 use tauri::{
     menu::{Menu, MenuItem},
@@ -17,10 +18,24 @@ async fn scan_games() -> Result<Vec<DetectedGame>, String> {
 }
 
 #[tauri::command]
-async fn create_zip(files: Vec<String>) -> Result<Vec<u8>, String> {
-    tokio::task::spawn_blocking(move || archive::create_zip(files))
+async fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<Vec<u8>, String> {
+    tokio::task::spawn_blocking(move || archive::create_zip(save_paths, files))
         .await
         .map_err(|e| format!("Zip task failed: {}", e))?
+}
+
+#[tauri::command]
+async fn extract_zip(zip_bytes: Vec<u8>, target_dirs: Vec<String>) -> Result<ExtractResult, String> {
+    tokio::task::spawn_blocking(move || archive::extract_zip(zip_bytes, target_dirs))
+        .await
+        .map_err(|e| format!("Extract task failed: {}", e))?
+}
+
+#[tauri::command]
+async fn read_zip_meta(zip_bytes: Vec<u8>) -> Result<Option<ZipMeta>, String> {
+    tokio::task::spawn_blocking(move || archive::read_zip_meta(zip_bytes))
+        .await
+        .map_err(|e| format!("Read meta task failed: {}", e))?
 }
 
 #[tauri::command]
@@ -97,7 +112,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![scan_games, create_zip, get_oauth_redirect_uri, start_oauth, send_native_notification, scan_manual_game, pick_folder])
+        .invoke_handler(tauri::generate_handler![scan_games, create_zip, extract_zip, read_zip_meta, get_oauth_redirect_uri, start_oauth, send_native_notification, scan_manual_game, pick_folder])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

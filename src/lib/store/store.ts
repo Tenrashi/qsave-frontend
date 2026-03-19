@@ -1,6 +1,7 @@
 import { load, type Store } from "@tauri-apps/plugin-store";
 import type { AuthState, SyncRecord, GameSyncFingerprint } from "@/domain/types";
-import { STORE_KEYS, MAX_SYNC_HISTORY_RECORDS } from "@/lib/constants";
+import { STORE_KEYS, MAX_SYNC_HISTORY_RECORDS } from "@/lib/constants/constants";
+import type { ManualGameEntry } from "./store.types";
 
 let store: Store | null = null;
 
@@ -105,7 +106,7 @@ export const setWatchedGames = async (names: string[]): Promise<void> => {
 };
 
 // Manual games
-export type ManualGameEntry = { name: string; paths: string[] };
+export type { ManualGameEntry } from "./store.types";
 
 export const getManualGames = async (): Promise<ManualGameEntry[]> => {
   try {

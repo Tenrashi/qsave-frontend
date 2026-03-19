@@ -35,6 +35,9 @@
     "add": "Hinzufügen",
     "cancel": "Abbrechen",
     "removeGame": "Spiel entfernen",
+    "removeConfirmTitle": "Dieses Spiel entfernen?",
+    "removeConfirmDescription": "Das entfernt es nur aus QSave. Deine Speicherdateien und Cloud-Backups bleiben unberührt.",
+    "remove": "Entfernen",
     "manualBadge": "Benutzerdefiniert",
     "removePath": "Pfad entfernen"
   },
@@ -52,6 +55,21 @@
   "notifications": {
     "gameDetectedOne": "{{name}} erkannt",
     "gameDetectedOther": "{{count}} neue Spiele erkannt"
+  },
+  "restore": {
+    "title": "{{name}} wiederherstellen",
+    "noBackups": "Keine Sicherungen gefunden",
+    "loading": "Sicherungen werden geladen...",
+    "selectBackup": "Wähle eine Sicherung zum Wiederherstellen",
+    "warning": "Dies überschreibt deine aktuellen Speicherdateien",
+    "restore": "Wiederherstellen",
+    "restoring": "Wiederherstellung...",
+    "success": "{{count}} Datei(en) erfolgreich wiederhergestellt",
+    "error": "Wiederherstellung fehlgeschlagen",
+    "tooltip": "Letzte Sicherung wiederherstellen",
+    "tooltipPick": "Eine Sicherung zum Wiederherstellen wählen",
+    "confirmTitle": "Letzte Sicherung wiederherstellen?",
+    "close": "Schließen"
   },
   "settings": {
     "language": "Sprache"
