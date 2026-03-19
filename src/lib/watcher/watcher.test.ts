@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { startWatching, stopWatching, getWatchedDirectories } from "./watcher";
 
-const mockUnwatch = vi.fn();
+const { mockUnwatch, mockWatchImmediate } = vi.hoisted(() => {
+  const mockUnwatch = vi.fn();
+  return {
+    mockUnwatch,
+    mockWatchImmediate: vi.fn(() => Promise.resolve(mockUnwatch)),
+  };
+});
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
-  watchImmediate: vi.fn(() => Promise.resolve(mockUnwatch)),
+  watchImmediate: mockWatchImmediate,
 }));
 
 describe("watcher", () => {
@@ -20,12 +26,10 @@ describe("watcher", () => {
   });
 
   it("does not duplicate watchers for the same directory", async () => {
-    const { watchImmediate } = await import("@tauri-apps/plugin-fs");
-
     await startWatching(["/saves/game1"], vi.fn());
     await startWatching(["/saves/game1"], vi.fn());
 
-    expect(watchImmediate).toHaveBeenCalledTimes(1);
+    expect(mockWatchImmediate).toHaveBeenCalledTimes(1);
   });
 
   it("clears all watchers on stopWatching", async () => {

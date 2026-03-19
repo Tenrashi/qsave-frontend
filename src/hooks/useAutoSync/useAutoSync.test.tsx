@@ -7,22 +7,38 @@ import { useSyncStore } from "@/stores/sync";
 import { sims4Game } from "@/test/mocks/games";
 import { useAutoSync } from "./useAutoSync";
 
+const {
+  mockStartWatching,
+  mockStopWatching,
+  mockScheduleAutoSync,
+  mockCancelAllAutoSyncs,
+  mockSyncGame,
+  mockRescanGame,
+} = vi.hoisted(() => ({
+  mockStartWatching: vi.fn(),
+  mockStopWatching: vi.fn(),
+  mockScheduleAutoSync: vi.fn(),
+  mockCancelAllAutoSyncs: vi.fn(),
+  mockSyncGame: vi.fn(),
+  mockRescanGame: vi.fn(),
+}));
+
 vi.mock("@/lib/watcher/watcher", () => ({
-  startWatching: vi.fn(),
-  stopWatching: vi.fn(),
+  startWatching: mockStartWatching,
+  stopWatching: mockStopWatching,
 }));
 
 vi.mock("@/lib/autoSync/autoSync", () => ({
-  scheduleAutoSync: vi.fn(),
-  cancelAllAutoSyncs: vi.fn(),
+  scheduleAutoSync: mockScheduleAutoSync,
+  cancelAllAutoSyncs: mockCancelAllAutoSyncs,
 }));
 
 vi.mock("@/services/sync/sync", () => ({
-  syncGame: vi.fn(),
+  syncGame: mockSyncGame,
 }));
 
 vi.mock("@/services/scanner/scanner", () => ({
-  rescanGame: vi.fn(),
+  rescanGame: mockRescanGame,
 }));
 
 const createWrapper = () => {
@@ -42,31 +58,24 @@ describe("useAutoSync", () => {
   });
 
   it("stops watching when disabled", async () => {
-    const { stopWatching } = await import("@/lib/watcher/watcher");
-    const { cancelAllAutoSyncs } = await import("@/lib/autoSync/autoSync");
-
     renderHook(() => useAutoSync([sims4Game], false), { wrapper: createWrapper() });
 
-    expect(stopWatching).toHaveBeenCalled();
-    expect(cancelAllAutoSyncs).toHaveBeenCalled();
+    expect(mockStopWatching).toHaveBeenCalled();
+    expect(mockCancelAllAutoSyncs).toHaveBeenCalled();
   });
 
   it("starts watching when enabled with games", async () => {
-    const { startWatching } = await import("@/lib/watcher/watcher");
-
     renderHook(() => useAutoSync([sims4Game], true), { wrapper: createWrapper() });
 
-    expect(startWatching).toHaveBeenCalledWith(
+    expect(mockStartWatching).toHaveBeenCalledWith(
       ["/saves/sims4"],
       expect.any(Function),
     );
   });
 
   it("stops watching when no games", async () => {
-    const { stopWatching } = await import("@/lib/watcher/watcher");
-
     renderHook(() => useAutoSync([], true), { wrapper: createWrapper() });
 
-    expect(stopWatching).toHaveBeenCalled();
+    expect(mockStopWatching).toHaveBeenCalled();
   });
 });

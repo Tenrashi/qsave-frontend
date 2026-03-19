@@ -3,16 +3,22 @@ import { RECORD_STATUS } from "@/domain/types";
 import { sims4Game } from "@/test/mocks/games";
 import { syncGame, syncAllGames } from "./sync";
 
+const { mockUploadGameArchive, mockAddSyncRecord, mockNotify } = vi.hoisted(() => ({
+  mockUploadGameArchive: vi.fn(() => Promise.resolve({ fileId: "drive-file-123" })),
+  mockAddSyncRecord: vi.fn(),
+  mockNotify: vi.fn(),
+}));
+
 vi.mock("@/services/drive/drive", () => ({
-  uploadGameArchive: vi.fn(() => Promise.resolve({ fileId: "drive-file-123" })),
+  uploadGameArchive: mockUploadGameArchive,
 }));
 
 vi.mock("@/lib/store/store", () => ({
-  addSyncRecord: vi.fn(),
+  addSyncRecord: mockAddSyncRecord,
 }));
 
 vi.mock("@/lib/notify/notify", () => ({
-  notify: vi.fn(),
+  notify: mockNotify,
 }));
 
 describe("syncGame", () => {
@@ -29,26 +35,23 @@ describe("syncGame", () => {
   });
 
   it("persists the sync record", async () => {
-    const { addSyncRecord } = await import("@/lib/store/store");
     await syncGame(sims4Game);
 
-    expect(addSyncRecord).toHaveBeenCalledOnce();
-    expect(vi.mocked(addSyncRecord).mock.calls[0][0]).toMatchObject({
+    expect(mockAddSyncRecord).toHaveBeenCalledOnce();
+    expect(mockAddSyncRecord.mock.calls[0][0]).toMatchObject({
       gameName: "The Sims 4",
       status: RECORD_STATUS.success,
     });
   });
 
   it("sends a notification after sync", async () => {
-    const { notify } = await import("@/lib/notify/notify");
     await syncGame(sims4Game);
 
-    expect(notify).toHaveBeenCalledOnce();
+    expect(mockNotify).toHaveBeenCalledOnce();
   });
 
   it("returns an error record when upload fails", async () => {
-    const { uploadGameArchive } = await import("@/services/drive/drive");
-    vi.mocked(uploadGameArchive).mockRejectedValueOnce(new Error("Network error"));
+    mockUploadGameArchive.mockRejectedValueOnce(new Error("Network error"));
 
     const record = await syncGame(sims4Game);
 
@@ -60,10 +63,9 @@ describe("syncGame", () => {
 describe("syncAllGames", () => {
   it("syncs each game sequentially and returns all records", async () => {
     vi.clearAllMocks();
-    const { uploadGameArchive } = await import("@/services/drive/drive");
     const records = await syncAllGames([sims4Game, sims4Game]);
 
     expect(records).toHaveLength(2);
-    expect(uploadGameArchive).toHaveBeenCalledTimes(2);
+    expect(mockUploadGameArchive).toHaveBeenCalledTimes(2);
   });
 });

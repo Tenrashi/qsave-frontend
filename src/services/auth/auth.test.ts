@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getValidToken, logout } from "./auth";
 
+const { mockGetAuthState, mockSetAuthState, mockClearAuth } = vi.hoisted(() => ({
+  mockGetAuthState: vi.fn(),
+  mockSetAuthState: vi.fn(),
+  mockClearAuth: vi.fn(),
+}));
+
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
@@ -10,9 +16,9 @@ vi.mock("@tauri-apps/plugin-http", () => ({
 }));
 
 vi.mock("@/lib/store/store", () => ({
-  getAuthState: vi.fn(),
-  setAuthState: vi.fn(),
-  clearAuth: vi.fn(),
+  getAuthState: mockGetAuthState,
+  setAuthState: mockSetAuthState,
+  clearAuth: mockClearAuth,
 }));
 
 describe("getValidToken", () => {
@@ -21,8 +27,7 @@ describe("getValidToken", () => {
   });
 
   it("returns access token when authenticated and not expired", async () => {
-    const { getAuthState } = await import("@/lib/store/store");
-    vi.mocked(getAuthState).mockResolvedValueOnce({
+    mockGetAuthState.mockResolvedValueOnce({
       isAuthenticated: true,
       accessToken: "valid-token",
       expiresAt: Date.now() + 3_600_000,
@@ -34,8 +39,7 @@ describe("getValidToken", () => {
   });
 
   it("throws when not authenticated", async () => {
-    const { getAuthState } = await import("@/lib/store/store");
-    vi.mocked(getAuthState).mockResolvedValueOnce({
+    mockGetAuthState.mockResolvedValueOnce({
       isAuthenticated: false,
     });
 
@@ -45,9 +49,8 @@ describe("getValidToken", () => {
 
 describe("logout", () => {
   it("clears auth state from store", async () => {
-    const { clearAuth } = await import("@/lib/store/store");
     await logout();
 
-    expect(clearAuth).toHaveBeenCalledOnce();
+    expect(mockClearAuth).toHaveBeenCalledOnce();
   });
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2, Download, CheckCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -22,7 +22,6 @@ import { restoreGame } from "@/services/restore/restore";
 import { useSyncStore } from "@/stores/sync";
 import { computeGameHash } from "@/lib/hash/hash";
 import { dateFnsLocales } from "@/lib/date-locales/date-locales";
-import type { RestoreState } from "./RestoreDialog.types";
 
 export type RestoreDialogProps = {
   game: Game;
@@ -36,77 +35,181 @@ export const RestoreDialog = ({ game, trigger, quick }: RestoreDialogProps) => {
   const { setGameStatus, updateSyncFingerprint } = useSyncStore();
   const locale = dateFnsLocales[i18n.language] ?? enUS;
   const [open, setOpen] = useState(false);
-  const [state, setState] = useState<RestoreState>({ step: "loading" });
+  const [selected, setSelected] = useState<DriveBackup>();
 
-  useEffect(() => {
-    if (!open) return;
+  const backupsQuery = useQuery({
+    queryKey: ["gameBackups", game.name],
+    queryFn: () => listGameBackups(game.name),
+    enabled: open && !quick,
+    gcTime: 0,
+  });
 
-    if (quick) {
-      setState({ step: "confirm" });
-      return;
-    }
-
-    setState({ step: "loading" });
-    listGameBackups(game.name)
-      .then((backups) => setState({ step: "select", backups }))
-      .catch((error) =>
-        setState({
-          step: "error",
-          message: error instanceof Error ? error.message : String(error),
-        }),
-      );
-  }, [open, game.name, quick]);
-
-  const handleSelect = (backup: DriveBackup) => {
-    if (state.step !== "select") return;
-    setState({ ...state, selected: backup });
-  };
-
-  const handleRestore = async (backupId?: string) => {
-    setState({ step: "restoring" });
-    setGameStatus(game.name, SYNC_STATUS.restoring);
-
-    let resolvedId = backupId;
-    if (!resolvedId) {
-      try {
+  const restoreMutation = useMutation({
+    mutationFn: async (backupId?: string) => {
+      let resolvedId = backupId;
+      if (!resolvedId) {
         const backups = await listGameBackups(game.name);
         resolvedId = backups[0]?.id;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        setState({ step: "error", message });
-        setGameStatus(game.name, SYNC_STATUS.error);
-        return;
+        if (!resolvedId) throw new Error(t("restore.noBackups"));
       }
-      if (!resolvedId) {
-        setState({ step: "error", message: t("restore.noBackups") });
-        setGameStatus(game.name, SYNC_STATUS.error);
-        return;
+      setGameStatus(game.name, SYNC_STATUS.restoring);
+      const result = await restoreGame(game, resolvedId);
+      if (result.status !== RECORD_STATUS.success) {
+        throw new Error(result.error ?? t("restore.error"));
       }
-    }
-
-    const result = await restoreGame(game, resolvedId);
-
-    if (result.status === RECORD_STATUS.success) {
-      setState({ step: "success", fileCount: result.revisionCount });
+      return result;
+    },
+    onSuccess: async (result) => {
       setGameStatus(game.name, SYNC_STATUS.success);
       const newHash = computeGameHash(game.saveFiles);
       await updateSyncFingerprint(game.name, newHash);
-    } else {
-      setState({ step: "error", message: result.error ?? t("restore.error") });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.games });
+    },
+    onError: () => {
       setGameStatus(game.name, SYNC_STATUS.error);
-    }
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.games });
+    },
+  });
 
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.games });
-  };
+  useEffect(() => {
+    if (open) return;
+    setSelected(undefined);
+    restoreMutation.reset();
+  }, [open]);
 
-  const canRestore = state.step === "confirm" || (state.step === "select" && state.selected);
+  const canRestore = restoreMutation.isIdle && (quick || selected !== undefined);
 
   const title = quick
     ? t("restore.confirmTitle")
     : t("restore.title", { name: game.name });
 
   const description = quick ? undefined : t("restore.selectBackup");
+
+  const renderContent = () => {
+    if (restoreMutation.isPending) {
+      return (
+        <div className="flex items-center justify-center gap-2 py-4">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">{t("restore.restoring")}</span>
+        </div>
+      );
+    }
+
+    if (restoreMutation.isSuccess) {
+      return (
+        <div className="flex items-center justify-center gap-2 py-4 text-green-600 dark:text-green-400">
+          <CheckCircle className="w-4 h-4" />
+          <span className="text-sm">
+            {t("restore.success", { count: restoreMutation.data.revisionCount })}
+          </span>
+        </div>
+      );
+    }
+
+    if (restoreMutation.isError) {
+      return (
+        <div className="flex items-center justify-center gap-2 py-4 text-destructive">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-sm">
+            {restoreMutation.error instanceof Error
+              ? restoreMutation.error.message
+              : String(restoreMutation.error)}
+          </span>
+        </div>
+      );
+    }
+
+    if (quick) {
+      return (
+        <p className="text-sm text-amber-600 dark:text-amber-400">
+          {t("restore.warning")}
+        </p>
+      );
+    }
+
+    if (backupsQuery.isLoading) {
+      return (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-10 w-full" />
+          ))}
+        </div>
+      );
+    }
+
+    if (backupsQuery.isError) {
+      return (
+        <div className="flex items-center justify-center gap-2 py-4 text-destructive">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-sm">
+            {backupsQuery.error instanceof Error
+              ? backupsQuery.error.message
+              : String(backupsQuery.error)}
+          </span>
+        </div>
+      );
+    }
+
+    const backups = backupsQuery.data ?? [];
+    if (backups.length === 0) {
+      return (
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          {t("restore.noBackups")}
+        </p>
+      );
+    }
+
+    return (
+      <>
+        <ul className="space-y-1">
+          {backups.map((backup) => {
+            const isSelected = selected?.id === backup.id;
+            return (
+              <li key={backup.id}>
+                <button
+                  type="button"
+                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                    isSelected
+                      ? "bg-primary/10 border border-primary/30"
+                      : "hover:bg-muted border border-transparent"
+                  }`}
+                  onClick={() => setSelected(backup)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">
+                      {formatDistanceToNow(new Date(backup.createdTime), {
+                        addSuffix: true,
+                        locale,
+                      })}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(backup.createdTime).toLocaleDateString(
+                        i18n.language,
+                        {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        {selected && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+            {t("restore.warning")}
+          </p>
+        )}
+      </>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -119,97 +222,7 @@ export const RestoreDialog = ({ game, trigger, quick }: RestoreDialogProps) => {
         )}
 
         <div className="space-y-2 min-h-[60px]">
-          {state.step === "loading" && (
-            <div className="space-y-2">
-              {Array.from({ length: quick ? 1 : 3 }).map((_, index) => (
-                <Skeleton key={index} className="h-10 w-full" />
-              ))}
-            </div>
-          )}
-
-          {state.step === "confirm" && (
-            <p className="text-sm text-amber-600 dark:text-amber-400">
-              {t("restore.warning")}
-            </p>
-          )}
-
-          {state.step === "select" && state.backups.length === 0 && (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              {t("restore.noBackups")}
-            </p>
-          )}
-
-          {state.step === "select" && state.backups.length > 0 && (
-            <>
-              <ul className="space-y-1">
-                {state.backups.map((backup) => {
-                  const isSelected = state.selected?.id === backup.id;
-                  return (
-                    <li key={backup.id}>
-                      <button
-                        type="button"
-                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                          isSelected
-                            ? "bg-primary/10 border border-primary/30"
-                            : "hover:bg-muted border border-transparent"
-                        }`}
-                        onClick={() => handleSelect(backup)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">
-                            {formatDistanceToNow(new Date(backup.createdTime), {
-                              addSuffix: true,
-                              locale,
-                            })}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(backup.createdTime).toLocaleDateString(
-                              i18n.language,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
-                            )}
-                          </span>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {state.selected && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                  {t("restore.warning")}
-                </p>
-              )}
-            </>
-          )}
-
-          {state.step === "restoring" && (
-            <div className="flex items-center justify-center gap-2 py-4">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">{t("restore.restoring")}</span>
-            </div>
-          )}
-
-          {state.step === "success" && (
-            <div className="flex items-center justify-center gap-2 py-4 text-green-600 dark:text-green-400">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-sm">
-                {t("restore.success", { count: state.fileCount })}
-              </span>
-            </div>
-          )}
-
-          {state.step === "error" && (
-            <div className="flex items-center justify-center gap-2 py-4 text-destructive">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">{state.message}</span>
-            </div>
-          )}
+          {renderContent()}
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
@@ -217,7 +230,7 @@ export const RestoreDialog = ({ game, trigger, quick }: RestoreDialogProps) => {
             {t("restore.close")}
           </DialogClose>
           {canRestore && (
-            <Button onClick={() => handleRestore(state.step === "select" ? state.selected?.id : undefined)}>
+            <Button onClick={() => restoreMutation.mutate(selected?.id)}>
               <Download className="w-3.5 h-3.5 mr-1.5" />
               {t("restore.restore")}
             </Button>

@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
 import { scanForGames, scanManualGame, rescanGame } from "./scanner";
 
+const { mockInvoke, mockGetManualGames } = vi.hoisted(() => ({
+  mockInvoke: vi.fn(),
+  mockGetManualGames: vi.fn(() => Promise.resolve([])),
+}));
+
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
+  invoke: mockInvoke,
 }));
 
 vi.mock("@/lib/store/store", () => ({
-  getManualGames: vi.fn(() => Promise.resolve([])),
+  getManualGames: mockGetManualGames,
 }));
 
 const rustGame = (name: string, steamId: number | null = null) => ({
@@ -31,7 +35,7 @@ describe("scanManualGame", () => {
   });
 
   it("returns a game marked as manual", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce(rustGame("Custom Game"));
+    mockInvoke.mockResolvedValueOnce(rustGame("Custom Game"));
 
     const game = await scanManualGame("Custom Game", ["/saves/custom"]);
 
@@ -47,7 +51,7 @@ describe("rescanGame", () => {
   });
 
   it("preserves the isManual flag from the original game", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce(rustGame("Custom Game"));
+    mockInvoke.mockResolvedValueOnce(rustGame("Custom Game"));
 
     const game = await rescanGame({
       name: "Custom Game",
@@ -66,7 +70,7 @@ describe("scanForGames", () => {
   });
 
   it("returns auto-detected games sorted by name", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce([rustGame("Zelda"), rustGame("Elden Ring")]);
+    mockInvoke.mockResolvedValueOnce([rustGame("Zelda"), rustGame("Elden Ring")]);
 
     const games = await scanForGames();
 
@@ -75,12 +79,11 @@ describe("scanForGames", () => {
   });
 
   it("includes manual games that are not auto-detected", async () => {
-    vi.mocked(invoke)
+    mockInvoke
       .mockResolvedValueOnce([rustGame("Elden Ring")])
       .mockResolvedValueOnce(rustGame("My Custom Game"));
 
-    const { getManualGames } = await import("@/lib/store/store");
-    vi.mocked(getManualGames).mockResolvedValueOnce([
+    mockGetManualGames.mockResolvedValueOnce([
       { name: "My Custom Game", paths: ["/saves/custom"] },
     ]);
 
@@ -91,10 +94,9 @@ describe("scanForGames", () => {
   });
 
   it("skips manual games that overlap with auto-detected", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce([rustGame("Elden Ring")]);
+    mockInvoke.mockResolvedValueOnce([rustGame("Elden Ring")]);
 
-    const { getManualGames } = await import("@/lib/store/store");
-    vi.mocked(getManualGames).mockResolvedValueOnce([
+    mockGetManualGames.mockResolvedValueOnce([
       { name: "Elden Ring", paths: ["/saves/elden"] },
     ]);
 

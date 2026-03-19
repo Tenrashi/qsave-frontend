@@ -3,21 +3,14 @@ import { renderWithProviders, screen, userEvent, waitFor } from "@/test/test-uti
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { sims4Game } from "@/test/mocks/games";
+import { mockBackups } from "@/test/mocks/drive";
 import { Button } from "@/components/ui/button";
 import { RestoreDialog } from "./RestoreDialog";
 
-const mockBackups = [
-  { id: "b1", name: "game_2026-03-14.zip", createdTime: "2026-03-14T12:00:00Z" },
-  { id: "b2", name: "game_2026-03-13.zip", createdTime: "2026-03-13T12:00:00Z" },
-];
-
-vi.mock("@/services/drive/drive", () => ({
-  listGameBackups: vi.fn(() => Promise.resolve(mockBackups)),
-  downloadBackup: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
-}));
-
-vi.mock("@/services/restore/restore", () => ({
-  restoreGame: vi.fn(() =>
+const { mockListGameBackups, mockDownloadBackup, mockRestoreGame } = vi.hoisted(() => ({
+  mockListGameBackups: vi.fn(),
+  mockDownloadBackup: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
+  mockRestoreGame: vi.fn(() =>
     Promise.resolve({
       id: "r1",
       gameName: "The Sims 4",
@@ -31,6 +24,15 @@ vi.mock("@/services/restore/restore", () => ({
   ),
 }));
 
+vi.mock("@/services/drive/drive", () => ({
+  listGameBackups: mockListGameBackups,
+  downloadBackup: mockDownloadBackup,
+}));
+
+vi.mock("@/services/restore/restore", () => ({
+  restoreGame: mockRestoreGame,
+}));
+
 const renderRestoreDialog = (quick = false) =>
   renderWithProviders(
     <RestoreDialog
@@ -42,6 +44,8 @@ const renderRestoreDialog = (quick = false) =>
 
 describe("RestoreDialog", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    mockListGameBackups.mockResolvedValue(mockBackups);
     useAuthStore.setState({
       auth: { isAuthenticated: true, email: "test@gmail.com" },
       loading: false,
@@ -83,8 +87,7 @@ describe("RestoreDialog", () => {
   });
 
   it("shows no backups message when list is empty", async () => {
-    const { listGameBackups } = await import("@/services/drive/drive");
-    vi.mocked(listGameBackups).mockResolvedValueOnce([]);
+    mockListGameBackups.mockResolvedValueOnce([]);
 
     renderRestoreDialog(false);
     await userEvent.click(screen.getByRole("button", { name: "Restore" }));

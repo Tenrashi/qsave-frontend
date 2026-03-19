@@ -90,51 +90,27 @@ pub fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<Vec<u8>
     Ok(cursor.into_inner())
 }
 
-/// Extracts a zip archive, routing files to the correct target directories.
-/// `target_dirs` maps to the save_paths indices stored in the ZIP.
-/// Each entry like `0/subdir/save.dat` is extracted to `target_dirs[0]/subdir/save.dat`.
-///
-/// Extraction is atomic per target dir: files are extracted to a temp directory first,
-/// then the original is replaced only on success. On failure, originals are untouched.
-pub fn extract_zip(zip_bytes: Vec<u8>, target_dirs: Vec<String>) -> Result<ExtractResult, String> {
-    let cursor = Cursor::new(zip_bytes);
-    let mut archive =
-        zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to open zip: {e}"))?;
-
-    // Create temp staging dirs next to each target (same filesystem for rename)
-    let staging_dirs: Vec<PathBuf> = target_dirs
+/// Creates temporary staging directories next to each target (same filesystem for rename).
+fn create_staging_dirs(target_dirs: &[String]) -> Result<Vec<PathBuf>, String> {
+    target_dirs
         .iter()
         .enumerate()
         .map(|(index, dir)| {
             let parent = PathBuf::from(dir)
                 .parent()
-                .map(|p| p.to_path_buf())
+                .map(|parent| parent.to_path_buf())
                 .unwrap_or_else(|| PathBuf::from(dir));
             let staging = parent.join(format!(".qsave_restore_tmp_{index}"));
-            if staging.exists() {
-                fs::remove_dir_all(&staging)
-                    .map_err(|e| format!("Failed to clean staging dir: {e}"))?;
-            }
+            let _ = fs::remove_dir_all(&staging);
             fs::create_dir_all(&staging)
                 .map_err(|e| format!("Failed to create staging dir: {e}"))?;
             Ok(staging)
         })
-        .collect::<Result<Vec<_>, String>>()?;
+        .collect()
+}
 
-    // Extract to staging dirs
-    let result = extract_to_dirs(&mut archive, &staging_dirs);
-
-    // On failure, clean up staging dirs and return error
-    if let Err(err) = result {
-        for staging in &staging_dirs {
-            let _ = fs::remove_dir_all(staging);
-        }
-        return Err(err);
-    }
-
-    let file_count = result.unwrap();
-
-    // Swap: remove originals, rename staging to target
+/// Atomically swaps staging directories into target directories.
+fn swap_staging_to_targets(staging_dirs: &[PathBuf], target_dirs: &[String]) -> Result<(), String> {
     for (index, dir) in target_dirs.iter().enumerate() {
         let target = PathBuf::from(dir);
         if target.exists() {
@@ -148,8 +124,91 @@ pub fn extract_zip(zip_bytes: Vec<u8>, target_dirs: Vec<String>) -> Result<Extra
         fs::rename(&staging_dirs[index], &target)
             .map_err(|e| format!("Failed to move staging to {dir}: {e}"))?;
     }
+    Ok(())
+}
 
+/// Extracts a zip archive, routing files to the correct target directories.
+/// `target_dirs` maps to the save_paths indices stored in the ZIP.
+/// Each entry like `0/subdir/save.dat` is extracted to `target_dirs[0]/subdir/save.dat`.
+///
+/// Extraction is atomic per target dir: files are extracted to a temp directory first,
+/// then the original is replaced only on success. On failure, originals are untouched.
+pub fn extract_zip(zip_bytes: Vec<u8>, target_dirs: Vec<String>) -> Result<ExtractResult, String> {
+    let cursor = Cursor::new(zip_bytes);
+    let mut archive =
+        zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to open zip: {e}"))?;
+
+    let staging_dirs = create_staging_dirs(&target_dirs)?;
+
+    let file_count = match extract_to_dirs(&mut archive, &staging_dirs) {
+        Ok(count) => count,
+        Err(err) => {
+            for staging in &staging_dirs {
+                let _ = fs::remove_dir_all(staging);
+            }
+            return Err(err);
+        }
+    };
+
+    swap_staging_to_targets(&staging_dirs, &target_dirs)?;
     Ok(ExtractResult { file_count })
+}
+
+/// Processes a single zip entry, writing it to the appropriate target directory.
+/// Returns `true` if a file was written, `false` if the entry was skipped or was a directory.
+fn extract_entry(
+    entry: &mut zip::read::ZipFile,
+    canonical_targets: &[PathBuf],
+) -> Result<bool, String> {
+    let name = entry.name().to_string();
+    if name == META_FILENAME {
+        return Ok(false);
+    }
+
+    let (index, relative) = name
+        .split_once('/')
+        .and_then(|(idx, rest)| idx.parse::<usize>().ok().map(|parsed| (parsed, rest)))
+        .ok_or_else(|| format!("Invalid zip entry (no index prefix): {name}"))?;
+
+    if index >= canonical_targets.len() {
+        return Err(format!(
+            "Zip entry index {index} exceeds target dirs count {}",
+            canonical_targets.len()
+        ));
+    }
+
+    if Path::new(relative)
+        .components()
+        .any(|component| component == std::path::Component::ParentDir)
+    {
+        return Err(format!("Zip entry escapes target directory: {name}"));
+    }
+
+    let out_path = canonical_targets[index].join(relative);
+
+    if let Some(parent) = out_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create dir for {name}: {e}"))?;
+    }
+
+    if entry.is_dir() {
+        fs::create_dir_all(&out_path)
+            .map_err(|e| format!("Failed to create dir {name}: {e}"))?;
+        return Ok(false);
+    }
+
+    let mut contents = Vec::new();
+    entry
+        .read_to_end(&mut contents)
+        .map_err(|e| format!("Failed to read {name}: {e}"))?;
+
+    let mut out_file =
+        File::create(&out_path).map_err(|e| format!("Failed to create {name}: {e}"))?;
+    out_file
+        .write_all(&contents)
+        .map_err(|e| format!("Failed to write {name}: {e}"))?;
+
+    Ok(true)
 }
 
 fn extract_to_dirs(
@@ -171,53 +230,9 @@ fn extract_to_dirs(
             .by_index(i)
             .map_err(|e| format!("Failed to read zip entry {i}: {e}"))?;
 
-        let name = entry.name().to_string();
-        if name == META_FILENAME {
-            continue;
+        if extract_entry(&mut entry, &canonical_targets)? {
+            file_count += 1;
         }
-
-        let (index, relative) = name
-            .split_once('/')
-            .and_then(|(idx, rest)| idx.parse::<usize>().ok().map(|i| (i, rest)))
-            .ok_or_else(|| format!("Invalid zip entry (no index prefix): {name}"))?;
-
-        if index >= canonical_targets.len() {
-            return Err(format!(
-                "Zip entry index {index} exceeds target dirs count {}",
-                canonical_targets.len()
-            ));
-        }
-
-        // Zip-slip protection
-        if Path::new(relative).components().any(|c| c == std::path::Component::ParentDir) {
-            return Err(format!("Zip entry escapes target directory: {name}"));
-        }
-
-        let out_path = canonical_targets[index].join(relative);
-
-        if let Some(parent) = out_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("Failed to create dir for {name}: {e}"))?;
-        }
-
-        if entry.is_dir() {
-            fs::create_dir_all(&out_path)
-                .map_err(|e| format!("Failed to create dir {name}: {e}"))?;
-            continue;
-        }
-
-        let mut contents = Vec::new();
-        entry
-            .read_to_end(&mut contents)
-            .map_err(|e| format!("Failed to read {name}: {e}"))?;
-
-        let mut out_file =
-            File::create(&out_path).map_err(|e| format!("Failed to create {name}: {e}"))?;
-        out_file
-            .write_all(&contents)
-            .map_err(|e| format!("Failed to write {name}: {e}"))?;
-
-        file_count += 1;
     }
 
     Ok(file_count)

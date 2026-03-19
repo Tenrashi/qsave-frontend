@@ -1,19 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders, screen, userEvent } from "@/test/test-utils";
-import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import { AddGameDialog } from "./AddGameDialog";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
-
-vi.mock("@/lib/store/store", () => ({
-  addManualGame: vi.fn(),
-}));
-
-vi.mock("@/services/scanner/scanner", () => ({
-  scanManualGame: vi.fn(() =>
+const { mockInvoke, mockAddManualGame, mockScanManualGame } = vi.hoisted(() => ({
+  mockInvoke: vi.fn(),
+  mockAddManualGame: vi.fn(),
+  mockScanManualGame: vi.fn(() =>
     Promise.resolve({
       name: "My Game",
       savePaths: ["/saves/mygame"],
@@ -22,6 +15,19 @@ vi.mock("@/services/scanner/scanner", () => ({
     }),
   ),
 }));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: mockInvoke,
+}));
+
+vi.mock("@/lib/store/store", () => ({
+  addManualGame: mockAddManualGame,
+}));
+
+vi.mock("@/services/scanner/scanner", () => ({
+  scanManualGame: mockScanManualGame,
+}));
+
 
 const renderDialog = () =>
   renderWithProviders(
@@ -74,7 +80,7 @@ describe("AddGameDialog", () => {
   });
 
   it("adds a path via browse and shows it in the list", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce("/saves/mygame");
+    mockInvoke.mockResolvedValueOnce("/saves/mygame");
 
     renderDialog();
     await openDialog();
@@ -86,7 +92,7 @@ describe("AddGameDialog", () => {
   });
 
   it("enables add button when name and path are provided", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce("/saves/mygame");
+    mockInvoke.mockResolvedValueOnce("/saves/mygame");
 
     renderDialog();
     await openDialog();
@@ -98,7 +104,7 @@ describe("AddGameDialog", () => {
   });
 
   it("removes a path when trash button is clicked", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce("/saves/mygame");
+    mockInvoke.mockResolvedValueOnce("/saves/mygame");
 
     renderDialog();
     await openDialog();
@@ -111,7 +117,7 @@ describe("AddGameDialog", () => {
   });
 
   it("does not add duplicate paths", async () => {
-    vi.mocked(invoke)
+    mockInvoke
       .mockResolvedValueOnce("/saves/mygame")
       .mockResolvedValueOnce("/saves/mygame");
 
@@ -125,9 +131,7 @@ describe("AddGameDialog", () => {
   });
 
   it("submits and closes dialog on add", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce("/saves/mygame");
-    const { addManualGame } = await import("@/lib/store/store");
-    const { scanManualGame } = await import("@/services/scanner/scanner");
+    mockInvoke.mockResolvedValueOnce("/saves/mygame");
 
     renderDialog();
     await openDialog();
@@ -136,12 +140,12 @@ describe("AddGameDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
     await userEvent.click(screen.getByRole("button", { name: "games.add" }));
 
-    expect(scanManualGame).toHaveBeenCalledWith("My Game", ["/saves/mygame"]);
-    expect(addManualGame).toHaveBeenCalledWith("My Game", ["/saves/mygame"]);
+    expect(mockScanManualGame).toHaveBeenCalledWith("My Game", ["/saves/mygame"]);
+    expect(mockAddManualGame).toHaveBeenCalledWith("My Game", ["/saves/mygame"]);
   });
 
   it("handles browse cancellation gracefully", async () => {
-    vi.mocked(invoke).mockResolvedValueOnce(null);
+    mockInvoke.mockResolvedValueOnce(null);
 
     renderDialog();
     await openDialog();
