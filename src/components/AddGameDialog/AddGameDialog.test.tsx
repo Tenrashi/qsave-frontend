@@ -1,157 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderWithProviders, screen, userEvent } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+import { renderWithProviders, screen, setupUser } from "@/test/test-utils";
 import { Button } from "@/components/ui/button";
 import { AddGameDialog } from "./AddGameDialog";
 
-const { mockInvoke, mockAddManualGame, mockScanManualGame } = vi.hoisted(() => ({
-  mockInvoke: vi.fn(),
-  mockAddManualGame: vi.fn(),
-  mockScanManualGame: vi.fn(() =>
-    Promise.resolve({
-      name: "My Game",
-      savePaths: ["/saves/mygame"],
-      saveFiles: [],
-      isManual: true,
-    }),
-  ),
+vi.mock("./AddGameContent", () => ({
+  AddGameContent: () => <div data-testid="add-game-content" />,
 }));
-
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: mockInvoke,
-}));
-
-vi.mock("@/lib/store/store", () => ({
-  addManualGame: mockAddManualGame,
-}));
-
-vi.mock("@/services/scanner/scanner", () => ({
-  scanManualGame: mockScanManualGame,
-}));
-
 
 const renderDialog = () =>
-  renderWithProviders(
-    <AddGameDialog trigger={<Button>Add game</Button>} />,
-  );
-
-const openDialog = async () => {
-  await userEvent.click(screen.getByRole("button", { name: "Add game" }));
-};
+  renderWithProviders(<AddGameDialog trigger={<Button>Add game</Button>} />);
 
 describe("AddGameDialog", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  const user = setupUser();
+
+  it("does not show content initially", () => {
+    renderDialog();
+    expect(screen.queryByTestId("add-game-content")).not.toBeInTheDocument();
   });
 
-  it("does not show dialog initially", () => {
+  it("shows content when trigger is clicked", async () => {
     renderDialog();
-    expect(screen.queryByText("games.addGameTitle")).not.toBeInTheDocument();
-  });
-
-  it("opens dialog when trigger is clicked", async () => {
-    renderDialog();
-    await openDialog();
-
-    expect(screen.getByText("games.addGameTitle")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("games.gameNamePlaceholder")).toBeInTheDocument();
-  });
-
-  it("shows empty paths message initially", async () => {
-    renderDialog();
-    await openDialog();
-
-    expect(screen.getByText("games.noPathsAdded")).toBeInTheDocument();
-  });
-
-  it("disables add button when name is empty", async () => {
-    renderDialog();
-    await openDialog();
-
-    expect(screen.getByRole("button", { name: "games.add" })).toBeDisabled();
-  });
-
-  it("disables add button when no paths are added", async () => {
-    renderDialog();
-    await openDialog();
-
-    await userEvent.type(screen.getByPlaceholderText("games.gameNamePlaceholder"), "My Game");
-
-    expect(screen.getByRole("button", { name: "games.add" })).toBeDisabled();
-  });
-
-  it("adds a path via browse and shows it in the list", async () => {
-    mockInvoke.mockResolvedValueOnce("/saves/mygame");
-
-    renderDialog();
-    await openDialog();
-
-    await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
-
-    expect(screen.getByText("/saves/mygame")).toBeInTheDocument();
-    expect(screen.queryByText("games.noPathsAdded")).not.toBeInTheDocument();
-  });
-
-  it("enables add button when name and path are provided", async () => {
-    mockInvoke.mockResolvedValueOnce("/saves/mygame");
-
-    renderDialog();
-    await openDialog();
-
-    await userEvent.type(screen.getByPlaceholderText("games.gameNamePlaceholder"), "My Game");
-    await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
-
-    expect(screen.getByRole("button", { name: "games.add" })).toBeEnabled();
-  });
-
-  it("removes a path when trash button is clicked", async () => {
-    mockInvoke.mockResolvedValueOnce("/saves/mygame");
-
-    renderDialog();
-    await openDialog();
-
-    await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
-    expect(screen.getByText("/saves/mygame")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByTitle("games.removePath"));
-    expect(screen.queryByText("/saves/mygame")).not.toBeInTheDocument();
-  });
-
-  it("does not add duplicate paths", async () => {
-    mockInvoke
-      .mockResolvedValueOnce("/saves/mygame")
-      .mockResolvedValueOnce("/saves/mygame");
-
-    renderDialog();
-    await openDialog();
-
-    await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
-    await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
-
-    expect(screen.getAllByText("/saves/mygame")).toHaveLength(1);
-  });
-
-  it("submits and closes dialog on add", async () => {
-    mockInvoke.mockResolvedValueOnce("/saves/mygame");
-
-    renderDialog();
-    await openDialog();
-
-    await userEvent.type(screen.getByPlaceholderText("games.gameNamePlaceholder"), "My Game");
-    await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
-    await userEvent.click(screen.getByRole("button", { name: "games.add" }));
-
-    expect(mockScanManualGame).toHaveBeenCalledWith("My Game", ["/saves/mygame"]);
-    expect(mockAddManualGame).toHaveBeenCalledWith("My Game", ["/saves/mygame"]);
-  });
-
-  it("handles browse cancellation gracefully", async () => {
-    mockInvoke.mockResolvedValueOnce(null);
-
-    renderDialog();
-    await openDialog();
-
-    await userEvent.click(screen.getByRole("button", { name: "games.browsePath" }));
-
-    expect(screen.getByText("games.noPathsAdded")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add game" }));
+    expect(screen.getByTestId("add-game-content")).toBeInTheDocument();
   });
 });

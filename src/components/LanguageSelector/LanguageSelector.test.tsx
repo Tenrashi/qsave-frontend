@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderWithProviders, screen, userEvent } from "@/test/test-utils";
+import { renderWithProviders, screen, setupUser } from "@/test/test-utils";
 import { LanguageSelector } from "./LanguageSelector";
 
 describe("LanguageSelector", () => {
@@ -9,7 +9,7 @@ describe("LanguageSelector", () => {
   });
 
   it("shows language options on click", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderWithProviders(<LanguageSelector />);
 
     await user.click(screen.getByRole("button"));

@@ -1,0 +1,3 @@
+pnpm tsc --noEmit
+pnpm exec lint-staged
+pnpm test:coverage

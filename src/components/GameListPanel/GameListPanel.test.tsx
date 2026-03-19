@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen } from "@/test/test-utils";
+import { renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import { twoGames } from "@/test/mocks/games";
 import { GameListPanel } from "./GameListPanel";
 
@@ -22,14 +22,18 @@ describe("GameListPanel", () => {
     expect(screen.getByText("games.scanning")).toBeInTheDocument();
   });
 
-  it("renders games list when not loading", () => {
+  it("renders games list when not loading", async () => {
     renderWithProviders(<GameListPanel games={twoGames} isLoading={false} />);
-    expect(screen.getByText("The Sims 4")).toBeInTheDocument();
-    expect(screen.getByText("Cyberpunk 2077")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("The Sims 4")).toBeInTheDocument();
+      expect(screen.getByText("Cyberpunk 2077")).toBeInTheDocument();
+    });
   });
 
-  it("shows empty state when no games and not loading", () => {
+  it("shows empty state when no games and not loading", async () => {
     renderWithProviders(<GameListPanel games={[]} isLoading={false} />);
-    expect(screen.getByText("games.noGamesDetected")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("games.noGamesDetected")).toBeInTheDocument();
+    });
   });
 });

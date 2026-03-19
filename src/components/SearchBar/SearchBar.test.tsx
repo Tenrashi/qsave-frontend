@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen, userEvent } from "@/test/test-utils";
+import { renderWithProviders, screen, setupUser } from "@/test/test-utils";
 import { SearchBar, type SearchBarProps } from "./SearchBar";
 
 const defaultProps: SearchBarProps = {
@@ -14,7 +14,9 @@ const renderSearchBar = (overrides: Partial<SearchBarProps> = {}) => {
 describe("SearchBar", () => {
   it("renders with placeholder", () => {
     renderSearchBar();
-    expect(screen.getByPlaceholderText("search.placeholder")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("search.placeholder"),
+    ).toBeInTheDocument();
   });
 
   it("displays the current value", () => {
@@ -24,7 +26,7 @@ describe("SearchBar", () => {
 
   it("calls onChange when typing", async () => {
     const onChange = vi.fn();
-    const user = userEvent.setup();
+    const user = setupUser();
     renderSearchBar({ onChange });
 
     await user.type(screen.getByPlaceholderText("search.placeholder"), "a");

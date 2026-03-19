@@ -1,14 +1,50 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderWithProviders, screen } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import {
+  renderWithProviders,
+  screen,
+  setupUser,
+  waitFor,
+} from "@/test/test-utils";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
-import { sims4Game, eldenRingGame, manualGame, emptyManualGame } from "@/test/mocks/games";
+import { SYNC_STATUS, RECORD_STATUS } from "@/domain/types";
+import type { SyncRecord } from "@/domain/types";
+import {
+  sims4Game,
+  eldenRingGame,
+  manualGame,
+  emptyManualGame,
+} from "@/test/mocks/games";
 import { computeGameHash } from "@/lib/hash/hash";
 import { GameCard, type GameCardProps } from "./GameCard";
 
+const { mockSyncGame, mockRemoveManualGame } = vi.hoisted(() => ({
+  mockSyncGame: vi.fn(() =>
+    Promise.resolve({
+      id: "sync-1",
+      gameName: "The Sims 4",
+      fileName: "The Sims 4.zip",
+      syncedAt: new Date(),
+      driveFileId: "file-123",
+      revisionCount: 1,
+      status: RECORD_STATUS.success,
+    } as SyncRecord),
+  ),
+  mockRemoveManualGame: vi.fn(),
+}));
+
 vi.mock("./utils/formatSize", () => ({
   formatSize: (bytes: number) => `${bytes} bytes`,
+}));
+
+vi.mock("@/services/sync/sync", () => ({
+  syncGame: mockSyncGame,
+}));
+
+vi.mock("@/lib/store/store", () => ({
+  removeManualGame: mockRemoveManualGame,
+  setWatchedGames: vi.fn(),
+  setSyncFingerprint: vi.fn(),
 }));
 
 const defaultProps: GameCardProps = {
@@ -26,7 +62,10 @@ const authenticateUser = () => {
 };
 
 describe("GameCard", () => {
+  const user = setupUser();
+
   beforeEach(() => {
+    vi.clearAllMocks();
     useAuthStore.setState({ auth: { isAuthenticated: false }, loading: false });
     useSyncStore.setState({
       gameStatuses: {},
@@ -62,20 +101,30 @@ describe("GameCard", () => {
   it("shows watch toggle when authenticated", () => {
     authenticateUser();
     renderGameCard();
-    expect(screen.getByRole("button", { name: /games\.watchTooltip|games\.unwatchTooltip/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /games\.watchTooltip|games\.unwatchTooltip/,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("does not show watch toggle when not authenticated", () => {
     renderGameCard();
-    expect(screen.queryByRole("button", { name: /games\.watchTooltip|games\.unwatchTooltip/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: /games\.watchTooltip|games\.unwatchTooltip/,
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("toggles watch state when clicking the eye icon", async () => {
     authenticateUser();
     renderGameCard();
 
-    const toggle = screen.getByRole("button", { name: /games\.watchTooltip|games\.unwatchTooltip/ });
-    await userEvent.click(toggle);
+    const toggle = screen.getByRole("button", {
+      name: /games\.watchTooltip|games\.unwatchTooltip/,
+    });
+    await user.click(toggle);
 
     expect(useSyncStore.getState().watchedGames["The Sims 4"]).toBe(true);
   });
@@ -97,12 +146,17 @@ describe("GameCard", () => {
     authenticateUser();
     useSyncStore.setState({
       syncFingerprints: {
-        "The Sims 4": { hash: "stale-hash", syncedAt: new Date().toISOString() },
+        "The Sims 4": {
+          hash: "stale-hash",
+          syncedAt: new Date().toISOString(),
+        },
       },
     });
 
     renderGameCard();
-    expect(screen.queryByRole("img", { name: "synced" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: "synced" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows custom badge for manual games", () => {
@@ -117,19 +171,25 @@ describe("GameCard", () => {
 
   it("shows remove button for manual games", () => {
     renderGameCard({ game: manualGame });
-    expect(screen.getByRole("button", { name: "games.removeGame" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "games.removeGame" }),
+    ).toBeInTheDocument();
   });
 
   it("does not show remove button for auto-detected games", () => {
     renderGameCard();
-    expect(screen.queryByRole("button", { name: "games.removeGame" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "games.removeGame" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens confirmation dialog when remove button is clicked", async () => {
     renderGameCard({ game: manualGame });
-    await userEvent.click(screen.getByRole("button", { name: "games.removeGame" }));
+    await user.click(screen.getByRole("button", { name: "games.removeGame" }));
     expect(screen.getByText("games.removeConfirmTitle")).toBeInTheDocument();
-    expect(screen.getByText("games.removeConfirmDescription")).toBeInTheDocument();
+    expect(
+      screen.getByText("games.removeConfirmDescription"),
+    ).toBeInTheDocument();
   });
 
   it("shows restore buttons when game has backup", () => {
@@ -142,18 +202,99 @@ describe("GameCard", () => {
       backedUpGamesLoaded: true,
     });
     renderGameCard();
-    expect(screen.getByRole("button", { name: "restore.tooltip" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "restore.tooltipPick" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "restore.tooltip" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "restore.tooltipPick" }),
+    ).toBeInTheDocument();
   });
 
   it("does not show restore buttons when game has no backup", () => {
     authenticateUser();
     renderGameCard();
-    expect(screen.queryByRole("button", { name: "restore.tooltip" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "restore.tooltip" }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides last modified date when game has no save files", () => {
     renderGameCard({ game: emptyManualGame });
     expect(screen.queryByText(/ago/)).not.toBeInTheDocument();
+  });
+
+  it("syncs game and updates status on success", async () => {
+    authenticateUser();
+    renderGameCard();
+
+    await user.click(screen.getByText("games.sync"));
+
+    await waitFor(() => {
+      expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.success,
+      );
+    });
+  });
+
+  it("sets error status when sync returns error record", async () => {
+    authenticateUser();
+    mockSyncGame.mockResolvedValueOnce({
+      status: RECORD_STATUS.error,
+      error: "upload failed",
+    } as SyncRecord);
+
+    renderGameCard();
+    await user.click(screen.getByText("games.sync"));
+
+    await waitFor(() => {
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.error,
+      );
+    });
+  });
+
+  it("sets error status when sync throws", async () => {
+    authenticateUser();
+    mockSyncGame.mockRejectedValueOnce(new Error("network error"));
+
+    renderGameCard();
+    await user.click(screen.getByText("games.sync"));
+
+    await waitFor(() => {
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.error,
+      );
+    });
+  });
+
+  it("shows syncing spinner during sync", async () => {
+    authenticateUser();
+    useSyncStore.setState({
+      gameStatuses: { "The Sims 4": SYNC_STATUS.syncing },
+    });
+
+    renderGameCard();
+    expect(screen.getByRole("img", { name: "syncing" })).toBeInTheDocument();
+  });
+
+  it("shows restoring spinner when restoring", () => {
+    authenticateUser();
+    useSyncStore.setState({
+      gameStatuses: { "The Sims 4": SYNC_STATUS.restoring },
+    });
+
+    renderGameCard();
+    expect(screen.getByRole("img", { name: "restoring" })).toBeInTheDocument();
+  });
+
+  it("shows error icon on sync error status", () => {
+    authenticateUser();
+    useSyncStore.setState({
+      gameStatuses: { "The Sims 4": SYNC_STATUS.error },
+    });
+
+    renderGameCard();
+    expect(screen.getByRole("img", { name: "sync error" })).toBeInTheDocument();
   });
 });

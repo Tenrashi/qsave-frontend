@@ -1,46 +1,28 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen, userEvent } from "@/test/test-utils";
+import { renderWithProviders, screen, setupUser } from "@/test/test-utils";
 import { RemoveGameDialog } from "./RemoveGameDialog";
 import { Button } from "@/components/ui/button";
 
-const renderDialog = (onConfirm = vi.fn()) =>
+vi.mock("./RemoveGameContent", () => ({
+  RemoveGameContent: () => <div data-testid="remove-game-content" />,
+}));
+
+const renderDialog = () =>
   renderWithProviders(
-    <RemoveGameDialog
-      onConfirm={onConfirm}
-      trigger={<Button>Delete</Button>}
-    />,
+    <RemoveGameDialog onConfirm={vi.fn()} trigger={<Button>Delete</Button>} />,
   );
 
 describe("RemoveGameDialog", () => {
-  it("does not show dialog initially", () => {
+  const user = setupUser();
+
+  it("does not show content initially", () => {
     renderDialog();
-    expect(screen.queryByText("games.removeConfirmTitle")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("remove-game-content")).not.toBeInTheDocument();
   });
 
-  it("opens dialog when trigger is clicked", async () => {
+  it("shows content when trigger is clicked", async () => {
     renderDialog();
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-    expect(screen.getByText("games.removeConfirmTitle")).toBeInTheDocument();
-    expect(screen.getByText("games.removeConfirmDescription")).toBeInTheDocument();
-  });
-
-  it("calls onConfirm and closes when remove button is clicked", async () => {
-    const onConfirm = vi.fn();
-    renderDialog(onConfirm);
-
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-    await userEvent.click(screen.getByRole("button", { name: "games.remove" }));
-
-    expect(onConfirm).toHaveBeenCalledOnce();
-  });
-
-  it("does not call onConfirm when cancel is clicked", async () => {
-    const onConfirm = vi.fn();
-    renderDialog(onConfirm);
-
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-    await userEvent.click(screen.getByRole("button", { name: "games.cancel" }));
-
-    expect(onConfirm).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(screen.getByTestId("remove-game-content")).toBeInTheDocument();
   });
 });

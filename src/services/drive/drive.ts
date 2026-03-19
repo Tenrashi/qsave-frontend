@@ -3,7 +3,14 @@ import { fetch } from "@tauri-apps/plugin-http";
 import { getValidToken } from "@/services/auth/auth";
 import { getDriveFolderId, setDriveFolderId } from "@/lib/store/store";
 import type { DriveBackup } from "@/domain/types";
-import { APP_NAME, STORE_KEYS, TAURI_COMMANDS, DRIVE_ENDPOINTS, MIME_TYPES, MAX_SAVES_PER_GAME } from "@/lib/constants/constants";
+import {
+  APP_NAME,
+  STORE_KEYS,
+  TAURI_COMMANDS,
+  DRIVE_ENDPOINTS,
+  MIME_TYPES,
+  MAX_SAVES_PER_GAME,
+} from "@/lib/constants/constants";
 
 const authHeaders = async (): Promise<Record<string, string>> => {
   const token = await getValidToken();
@@ -17,7 +24,10 @@ const assertOk = async (res: Response, context: string) => {
   }
 };
 
-const createFolder = async (name: string, parentId: string): Promise<string> => {
+const createFolder = async (
+  name: string,
+  parentId: string,
+): Promise<string> => {
   const headers = await authHeaders();
   const res = await fetch(`${DRIVE_ENDPOINTS.api}/files`, {
     method: "POST",
@@ -33,13 +43,16 @@ const createFolder = async (name: string, parentId: string): Promise<string> => 
   });
 
   await assertOk(res, "Failed to create folder");
-  const data = await res.json() as { id: string };
+  const data = (await res.json()) as { id: string };
   const key = parentId === "root" ? STORE_KEYS.rootFolder : name;
   await setDriveFolderId(key, data.id);
   return data.id;
 };
 
-const findFolder = async (name: string, parentId: string): Promise<string | null> => {
+const findFolder = async (
+  name: string,
+  parentId: string,
+): Promise<string | null> => {
   const headers = await authHeaders();
   const query = `name='${name}' and '${parentId}' in parents and mimeType='${MIME_TYPES.googleFolder}' and trashed=false`;
   const res = await fetch(
@@ -48,7 +61,7 @@ const findFolder = async (name: string, parentId: string): Promise<string | null
   );
 
   if (!res.ok) return null;
-  const data = await res.json() as { files: { id: string }[] };
+  const data = (await res.json()) as { files: { id: string }[] };
   return data.files.length > 0 ? data.files[0].id : null;
 };
 
@@ -68,7 +81,10 @@ export const ensureQSaveFolder = async (): Promise<string> => {
 
     return await createFolder(APP_NAME, "root");
   } catch (error) {
-    throw new Error(`Failed to ensure ${APP_NAME} folder: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to ensure ${APP_NAME} folder: ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
   }
 };
 
@@ -90,7 +106,10 @@ export const ensureGameFolder = async (gameName: string): Promise<string> => {
 
     return await createFolder(gameName, rootId);
   } catch (error) {
-    throw new Error(`Failed to ensure game folder "${gameName}": ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to ensure game folder "${gameName}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
   }
 };
 
@@ -105,7 +124,9 @@ const listFilesInFolder = async (
   );
 
   await assertOk(res, "Failed to list files");
-  const data = await res.json() as { files: { id: string; name: string; createdTime: string }[] };
+  const data = (await res.json()) as {
+    files: { id: string; name: string; createdTime: string }[];
+  };
   return data.files;
 };
 
@@ -157,36 +178,49 @@ export const listBackedUpGameNames = async (): Promise<string[]> => {
       { headers },
     );
     if (!res.ok) return [];
-    const data = await res.json() as { files: { name: string }[] };
+    const data = (await res.json()) as { files: { name: string }[] };
     return data.files.map((file) => file.name);
   } catch {
     return [];
   }
 };
 
-export const listGameBackups = async (gameName: string): Promise<DriveBackup[]> => {
+export const listGameBackups = async (
+  gameName: string,
+): Promise<DriveBackup[]> => {
   try {
     const folderId = await ensureGameFolder(gameName);
     const files = await listFilesInFolder(folderId);
-    return files.map((file) => ({
-      id: file.id,
-      name: file.name,
-      createdTime: file.createdTime,
-    })).reverse();
+    return files
+      .map((file) => ({
+        id: file.id,
+        name: file.name,
+        createdTime: file.createdTime,
+      }))
+      .reverse();
   } catch (error) {
-    throw new Error(`Failed to list backups for "${gameName}": ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to list backups for "${gameName}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
   }
 };
 
 export const downloadBackup = async (fileId: string): Promise<Uint8Array> => {
   try {
     const headers = await authHeaders();
-    const res = await fetch(`${DRIVE_ENDPOINTS.api}/files/${fileId}?alt=media`, { headers });
+    const res = await fetch(
+      `${DRIVE_ENDPOINTS.api}/files/${fileId}?alt=media`,
+      { headers },
+    );
     await assertOk(res, "Failed to download backup");
     const buffer = await res.arrayBuffer();
     return new Uint8Array(buffer);
   } catch (error) {
-    throw new Error(`Failed to download backup "${fileId}": ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to download backup "${fileId}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
   }
 };
 
@@ -196,7 +230,10 @@ export const uploadGameArchive = async (
   filePaths: string[],
 ): Promise<{ fileId: string }> => {
   try {
-    const zipBytes: number[] = await invoke(TAURI_COMMANDS.createZip, { savePaths, files: filePaths });
+    const zipBytes: number[] = await invoke(TAURI_COMMANDS.createZip, {
+      savePaths,
+      files: filePaths,
+    });
     const zipData = new Uint8Array(zipBytes);
 
     const folderId = await ensureGameFolder(gameName);
@@ -205,7 +242,10 @@ export const uploadGameArchive = async (
     // Delete oldest saves if at the limit
     try {
       const existing = await listFilesInFolder(folderId);
-      const toDelete = existing.slice(0, Math.max(0, existing.length - MAX_SAVES_PER_GAME + 1));
+      const toDelete = existing.slice(
+        0,
+        Math.max(0, existing.length - MAX_SAVES_PER_GAME + 1),
+      );
       for (const file of toDelete) {
         await deleteFile(file.id);
       }
@@ -225,19 +265,25 @@ export const uploadGameArchive = async (
     const boundary = "qsave_boundary_" + Date.now();
     const body = buildMultipartBody(boundary, metadata, zipData);
 
-    const res = await fetch(`${DRIVE_ENDPOINTS.upload}/files?uploadType=multipart`, {
-      method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
+    const res = await fetch(
+      `${DRIVE_ENDPOINTS.upload}/files?uploadType=multipart`,
+      {
+        method: "POST",
+        headers: {
+          ...headers,
+          "Content-Type": `multipart/related; boundary=${boundary}`,
+        },
+        body: body as unknown as BodyInit,
       },
-      body: body as unknown as BodyInit,
-    });
+    );
 
     await assertOk(res, "Failed to upload archive");
-    const data = await res.json() as { id: string };
+    const data = (await res.json()) as { id: string };
     return { fileId: data.id };
   } catch (error) {
-    throw new Error(`Failed to upload archive for "${gameName}": ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Failed to upload archive for "${gameName}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
   }
 };

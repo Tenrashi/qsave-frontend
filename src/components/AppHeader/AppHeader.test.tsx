@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen, userEvent } from "@/test/test-utils";
+import { renderWithProviders, screen, setupUser } from "@/test/test-utils";
 import { AppHeader, type AppHeaderProps } from "./AppHeader";
 import { APP_NAME } from "@/lib/constants/constants";
 
@@ -19,7 +19,7 @@ describe("AppHeader", () => {
 
   it("calls onRefresh when refresh button clicked", async () => {
     const onRefresh = vi.fn();
-    const user = userEvent.setup();
+    const user = setupUser();
     renderHeader({ onRefresh });
 
     await user.click(screen.getByText("app.refresh"));

@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { scanForGames, scanManualGame, rescanGame } from "./scanner";
 
+import type { ManualGameEntry } from "@/lib/store/store";
+
 const { mockInvoke, mockGetManualGames } = vi.hoisted(() => ({
   mockInvoke: vi.fn(),
-  mockGetManualGames: vi.fn(() => Promise.resolve([])),
+  mockGetManualGames: vi.fn(
+    (): Promise<ManualGameEntry[]> => Promise.resolve([]),
+  ),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -70,7 +74,10 @@ describe("scanForGames", () => {
   });
 
   it("returns auto-detected games sorted by name", async () => {
-    mockInvoke.mockResolvedValueOnce([rustGame("Zelda"), rustGame("Elden Ring")]);
+    mockInvoke.mockResolvedValueOnce([
+      rustGame("Zelda"),
+      rustGame("Elden Ring"),
+    ]);
 
     const games = await scanForGames();
 
@@ -89,7 +96,10 @@ describe("scanForGames", () => {
 
     const games = await scanForGames();
 
-    expect(games.map((game) => game.name)).toEqual(["Elden Ring", "My Custom Game"]);
+    expect(games.map((game) => game.name)).toEqual([
+      "Elden Ring",
+      "My Custom Game",
+    ]);
     expect(games[1].isManual).toBe(true);
   });
 

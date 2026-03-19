@@ -11,6 +11,9 @@ src-tauri/gen/
 .env.local
 .env.*.local
 
+# Coverage
+coverage/
+
 # IDE
 .vscode/
 *.swp

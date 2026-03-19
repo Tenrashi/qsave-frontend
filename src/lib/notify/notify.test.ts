@@ -21,8 +21,11 @@ describe("notify", () => {
   });
 
   it("does not throw when invoke fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(invoke).mockRejectedValueOnce(new Error("Not supported"));
 
     await expect(notify("QSave", "test")).resolves.toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith("[notify] Failed:", expect.any(Error));
+    warnSpy.mockRestore();
   });
 });

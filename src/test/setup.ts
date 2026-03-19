@@ -40,3 +40,20 @@ vi.mock("@tauri-apps/plugin-shell", () => ({
 vi.mock("@tauri-apps/plugin-http", () => ({
   fetch: vi.fn(),
 }));
+
+// Prevent the real i18n init (with LanguageDetector) from running
+vi.mock("@/i18n", () => ({
+  default: {},
+  languages: {
+    en: "English",
+    fr: "Français",
+    es: "Español",
+    de: "Deutsch",
+    it: "Italiano",
+    pt: "Português",
+    ru: "Русский",
+    ja: "日本語",
+    zh: "中文",
+    ko: "한국어",
+  },
+}));

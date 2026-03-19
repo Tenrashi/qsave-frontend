@@ -3,16 +3,21 @@ import { RECORD_STATUS } from "@/domain/types";
 import { sims4Game } from "@/test/mocks/games";
 import { restoreGame } from "./restore";
 
-const { mockInvoke, mockDownloadBackup, mockAddSyncRecord, mockNotify } = vi.hoisted(() => ({
-  mockInvoke: vi.fn((command: string) => {
-    if (command === "read_zip_meta") return Promise.resolve({ platform: "macos", save_paths: ["/saves/sims4"] });
-    if (command === "extract_zip") return Promise.resolve({ file_count: 3 });
-    return Promise.resolve();
-  }),
-  mockDownloadBackup: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
-  mockAddSyncRecord: vi.fn(),
-  mockNotify: vi.fn(),
-}));
+const { mockInvoke, mockDownloadBackup, mockAddSyncRecord, mockNotify } =
+  vi.hoisted(() => ({
+    mockInvoke: vi.fn((command: string): Promise<unknown> => {
+      if (command === "read_zip_meta")
+        return Promise.resolve({
+          platform: "macos",
+          save_paths: ["/saves/sims4"],
+        });
+      if (command === "extract_zip") return Promise.resolve({ file_count: 3 });
+      return Promise.resolve();
+    }),
+    mockDownloadBackup: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
+    mockAddSyncRecord: vi.fn(),
+    mockNotify: vi.fn(),
+  }));
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: mockInvoke,
@@ -68,5 +73,38 @@ describe("restoreGame", () => {
     expect(record.status).toBe(RECORD_STATUS.error);
     expect(record.error).toBe("Download failed");
     expect(record.type).toBe("restore");
+  });
+
+  it("handles non-Error rejection in error record", async () => {
+    mockDownloadBackup.mockRejectedValueOnce("string error");
+
+    const record = await restoreGame(sims4Game, "backup-123");
+
+    expect(record.status).toBe(RECORD_STATUS.error);
+    expect(record.error).toBe("string error");
+  });
+
+  it("uses only first save path when meta has no save_paths", async () => {
+    mockInvoke
+      .mockResolvedValueOnce(null) // read_zip_meta
+      .mockResolvedValueOnce({ file_count: 1 }); // extract_zip
+
+    const record = await restoreGame(sims4Game, "backup-123");
+
+    expect(record.status).toBe(RECORD_STATUS.success);
+    expect(mockInvoke).toHaveBeenCalledWith("extract_zip", {
+      zipBytes: expect.any(Array),
+      targetDirs: ["/saves/sims4"],
+    });
+  });
+
+  it("throws when game has no save paths", async () => {
+    const noPathGame = { ...sims4Game, savePaths: [] as string[] };
+    mockInvoke.mockResolvedValueOnce(null); // read_zip_meta
+
+    const record = await restoreGame(noPathGame, "backup-123");
+
+    expect(record.status).toBe(RECORD_STATUS.error);
+    expect(record.error).toBe("No save paths available for restore");
   });
 });

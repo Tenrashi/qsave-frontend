@@ -3,11 +3,15 @@ import { RECORD_STATUS } from "@/domain/types";
 import { sims4Game } from "@/test/mocks/games";
 import { syncGame, syncAllGames } from "./sync";
 
-const { mockUploadGameArchive, mockAddSyncRecord, mockNotify } = vi.hoisted(() => ({
-  mockUploadGameArchive: vi.fn(() => Promise.resolve({ fileId: "drive-file-123" })),
-  mockAddSyncRecord: vi.fn(),
-  mockNotify: vi.fn(),
-}));
+const { mockUploadGameArchive, mockAddSyncRecord, mockNotify } = vi.hoisted(
+  () => ({
+    mockUploadGameArchive: vi.fn(() =>
+      Promise.resolve({ fileId: "drive-file-123" }),
+    ),
+    mockAddSyncRecord: vi.fn(),
+    mockNotify: vi.fn(),
+  }),
+);
 
 vi.mock("@/services/drive/drive", () => ({
   uploadGameArchive: mockUploadGameArchive,
@@ -57,6 +61,15 @@ describe("syncGame", () => {
 
     expect(record.status).toBe(RECORD_STATUS.error);
     expect(record.error).toBe("Network error");
+  });
+
+  it("handles non-Error rejection in error record", async () => {
+    mockUploadGameArchive.mockRejectedValueOnce("string error");
+
+    const record = await syncGame(sims4Game);
+
+    expect(record.status).toBe(RECORD_STATUS.error);
+    expect(record.error).toBe("string error");
   });
 });
 

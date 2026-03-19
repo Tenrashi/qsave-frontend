@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
+import { renderWithProviders, screen, setupUser } from "@/test/test-utils";
 import { twoGames } from "@/test/mocks/games";
 import { StatusBar, type StatusBarProps } from "./StatusBar";
 
@@ -15,6 +14,8 @@ const renderStatusBar = (overrides: Partial<StatusBarProps> = {}) => {
 };
 
 describe("StatusBar", () => {
+  const user = setupUser();
+
   it("shows game count", () => {
     renderStatusBar({ games: twoGames });
     expect(screen.getByText("status.game")).toBeInTheDocument();
@@ -34,7 +35,7 @@ describe("StatusBar", () => {
     const onToggle = vi.fn();
     renderStatusBar({ watching: true, onToggleWatching: onToggle });
 
-    await userEvent.click(screen.getByText("status.watchingActive"));
+    await user.click(screen.getByText("status.watchingActive"));
     expect(onToggle).toHaveBeenCalledOnce();
   });
 
@@ -42,9 +43,7 @@ describe("StatusBar", () => {
     const { rerender } = renderStatusBar({ watching: true });
     expect(screen.getByText("status.watchingActive")).toBeInTheDocument();
 
-    rerender(
-      <StatusBar {...defaultProps} watching={false} />,
-    );
+    rerender(<StatusBar {...defaultProps} watching={false} />);
     expect(screen.getByText("status.watchingInactive")).toBeInTheDocument();
   });
 });
