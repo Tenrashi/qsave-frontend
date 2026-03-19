@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::resolve::resolve_path;
 use super::types::ManifestEntry;
@@ -31,20 +31,28 @@ const MANIFESTS: &[ManifestSource] = &[
     },
 ];
 
-fn cache_path(filename: &str) -> Option<PathBuf> {
-    dirs::cache_dir().map(|dir| dir.join(APP_ID).join(filename))
+fn cache_file_path(cache_dir: &Path, filename: &str) -> PathBuf {
+    cache_dir.join(APP_ID).join(filename)
+}
+
+fn save_to_path(path: &Path, body: &str) {
+    let Some(parent) = path.parent() else { return };
+    let _ = fs::create_dir_all(parent);
+    let _ = fs::write(path, body);
+}
+
+fn load_from_path(path: &Path) -> Option<String> {
+    fs::read_to_string(path).ok()
 }
 
 fn save_to_cache(filename: &str, body: &str) {
-    let Some(path) = cache_path(filename) else { return };
-    let Some(parent) = path.parent() else { return };
-    let _ = fs::create_dir_all(parent);
-    let _ = fs::write(&path, body);
+    let Some(cache_dir) = dirs::cache_dir() else { return };
+    save_to_path(&cache_file_path(&cache_dir, filename), body);
 }
 
 fn load_from_cache(filename: &str) -> Option<String> {
-    let path = cache_path(filename)?;
-    fs::read_to_string(path).ok()
+    let cache_dir = dirs::cache_dir()?;
+    load_from_path(&cache_file_path(&cache_dir, filename))
 }
 
 fn download(url: &str) -> Option<String> {
@@ -57,17 +65,23 @@ fn download(url: &str) -> Option<String> {
     None
 }
 
+fn resolve_with_fallback(
+    downloaded: Option<String>,
+    cached: Option<String>,
+    bundled: &str,
+) -> String {
+    downloaded
+        .or(cached)
+        .unwrap_or_else(|| bundled.to_string())
+}
+
 fn fetch_source(source: &ManifestSource) -> String {
-    if let Some(body) = download(source.url) {
-        save_to_cache(source.cache_filename, &body);
-        return body;
+    let downloaded = download(source.url);
+    if let Some(body) = &downloaded {
+        save_to_cache(source.cache_filename, body);
     }
-
-    if let Some(cached) = load_from_cache(source.cache_filename) {
-        return cached;
-    }
-
-    source.bundled.to_string()
+    let cached = load_from_cache(source.cache_filename);
+    resolve_with_fallback(downloaded, cached, source.bundled)
 }
 
 fn merge_manifests(
@@ -80,19 +94,22 @@ fn merge_manifests(
             None => continue,
         };
 
-        base.entry(name)
-            .and_modify(|existing| {
-                let existing_files = existing.files.get_or_insert_with(HashMap::new);
-                for (path, value) in &extra_files {
-                    existing_files.entry(path.clone()).or_insert_with(|| value.clone());
-                }
-            })
-            .or_insert_with(|| ManifestEntry {
-                files: Some(extra_files),
-                steam: entry.steam,
-                gog: entry.gog,
-                _rest: entry._rest,
-            });
+        match base.entry(name) {
+            std::collections::hash_map::Entry::Occupied(mut occupied) => {
+                let existing_files = occupied.get_mut().files.get_or_insert_with(HashMap::new);
+                extra_files.into_iter().for_each(|(path, value)| {
+                    existing_files.entry(path).or_insert(value);
+                });
+            }
+            std::collections::hash_map::Entry::Vacant(vacant) => {
+                vacant.insert(ManifestEntry {
+                    files: Some(extra_files),
+                    steam: entry.steam,
+                    gog: entry.gog,
+                    _rest: entry._rest,
+                });
+            }
+        }
     }
 }
 
@@ -149,6 +166,185 @@ pub fn resolve_candidates(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
+
+    fn temp_dir(test_name: &str) -> PathBuf {
+        let dir = env::temp_dir().join("qsave_test").join(test_name);
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn parse_yaml(yaml: &str) -> HashMap<String, ManifestEntry> {
+        serde_yaml::from_str(yaml).unwrap()
+    }
+
+    // -- cache tests --
+
+    #[test]
+    fn cache_round_trip() {
+        let dir = temp_dir("cache_round_trip");
+        let path = cache_file_path(&dir, "test.yaml");
+
+        save_to_path(&path, "hello: world");
+        let loaded = load_from_path(&path);
+
+        assert_eq!(loaded, Some("hello: world".to_string()));
+    }
+
+    #[test]
+    fn cache_creates_parent_dirs() {
+        let dir = temp_dir("cache_creates_dirs");
+        let path = cache_file_path(&dir, "nested.yaml");
+
+        assert!(!path.parent().unwrap().exists());
+        save_to_path(&path, "content");
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn load_from_missing_file_returns_none() {
+        let path = PathBuf::from("/nonexistent/path/manifest.yaml");
+        assert_eq!(load_from_path(&path), None);
+    }
+
+    // -- fallback chain tests --
+
+    #[test]
+    fn fallback_prefers_download() {
+        let result = resolve_with_fallback(
+            Some("downloaded".to_string()),
+            Some("cached".to_string()),
+            "bundled",
+        );
+        assert_eq!(result, "downloaded");
+    }
+
+    #[test]
+    fn fallback_uses_cache_when_download_fails() {
+        let result = resolve_with_fallback(
+            None,
+            Some("cached".to_string()),
+            "bundled",
+        );
+        assert_eq!(result, "cached");
+    }
+
+    #[test]
+    fn fallback_uses_bundled_when_both_fail() {
+        let result = resolve_with_fallback(None, None, "bundled");
+        assert_eq!(result, "bundled");
+    }
+
+    // -- merge tests --
+
+    #[test]
+    fn merge_adds_new_game() {
+        let mut base = parse_yaml(r#"
+GameA:
+  files:
+    <home>/saves: {}
+"#);
+        let extra = parse_yaml(r#"
+GameB:
+  files:
+    <home>/other: {}
+  steam:
+    id: 99
+"#);
+
+        merge_manifests(&mut base, extra);
+
+        assert!(base.contains_key("GameA"));
+        assert!(base.contains_key("GameB"));
+        assert_eq!(base["GameB"].steam.as_ref().unwrap().id, Some(99));
+    }
+
+    #[test]
+    fn merge_extends_existing_game_paths() {
+        let mut base = parse_yaml(r#"
+GameA:
+  files:
+    <home>/saves: {}
+"#);
+        let extra = parse_yaml(r#"
+GameA:
+  files:
+    <home>/extra: {}
+"#);
+
+        merge_manifests(&mut base, extra);
+
+        let files = base["GameA"].files.as_ref().unwrap();
+        assert!(files.contains_key("<home>/saves"));
+        assert!(files.contains_key("<home>/extra"));
+    }
+
+    #[test]
+    fn merge_does_not_overwrite_existing_paths() {
+        let mut base = parse_yaml(r#"
+GameA:
+  files:
+    <home>/saves:
+      tags: [save]
+"#);
+        let extra = parse_yaml(r#"
+GameA:
+  files:
+    <home>/saves:
+      tags: [config]
+"#);
+
+        merge_manifests(&mut base, extra);
+
+        let files = base["GameA"].files.as_ref().unwrap();
+        let value = &files["<home>/saves"];
+        let tags = value.as_mapping().unwrap().get("tags").unwrap();
+        assert_eq!(tags[0].as_str().unwrap(), "save");
+    }
+
+    #[test]
+    fn merge_skips_entries_without_files() {
+        let mut base = parse_yaml(r#"
+GameA:
+  files:
+    <home>/saves: {}
+"#);
+        let extra = parse_yaml(r#"
+GameB:
+  steam:
+    id: 50
+"#);
+
+        merge_manifests(&mut base, extra);
+
+        assert_eq!(base.len(), 1);
+        assert!(!base.contains_key("GameB"));
+    }
+
+    #[test]
+    fn merge_adds_files_to_existing_game_without_files() {
+        let mut base: HashMap<String, ManifestEntry> = HashMap::new();
+        base.insert("GameA".to_string(), ManifestEntry {
+            files: None,
+            steam: None,
+            gog: None,
+            _rest: HashMap::new(),
+        });
+
+        let extra = parse_yaml(r#"
+GameA:
+  files:
+    <home>/new_path: {}
+"#);
+
+        merge_manifests(&mut base, extra);
+
+        let files = base["GameA"].files.as_ref().unwrap();
+        assert!(files.contains_key("<home>/new_path"));
+    }
+
+    // -- existing tests --
 
     #[test]
     fn parse_manifest_entry() {
