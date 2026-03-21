@@ -377,14 +377,32 @@ IndieGame:
     }
 
     #[test]
-    fn filters_empty_paths() {
+    fn resolves_store_user_id_as_wildcard() {
         let yaml = r#"
 GameA:
   files:
     <home>/saves: {}
 GameB:
   files:
-    <storeUserId>/unknown: {}
+    <home>/<storeUserId>/unknown: {}
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &HashMap::new(), &HashMap::new());
+
+        assert_eq!(candidates.len(), 2);
+        let game_b = candidates.iter().find(|(name, _, _)| name == "GameB").unwrap();
+        assert!(game_b.2[0].contains('*'));
+    }
+
+    #[test]
+    fn filters_unknown_placeholders() {
+        let yaml = r#"
+GameA:
+  files:
+    <home>/saves: {}
+GameB:
+  files:
+    <someUnknownVar>/unknown: {}
 "#;
         let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
         let candidates = resolve_candidates(manifest, "/home/user", "user", &HashMap::new(), &HashMap::new());

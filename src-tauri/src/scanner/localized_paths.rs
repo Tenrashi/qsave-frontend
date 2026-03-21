@@ -2,14 +2,13 @@ use std::path::Path;
 
 use super::localized_names;
 
-/// Given a resolved path that doesn't exist, try replacing known English folder names
-/// with their localized variants. Returns the first path that exists, or None.
-///
-/// For each variant, tries both regular spaces and non-breaking spaces (\u{00a0})
-/// since some publishers (EA) use non-breaking spaces in folder names.
-pub fn try_localized_path(path: &str) -> Option<String> {
-    if Path::new(path).exists() {
-        return Some(path.to_string());
+/// Expands a path into concrete, existing directory paths.
+/// Handles glob wildcards (from `<storeUserId>` → `*`) and tries localized
+/// folder name variants (e.g. "The Sims 4" → "Les Sims 4") with both
+/// regular and non-breaking spaces (EA uses U+00A0 in some locales).
+pub fn resolve_localized_paths(path: &str) -> Vec<String> {
+    if let Some(expanded) = expand_if_exists(path) {
+        return expanded;
     }
 
     localized_names::ENTRIES
@@ -18,25 +17,45 @@ pub fn try_localized_path(path: &str) -> Option<String> {
         .find_map(|(english_name, variants)| {
             variants.iter().find_map(|variant| {
                 let candidate = path.replace(english_name.as_str(), variant);
-                if Path::new(&candidate).exists() {
-                    return Some(candidate);
+                if let Some(expanded) = expand_if_exists(&candidate) {
+                    return Some(expanded);
                 }
-                // Try with non-breaking spaces (U+00A0) — EA uses these in some locales
-                let nbsp_variant = variant.replace(' ', "\u{00a0}");
-                if nbsp_variant == *variant {
+                if !variant.contains(' ') {
                     return None;
                 }
+                let nbsp_variant = variant.replace(' ', "\u{00a0}");
                 let candidate = path.replace(english_name.as_str(), &nbsp_variant);
-                Path::new(&candidate).exists().then_some(candidate)
+                expand_if_exists(&candidate)
             })
         })
+        .unwrap_or_default()
+}
+
+fn expand_if_exists(path: &str) -> Option<Vec<String>> {
+    if path.contains('*') {
+        let matches: Vec<String> = glob::glob(path)
+            .ok()?
+            .filter_map(|entry| entry.ok())
+            .filter(|matched| matched.is_dir())
+            .map(|matched| matched.to_string_lossy().to_string())
+            .collect();
+        if matches.is_empty() {
+            return None;
+        }
+        return Some(matches);
+    }
+
+    if !Path::new(path).exists() {
+        return None;
+    }
+
+    Some(vec![path.to_string()])
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs::{self, File};
-    use std::io::Write;
     use tempfile::TempDir;
 
     #[test]
@@ -45,16 +64,12 @@ mod tests {
         let ea = dir.path().join("Electronic Arts");
         let sims_fr = ea.join("Les Sims 4").join("saves");
         fs::create_dir_all(&sims_fr).unwrap();
-        File::create(sims_fr.join("save.dat"))
-            .unwrap()
-            .write_all(b"data")
-            .unwrap();
 
         let english_path = ea.join("The Sims 4").join("saves");
-        let result = try_localized_path(&english_path.to_string_lossy());
+        let result = resolve_localized_paths(&english_path.to_string_lossy());
 
-        assert!(result.is_some());
-        assert!(result.unwrap().contains("Les Sims 4"));
+        assert_eq!(result.len(), 1);
+        assert!(result[0].contains("Les Sims 4"));
     }
 
     #[test]
@@ -63,28 +78,24 @@ mod tests {
         let ea = dir.path().join("Electronic Arts");
         let sims_de = ea.join("Die Sims 4").join("saves");
         fs::create_dir_all(&sims_de).unwrap();
-        File::create(sims_de.join("save.dat"))
-            .unwrap()
-            .write_all(b"data")
-            .unwrap();
 
         let english_path = ea.join("The Sims 4").join("saves");
-        let result = try_localized_path(&english_path.to_string_lossy());
+        let result = resolve_localized_paths(&english_path.to_string_lossy());
 
-        assert!(result.is_some());
-        assert!(result.unwrap().contains("Die Sims 4"));
+        assert_eq!(result.len(), 1);
+        assert!(result[0].contains("Die Sims 4"));
     }
 
     #[test]
-    fn returns_none_when_no_variant_exists() {
+    fn returns_empty_when_no_variant_exists() {
         let dir = TempDir::new().unwrap();
         let ea = dir.path().join("Electronic Arts");
         fs::create_dir_all(&ea).unwrap();
 
         let english_path = ea.join("The Sims 4").join("saves");
-        let result = try_localized_path(&english_path.to_string_lossy());
+        let result = resolve_localized_paths(&english_path.to_string_lossy());
 
-        assert!(result.is_none());
+        assert!(result.is_empty());
     }
 
     #[test]
@@ -94,30 +105,24 @@ mod tests {
         let sims_en = ea.join("The Sims 4").join("saves");
         fs::create_dir_all(&sims_en).unwrap();
 
-        let result = try_localized_path(&sims_en.to_string_lossy());
+        let result = resolve_localized_paths(&sims_en.to_string_lossy());
 
-        assert!(result.is_some());
-        assert!(result.unwrap().contains("The Sims 4"));
+        assert_eq!(result.len(), 1);
+        assert!(result[0].contains("The Sims 4"));
     }
 
     #[test]
     fn resolves_french_sims_4_with_nbsp() {
         let dir = TempDir::new().unwrap();
         let ea = dir.path().join("Electronic Arts");
-        // EA uses non-breaking spaces (U+00A0) in French folder names
         let sims_fr = ea.join("Les\u{00a0}Sims\u{00a0}4").join("saves");
         fs::create_dir_all(&sims_fr).unwrap();
-        File::create(sims_fr.join("save.dat"))
-            .unwrap()
-            .write_all(b"data")
-            .unwrap();
 
         let english_path = ea.join("The Sims 4").join("saves");
-        let result = try_localized_path(&english_path.to_string_lossy());
+        let result = resolve_localized_paths(&english_path.to_string_lossy());
 
-        assert!(result.is_some());
-        let resolved = result.unwrap();
-        assert!(resolved.contains("Les\u{00a0}Sims\u{00a0}4"));
+        assert_eq!(result.len(), 1);
+        assert!(result[0].contains("Les\u{00a0}Sims\u{00a0}4"));
     }
 
     #[test]
@@ -126,8 +131,36 @@ mod tests {
         let game_dir = dir.path().join("Undertale");
         fs::create_dir_all(&game_dir).unwrap();
 
-        let result = try_localized_path(&dir.path().join("Minecraft").to_string_lossy());
+        let result = resolve_localized_paths(&dir.path().join("Minecraft").to_string_lossy());
 
-        assert!(result.is_none());
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn expands_glob_to_matching_directories() {
+        let dir = TempDir::new().unwrap();
+        let user_a = dir.path().join("game").join("user_123");
+        let user_b = dir.path().join("game").join("user_456");
+        fs::create_dir_all(&user_a).unwrap();
+        fs::create_dir_all(&user_b).unwrap();
+
+        let glob_path = format!("{}/game/*", dir.path().to_string_lossy());
+        let result = resolve_localized_paths(&glob_path);
+
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn glob_skips_files() {
+        let dir = TempDir::new().unwrap();
+        let subdir = dir.path().join("game").join("user_123");
+        fs::create_dir_all(&subdir).unwrap();
+        File::create(dir.path().join("game").join("config.txt")).unwrap();
+
+        let glob_path = format!("{}/game/*", dir.path().to_string_lossy());
+        let result = resolve_localized_paths(&glob_path);
+
+        assert_eq!(result.len(), 1);
+        assert!(result[0].contains("user_123"));
     }
 }
