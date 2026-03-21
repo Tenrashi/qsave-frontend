@@ -22,6 +22,8 @@ pub fn resolve_path(raw: &str, home: &str, username: &str, root: Option<&str>) -
     resolved = resolved.replace("<Home>", home);
     resolved = resolved.replace("<osUserName>", username);
     resolved = resolved.replace("<OsUserName>", username);
+    resolved = resolved.replace("<storeUserId>", "*");
+    resolved = resolved.replace("<StoreUserId>", "*");
 
     #[cfg(target_os = "windows")]
     {
@@ -92,8 +94,20 @@ mod tests {
     }
 
     #[test]
-    fn returns_none_for_unresolved_vars() {
+    fn resolves_store_user_id_to_wildcard() {
         let result = resolve_path("<storeUserId>/saves", "/home/user", "user", None);
+        assert_eq!(result, Some("*/saves".to_string()));
+    }
+
+    #[test]
+    fn store_user_id_with_trailing_glob_strips_correctly() {
+        let result = resolve_path("<home>/<storeUserId>/saves/**", "/home/user", "user", None);
+        assert_eq!(result, Some("/home/user/*/saves".to_string()));
+    }
+
+    #[test]
+    fn returns_none_for_unresolved_vars() {
+        let result = resolve_path("<someUnknownVar>/saves", "/home/user", "user", None);
         assert_eq!(result, None);
     }
 
