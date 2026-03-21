@@ -34,7 +34,7 @@ QSave detects installed games using the [Ludusavi](https://github.com/mtkennerly
 ### Setup
 
 ```bash
-cd qsave-frontend
+cd qsave
 pnpm install
 cp .env.example .env
 ```
