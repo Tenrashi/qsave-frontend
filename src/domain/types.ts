@@ -5,6 +5,7 @@ export type Game = {
   saveFiles: SaveFile[];
   isManual?: boolean;
   isCloudOnly?: boolean;
+  hasSteamCloud?: boolean;
 };
 
 export type SaveFile = {

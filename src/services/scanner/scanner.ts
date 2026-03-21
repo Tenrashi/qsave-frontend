@@ -18,10 +18,17 @@ const toGame = (game: RustDetectedGame, isManual = false): Game => ({
     }),
   ),
   isManual,
+  hasSteamCloud: game.hasSteamCloud,
 });
 
-export const scanManualGame = async (name: string, paths: string[]): Promise<Game> => {
-  const result = await invoke<RustDetectedGame>(TAURI_COMMANDS.scanManualGame, { name, paths });
+export const scanManualGame = async (
+  name: string,
+  paths: string[],
+): Promise<Game> => {
+  const result = await invoke<RustDetectedGame>(TAURI_COMMANDS.scanManualGame, {
+    name,
+    paths,
+  });
   return toGame(result, true);
 };
 
@@ -53,5 +60,7 @@ export const scanForGames = async (): Promise<Game[]> => {
       ),
   );
 
-  return [...autoGames, ...manualGames].sort((gameA, gameB) => gameA.name.localeCompare(gameB.name));
+  return [...autoGames, ...manualGames].sort((gameA, gameB) =>
+    gameA.name.localeCompare(gameB.name),
+  );
 };

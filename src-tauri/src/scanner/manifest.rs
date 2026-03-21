@@ -106,6 +106,7 @@ fn merge_manifests(
                     files: Some(extra_files),
                     steam: entry.steam,
                     gog: entry.gog,
+                    cloud: entry.cloud,
                     _rest: entry._rest,
                 });
             }
@@ -132,13 +133,14 @@ pub fn resolve_candidates(
     username: &str,
     steam_roots: &HashMap<u64, PathBuf>,
     gog_roots: &HashMap<u64, PathBuf>,
-) -> Vec<(String, Option<u64>, Vec<String>)> {
+) -> Vec<(String, Option<u64>, Vec<String>, bool)> {
     manifest
         .into_iter()
         .filter_map(|(name, entry)| {
             let files = entry.files?;
             let steam_id = entry.steam.and_then(|s| s.id);
             let gog_id = entry.gog.and_then(|g| g.id);
+            let has_steam_cloud = entry.cloud.map_or(false, |c| c.steam);
             let root = steam_id
                 .and_then(|id| steam_roots.get(&id))
                 .or_else(|| gog_id.and_then(|id| gog_roots.get(&id)))
@@ -158,7 +160,7 @@ pub fn resolve_candidates(
                 return None;
             }
 
-            Some((name, steam_id, paths))
+            Some((name, steam_id, paths, has_steam_cloud))
         })
         .collect()
 }
@@ -329,6 +331,7 @@ GameB:
             files: None,
             steam: None,
             gog: None,
+            cloud: None,
             _rest: HashMap::new(),
         });
 
@@ -390,7 +393,7 @@ GameB:
         let candidates = resolve_candidates(manifest, "/home/user", "user", &HashMap::new(), &HashMap::new());
 
         assert_eq!(candidates.len(), 2);
-        let game_b = candidates.iter().find(|(name, _, _)| name == "GameB").unwrap();
+        let game_b = candidates.iter().find(|(name, _, _, _)| name == "GameB").unwrap();
         assert!(game_b.2[0].contains('*'));
     }
 

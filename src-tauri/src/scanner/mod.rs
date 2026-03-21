@@ -33,6 +33,7 @@ pub fn scan_manual_game_blocking(name: String, paths: Vec<String>) -> DetectedGa
         steam_id: None,
         save_paths: existing_paths,
         save_files,
+        has_steam_cloud: false,
     }
 }
 

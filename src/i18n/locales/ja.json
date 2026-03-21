@@ -39,6 +39,9 @@
     "removeConfirmDescription": "QSaveからのみ削除されます。セーブファイルやクラウドバックアップには影響しません。",
     "remove": "削除",
     "manualBadge": "カスタム",
+    "steamCloudBadge": "Steam Cloud",
+    "hideSteamCloud": "Steamクラウドのゲームを非表示",
+    "showSteamCloud": "Steamクラウドのゲームを表示",
     "cloudBadge": "クラウド",
     "cloudOnlyHint": "別のデバイスでバックアップ済み",
     "removePath": "パスを削除"

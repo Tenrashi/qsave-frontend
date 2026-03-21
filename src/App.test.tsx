@@ -7,7 +7,7 @@ import {
 } from "@/test/test-utils";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
-import { sims4Game, cyberpunkGame } from "@/test/mocks/games";
+import { sims4Game, cyberpunkGame, steamCloudGame } from "@/test/mocks/games";
 import { RECORD_STATUS } from "@/domain/types";
 import type { AuthState, Game, SyncRecord } from "@/domain/types";
 import App from "./App";
@@ -94,12 +94,14 @@ describe("App", () => {
 
   it("renders app header with name and refresh button", async () => {
     renderWithProviders(<App />);
+    await waitFor(() => expect(mockGetAuthState).toHaveBeenCalled());
     expect(screen.getByText("QSave")).toBeInTheDocument();
     expect(screen.getByText("app.refresh")).toBeInTheDocument();
   });
 
-  it("renders search bar", () => {
+  it("renders search bar", async () => {
     renderWithProviders(<App />);
+    await waitFor(() => expect(mockGetAuthState).toHaveBeenCalled());
     expect(
       screen.getByPlaceholderText("search.placeholder"),
     ).toBeInTheDocument();
@@ -172,8 +174,9 @@ describe("App", () => {
     });
   });
 
-  it("hides sync history panel when no history data", () => {
+  it("hides sync history panel when no history data", async () => {
     renderWithProviders(<App />);
+    await waitFor(() => expect(mockGetAuthState).toHaveBeenCalled());
     expect(screen.queryByText("history.title")).not.toBeInTheDocument();
   });
 
@@ -182,6 +185,38 @@ describe("App", () => {
     const toggleButton = screen.getByText("status.watchingActive");
     await user.click(toggleButton);
     expect(screen.getByText("status.watchingInactive")).toBeInTheDocument();
+  });
+
+  describe("steam cloud filter", () => {
+    it("hides steam cloud games when toggle is clicked", async () => {
+      mockScanForGames.mockResolvedValue([sims4Game, steamCloudGame]);
+      renderWithProviders(<App />);
+      await screen.findByText("The Sims 4");
+      expect(screen.getByText("Portal 2")).toBeInTheDocument();
+
+      await user.click(screen.getByTitle("games.hideSteamCloud"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Portal 2")).not.toBeInTheDocument();
+      });
+      expect(screen.getByText("The Sims 4")).toBeInTheDocument();
+    });
+
+    it("shows steam cloud games again when toggle is clicked twice", async () => {
+      mockScanForGames.mockResolvedValue([sims4Game, steamCloudGame]);
+      renderWithProviders(<App />);
+      await screen.findByText("Portal 2");
+
+      await user.click(screen.getByTitle("games.hideSteamCloud"));
+      await waitFor(() => {
+        expect(screen.queryByText("Portal 2")).not.toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTitle("games.showSteamCloud"));
+      await waitFor(() => {
+        expect(screen.getByText("Portal 2")).toBeInTheDocument();
+      });
+    });
   });
 
   describe("cloud-only games", () => {

@@ -42,10 +42,10 @@ pub fn collect_save_files(dir: &Path, game_name: &str) -> Vec<SaveFileInfo> {
         .collect()
 }
 
-pub fn scan_candidates(candidates: Vec<(String, Option<u64>, Vec<String>)>) -> Vec<DetectedGame> {
+pub fn scan_candidates(candidates: Vec<(String, Option<u64>, Vec<String>, bool)>) -> Vec<DetectedGame> {
     let mut games: Vec<DetectedGame> = candidates
         .into_par_iter()
-        .filter_map(|(name, steam_id, paths)| {
+        .filter_map(|(name, steam_id, paths, has_steam_cloud)| {
             let existing: Vec<_> = paths
                 .into_iter()
                 .flat_map(|path| resolve_localized_paths(&path))
@@ -65,6 +65,7 @@ pub fn scan_candidates(candidates: Vec<(String, Option<u64>, Vec<String>)>) -> V
                 steam_id,
                 save_paths: existing,
                 save_files,
+                has_steam_cloud,
             })
         })
         .collect();
@@ -127,6 +128,7 @@ mod tests {
             "TestGame".to_string(),
             Some(42u64),
             vec![dir.path().to_string_lossy().to_string()],
+            false,
         )];
 
         let games = scan_candidates(candidates);
@@ -142,6 +144,7 @@ mod tests {
             "MissingGame".to_string(),
             None,
             vec!["/nonexistent/path/very/unlikely".to_string()],
+            false,
         )];
 
         let games = scan_candidates(candidates);
@@ -160,11 +163,13 @@ mod tests {
                 "Zelda".to_string(),
                 None,
                 vec![dir_a.path().to_string_lossy().to_string()],
+                false,
             ),
             (
                 "Amnesia".to_string(),
                 None,
                 vec![dir_b.path().to_string_lossy().to_string()],
+                false,
             ),
         ];
 

@@ -39,6 +39,9 @@
     "removeConfirmDescription": "Isso apenas o remove do QSave. Seus arquivos de save e backups na nuvem não serão afetados.",
     "remove": "Remover",
     "manualBadge": "Personalizado",
+    "steamCloudBadge": "Steam Cloud",
+    "hideSteamCloud": "Ocultar jogos com Steam Cloud",
+    "showSteamCloud": "Mostrar jogos com Steam Cloud",
     "cloudBadge": "Nuvem",
     "cloudOnlyHint": "Backup feito em outro dispositivo",
     "removePath": "Remover caminho"

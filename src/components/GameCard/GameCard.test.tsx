@@ -8,6 +8,7 @@ import {
   eldenRingGame,
   manualGame,
   cloudOnlyGame,
+  steamCloudGame,
 } from "@/test/mocks/games";
 import { computeGameHash } from "@/lib/hash/hash";
 import { GameCard, type GameCardProps } from "./GameCard";
@@ -136,6 +137,20 @@ describe("GameCard", () => {
   it("renders LocalGameActions for local games", () => {
     renderGameCard();
     expect(screen.getByText("20971520 bytes")).toBeInTheDocument();
+  });
+
+  describe("steam cloud games", () => {
+    it("shows steam cloud badge for games with Steam Cloud", () => {
+      renderGameCard({ game: steamCloudGame });
+      expect(screen.getByText("games.steamCloudBadge")).toBeInTheDocument();
+    });
+
+    it("does not show steam cloud badge for games without Steam Cloud", () => {
+      renderGameCard();
+      expect(
+        screen.queryByText("games.steamCloudBadge"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("cloud-only games", () => {

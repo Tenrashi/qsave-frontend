@@ -39,6 +39,9 @@
     "removeConfirmDescription": "这只会从 QSave 中移除。您的存档文件和云备份不会受到影响。",
     "remove": "移除",
     "manualBadge": "自定义",
+    "steamCloudBadge": "Steam Cloud",
+    "hideSteamCloud": "隐藏Steam云游戏",
+    "showSteamCloud": "显示Steam云游戏",
     "cloudBadge": "云端",
     "cloudOnlyHint": "已在其他设备上备份",
     "removePath": "移除路径"

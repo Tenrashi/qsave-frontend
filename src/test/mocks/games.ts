@@ -75,6 +75,22 @@ export const emptyManualGame: Game = {
   isManual: true,
 };
 
+export const steamCloudGame: Game = {
+  name: "Portal 2",
+  steamId: 620,
+  savePaths: ["/saves/portal2"],
+  saveFiles: [
+    {
+      name: "save.sav",
+      path: "/saves/portal2/save.sav",
+      sizeBytes: 2048,
+      lastModified: MOCK_DATE,
+      gameName: "Portal 2",
+    },
+  ],
+  hasSteamCloud: true,
+};
+
 export const cloudOnlyGame: Game = {
   name: "Cloud Save RPG",
   savePaths: [],

@@ -39,6 +39,9 @@
     "removeConfirmDescription": "Игра будет удалена только из QSave. Ваши файлы сохранений и облачные резервные копии не будут затронуты.",
     "remove": "Удалить",
     "manualBadge": "Пользовательский",
+    "steamCloudBadge": "Steam Cloud",
+    "hideSteamCloud": "Скрыть игры Steam Cloud",
+    "showSteamCloud": "Показать игры Steam Cloud",
     "cloudBadge": "Облако",
     "cloudOnlyHint": "Резервная копия с другого устройства",
     "removePath": "Удалить путь"

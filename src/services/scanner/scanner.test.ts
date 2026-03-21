@@ -31,6 +31,7 @@ const rustGame = (name: string, steamId: number | null = null) => ({
       gameName: name,
     },
   ],
+  hasSteamCloud: false,
 });
 
 describe("scanManualGame", () => {

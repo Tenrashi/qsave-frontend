@@ -27,6 +27,7 @@ const App = () => {
   const history = useSyncHistory();
   const [search, setSearch] = useState("");
   const [watching, setWatching] = useState(true);
+  const [hideSteamCloud, setHideSteamCloud] = useState(false);
   const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
@@ -64,10 +65,16 @@ const App = () => {
   }, [games.data, auth.isAuthenticated, backedUpGames, backedUpGamesLoaded]);
 
   const filteredGames = useMemo(() => {
-    if (!deferredSearch.trim()) return allGames;
-    const query = deferredSearch.toLowerCase();
-    return allGames.filter((game) => game.name.toLowerCase().includes(query));
-  }, [allGames, deferredSearch]);
+    let result = allGames;
+    if (hideSteamCloud) {
+      result = result.filter((game) => !game.hasSteamCloud);
+    }
+    if (deferredSearch.trim()) {
+      const query = deferredSearch.toLowerCase();
+      result = result.filter((game) => game.name.toLowerCase().includes(query));
+    }
+    return result;
+  }, [allGames, deferredSearch, hideSteamCloud]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -79,7 +86,12 @@ const App = () => {
         }}
       />
       <AuthStatus />
-      <GameToolbar search={search} onSearchChange={setSearch} />
+      <GameToolbar
+        search={search}
+        onSearchChange={setSearch}
+        hideSteamCloud={hideSteamCloud}
+        onToggleHideSteamCloud={() => setHideSteamCloud((prev) => !prev)}
+      />
       {games.error && <ErrorBanner message={games.error.message} />}
       <GameListPanel games={filteredGames} isLoading={games.isLoading} />
       {(history.data?.length ?? 0) > 0 && (

@@ -37,6 +37,11 @@ export const GameCard = memo(({ game }: GameCardProps) => {
                 {t("games.manualBadge")}
               </span>
             )}
+            {game.hasSteamCloud && (
+              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-medium">
+                {t("games.steamCloudBadge")}
+              </span>
+            )}
             {game.isCloudOnly && (
               <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 font-medium">
                 {t("games.cloudBadge")}
