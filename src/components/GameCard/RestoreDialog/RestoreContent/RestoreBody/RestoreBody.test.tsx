@@ -11,7 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { SYNC_STATUS, RECORD_STATUS } from "@/domain/types";
 import type { SyncRecord } from "@/domain/types";
-import { sims4Game } from "@/test/mocks/games";
+import { sims4Game, cloudOnlyGame } from "@/test/mocks/games";
 import { mockBackups } from "@/test/mocks/drive";
 import { RestoreBody } from "./RestoreBody";
 
@@ -26,12 +26,21 @@ const defaultRestoreRecord: SyncRecord = {
   type: "restore",
 };
 
-const { mockListGameBackups, mockRestoreGame, mockDeleteGameBackup } =
-  vi.hoisted(() => ({
-    mockListGameBackups: vi.fn(),
-    mockRestoreGame: vi.fn(),
-    mockDeleteGameBackup: vi.fn(),
-  }));
+const {
+  mockListGameBackups,
+  mockRestoreGame,
+  mockDeleteGameBackup,
+  mockInvoke,
+} = vi.hoisted(() => ({
+  mockListGameBackups: vi.fn(),
+  mockRestoreGame: vi.fn(),
+  mockDeleteGameBackup: vi.fn(),
+  mockInvoke: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: mockInvoke,
+}));
 
 vi.mock("@/services/drive/drive", () => ({
   listGameBackups: mockListGameBackups,
@@ -87,12 +96,16 @@ vi.mock("./BackupList/BackupList", () => ({
   ),
 }));
 
-const renderBody = (props: { quick?: boolean } = {}) =>
-  renderWithProviders(
+const renderBody = (
+  props: { quick?: boolean; game?: typeof sims4Game } = {},
+) => {
+  const { game = sims4Game, ...rest } = props;
+  return renderWithProviders(
     <Dialog open={true}>
-      <RestoreBody game={sims4Game} open={true} {...props} />
+      <RestoreBody game={game} open={true} {...rest} />
     </Dialog>,
   );
+};
 
 describe("RestoreBody", () => {
   const user = setupUser();
@@ -301,6 +314,45 @@ describe("RestoreBody", () => {
       expect(screen.getByTestId("status-error")).toHaveTextContent(
         "Permission denied",
       );
+    });
+  });
+
+  describe("cloud-only games", () => {
+    it("shows folder picker for cloud-only games", async () => {
+      renderBody({ game: cloudOnlyGame });
+
+      await waitFor(() => {
+        expect(screen.getByText("restore.pickFolder")).toBeInTheDocument();
+      });
+    });
+
+    it("does not show folder picker for local games", () => {
+      renderBody();
+      expect(screen.queryByText("restore.pickFolder")).not.toBeInTheDocument();
+    });
+
+    it("shows selected path after picking a folder", async () => {
+      mockInvoke.mockResolvedValueOnce("/Users/test/saves");
+      renderBody({ game: cloudOnlyGame });
+
+      await user.click(screen.getByText("restore.pickFolder"));
+
+      await waitFor(() => {
+        expect(screen.getByText("/Users/test/saves")).toBeInTheDocument();
+        expect(screen.getByText("restore.changePath")).toBeInTheDocument();
+      });
+    });
+
+    it("does not show restore button before picking a folder", async () => {
+      renderBody({ game: cloudOnlyGame });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("backup-list")).toBeInTheDocument();
+      });
+
+      expect(
+        screen.queryByRole("button", { name: "restore.restore" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

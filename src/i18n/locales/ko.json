@@ -39,6 +39,8 @@
     "removeConfirmDescription": "QSave에서만 제거됩니다. 세이브 파일과 클라우드 백업에는 영향을 주지 않습니다.",
     "remove": "제거",
     "manualBadge": "사용자 지정",
+    "cloudBadge": "클라우드",
+    "cloudOnlyHint": "다른 기기에서 백업됨",
     "removePath": "경로 제거"
   },
   "history": {
@@ -68,6 +70,9 @@
     "error": "복원 실패",
     "tooltip": "최신 백업 복원",
     "tooltipPick": "복원할 백업 선택",
+    "pickFolder": "복원 위치 선택",
+    "restoreTo": "복원 위치:",
+    "changePath": "변경",
     "confirmTitle": "최신 백업을 복원하시겠습니까?",
     "close": "닫기",
     "deleteTitle": "이 백업을 삭제하시겠습니까?",

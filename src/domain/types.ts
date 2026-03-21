@@ -4,6 +4,7 @@ export type Game = {
   savePaths: string[];
   saveFiles: SaveFile[];
   isManual?: boolean;
+  isCloudOnly?: boolean;
 };
 
 export type SaveFile = {

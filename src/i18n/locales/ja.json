@@ -39,6 +39,8 @@
     "removeConfirmDescription": "QSaveからのみ削除されます。セーブファイルやクラウドバックアップには影響しません。",
     "remove": "削除",
     "manualBadge": "カスタム",
+    "cloudBadge": "クラウド",
+    "cloudOnlyHint": "別のデバイスでバックアップ済み",
     "removePath": "パスを削除"
   },
   "history": {
@@ -68,6 +70,9 @@
     "error": "復元に失敗しました",
     "tooltip": "最新のバックアップを復元",
     "tooltipPick": "復元するバックアップを選択",
+    "pickFolder": "復元先を選択",
+    "restoreTo": "復元先:",
+    "changePath": "変更",
     "confirmTitle": "最新のバックアップを復元しますか？",
     "close": "閉じる",
     "deleteTitle": "このバックアップを削除しますか？",

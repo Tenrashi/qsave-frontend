@@ -39,6 +39,8 @@
     "removeConfirmDescription": "Das entfernt es nur aus QSave. Deine Speicherdateien und Cloud-Backups bleiben unberührt.",
     "remove": "Entfernen",
     "manualBadge": "Benutzerdefiniert",
+    "cloudBadge": "Cloud",
+    "cloudOnlyHint": "Auf einem anderen Gerät gesichert",
     "removePath": "Pfad entfernen"
   },
   "history": {
@@ -68,6 +70,9 @@
     "error": "Wiederherstellung fehlgeschlagen",
     "tooltip": "Letzte Sicherung wiederherstellen",
     "tooltipPick": "Eine Sicherung zum Wiederherstellen wählen",
+    "pickFolder": "Wiederherstellungsort wählen",
+    "restoreTo": "Wiederherstellen nach:",
+    "changePath": "Ändern",
     "confirmTitle": "Letzte Sicherung wiederherstellen?",
     "close": "Schließen",
     "deleteTitle": "Dieses Backup löschen?",

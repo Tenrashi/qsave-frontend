@@ -75,4 +75,11 @@ export const emptyManualGame: Game = {
   isManual: true,
 };
 
+export const cloudOnlyGame: Game = {
+  name: "Cloud Save RPG",
+  savePaths: [],
+  saveFiles: [],
+  isCloudOnly: true,
+};
+
 export const twoGames: Game[] = [sims4Game, cyberpunkGame];

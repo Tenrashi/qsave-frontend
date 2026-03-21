@@ -39,6 +39,8 @@
     "removeConfirmDescription": "这只会从 QSave 中移除。您的存档文件和云备份不会受到影响。",
     "remove": "移除",
     "manualBadge": "自定义",
+    "cloudBadge": "云端",
+    "cloudOnlyHint": "已在其他设备上备份",
     "removePath": "移除路径"
   },
   "history": {
@@ -68,6 +70,9 @@
     "error": "恢复失败",
     "tooltip": "恢复最新备份",
     "tooltipPick": "选择要恢复的备份",
+    "pickFolder": "选择恢复位置",
+    "restoreTo": "恢复到：",
+    "changePath": "更改",
     "confirmTitle": "恢复最新备份？",
     "close": "关闭",
     "deleteTitle": "删除此备份？",

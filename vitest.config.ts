@@ -29,7 +29,6 @@ export default defineConfig({
         "src/components/ui/**",
         "src/**/mocks/**",
         "src/main.tsx",
-        "src/App.tsx",
         "src/i18n/**",
         "src/vite-env.d.ts",
       ],

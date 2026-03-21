@@ -39,6 +39,8 @@
     "removeConfirmDescription": "Verrà rimosso solo da QSave. I file di salvataggio e i backup cloud non saranno modificati.",
     "remove": "Rimuovi",
     "manualBadge": "Personalizzato",
+    "cloudBadge": "Cloud",
+    "cloudOnlyHint": "Backup eseguito su un altro dispositivo",
     "removePath": "Rimuovi percorso"
   },
   "history": {
@@ -68,6 +70,9 @@
     "error": "Ripristino fallito",
     "tooltip": "Ripristina ultimo backup",
     "tooltipPick": "Scegli un backup da ripristinare",
+    "pickFolder": "Scegli posizione di ripristino",
+    "restoreTo": "Ripristina in:",
+    "changePath": "Cambia",
     "confirmTitle": "Ripristinare l'ultimo backup?",
     "close": "Chiudi",
     "deleteTitle": "Eliminare questo backup?",

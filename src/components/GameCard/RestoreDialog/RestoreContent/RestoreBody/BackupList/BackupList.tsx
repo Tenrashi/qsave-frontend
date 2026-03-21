@@ -31,7 +31,7 @@ export const BackupList = ({
             <li key={backup.id} className="flex items-center gap-1">
               <button
                 type="button"
-                className={`flex-1 text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                className={`flex-1 text-left px-3 py-2 rounded-md text-sm transition-colors cursor-pointer ${
                   isSelected
                     ? "bg-primary/10 border border-primary/30"
                     : "hover:bg-muted border border-transparent"
@@ -62,7 +62,7 @@ export const BackupList = ({
                 trigger={
                   <button
                     type="button"
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                     aria-label={t("restore.delete")}
                   >
                     <Trash2 className="w-3.5 h-3.5" />

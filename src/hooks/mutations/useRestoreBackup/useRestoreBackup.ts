@@ -5,6 +5,8 @@ import { SYNC_STATUS, RECORD_STATUS } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
 import { listGameBackups } from "@/services/drive/drive";
 import { restoreGame } from "@/services/restore/restore";
+import { scanManualGame } from "@/services/scanner/scanner";
+import { addManualGame } from "@/lib/store/store";
 import { useSyncStore } from "@/stores/sync";
 import { computeGameHash } from "@/lib/hash/hash";
 
@@ -14,13 +16,17 @@ export const useRestoreBackup = (game: Game) => {
   const { setGameStatus, updateSyncFingerprint } = useSyncStore();
 
   return useMutation({
-    mutationFn: async (backupId?: string) => {
-      const resolvedId = backupId ?? (await listGameBackups(game.name))[0]?.id;
+    mutationFn: async (params?: {
+      backupId?: string;
+      targetPaths?: string[];
+    }) => {
+      const resolvedId =
+        params?.backupId ?? (await listGameBackups(game.name))[0]?.id;
 
       if (!resolvedId) throw new Error(t("restore.noBackups"));
 
       setGameStatus(game.name, SYNC_STATUS.restoring);
-      const result = await restoreGame(game, resolvedId);
+      const result = await restoreGame(game, resolvedId, params?.targetPaths);
 
       if (result.status !== RECORD_STATUS.success) {
         throw new Error(result.error ?? t("restore.error"));
@@ -28,14 +34,27 @@ export const useRestoreBackup = (game: Game) => {
 
       return result;
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, params) => {
       try {
         setGameStatus(game.name, SYNC_STATUS.success);
         const newHash = computeGameHash(game.saveFiles);
         await updateSyncFingerprint(game.name, newHash);
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.games });
-      } catch {
+
+        if (!game.isCloudOnly || !params?.targetPaths?.length) {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.games });
+          return;
+        }
+
+        await addManualGame(game.name, params.targetPaths);
+        const scanned = await scanManualGame(game.name, params.targetPaths);
+        queryClient.setQueryData<Game[]>(QUERY_KEYS.games, (prev = []) =>
+          [...prev, scanned].sort((gameA, gameB) =>
+            gameA.name.localeCompare(gameB.name),
+          ),
+        );
+      } catch (error) {
+        console.error("Post-restore update failed:", error);
         setGameStatus(game.name, SYNC_STATUS.error);
       }
     },

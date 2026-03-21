@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { RECORD_STATUS, SYNC_STATUS } from "@/domain/types";
 import type { SyncRecord } from "@/domain/types";
 import { useSyncStore } from "@/stores/sync";
-import { sims4Game } from "@/test/mocks/games";
+import { sims4Game, cloudOnlyGame } from "@/test/mocks/games";
 import { mockBackups } from "@/test/mocks/drive";
 import { useRestoreBackup } from "./useRestoreBackup";
 
@@ -30,9 +30,16 @@ const defaultRecord: SyncRecord = {
   type: "restore",
 };
 
-const { mockListGameBackups, mockRestoreGame } = vi.hoisted(() => ({
+const {
+  mockListGameBackups,
+  mockRestoreGame,
+  mockAddManualGame,
+  mockScanManualGame,
+} = vi.hoisted(() => ({
   mockListGameBackups: vi.fn(),
   mockRestoreGame: vi.fn(),
+  mockAddManualGame: vi.fn(),
+  mockScanManualGame: vi.fn(),
 }));
 
 vi.mock("@/services/drive/drive", () => ({
@@ -41,6 +48,15 @@ vi.mock("@/services/drive/drive", () => ({
 
 vi.mock("@/services/restore/restore", () => ({
   restoreGame: mockRestoreGame,
+}));
+
+vi.mock("@/lib/store/store", () => ({
+  addManualGame: mockAddManualGame,
+  setSyncFingerprint: vi.fn(),
+}));
+
+vi.mock("@/services/scanner/scanner", () => ({
+  scanManualGame: mockScanManualGame,
 }));
 
 const createWrapper = () => {
@@ -67,9 +83,9 @@ describe("useRestoreBackup", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => result.current.mutateAsync("b1"));
+    await act(() => result.current.mutateAsync({ backupId: "b1" }));
 
-    expect(mockRestoreGame).toHaveBeenCalledWith(sims4Game, "b1");
+    expect(mockRestoreGame).toHaveBeenCalledWith(sims4Game, "b1", undefined);
   });
 
   it("resolves latest backup when no id is provided", async () => {
@@ -80,7 +96,7 @@ describe("useRestoreBackup", () => {
     await act(() => result.current.mutateAsync(undefined));
 
     expect(mockListGameBackups).toHaveBeenCalledWith("The Sims 4");
-    expect(mockRestoreGame).toHaveBeenCalledWith(sims4Game, "b1");
+    expect(mockRestoreGame).toHaveBeenCalledWith(sims4Game, "b1", undefined);
   });
 
   it("sets game status to success after restore", async () => {
@@ -88,12 +104,72 @@ describe("useRestoreBackup", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => result.current.mutateAsync("b1"));
+    await act(() => result.current.mutateAsync({ backupId: "b1" }));
 
     await waitFor(() => {
       expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
         SYNC_STATUS.success,
       );
+    });
+  });
+
+  it("passes targetPaths to restoreGame", async () => {
+    const { result } = renderHook(() => useRestoreBackup(sims4Game), {
+      wrapper: createWrapper(),
+    });
+
+    await act(() =>
+      result.current.mutateAsync({
+        backupId: "b1",
+        targetPaths: ["/saves/custom"],
+      }),
+    );
+
+    expect(mockRestoreGame).toHaveBeenCalledWith(sims4Game, "b1", [
+      "/saves/custom",
+    ]);
+  });
+
+  it("persists cloud-only game as manual after restore", async () => {
+    const scannedGame = {
+      ...cloudOnlyGame,
+      savePaths: ["/saves/custom"],
+      saveFiles: [],
+      isManual: true,
+    };
+    mockScanManualGame.mockResolvedValue(scannedGame);
+    mockAddManualGame.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useRestoreBackup(cloudOnlyGame), {
+      wrapper: createWrapper(),
+    });
+
+    await act(() =>
+      result.current.mutateAsync({
+        backupId: "b1",
+        targetPaths: ["/saves/custom"],
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mockAddManualGame).toHaveBeenCalledWith("Cloud Save RPG", [
+        "/saves/custom",
+      ]);
+      expect(mockScanManualGame).toHaveBeenCalledWith("Cloud Save RPG", [
+        "/saves/custom",
+      ]);
+    });
+  });
+
+  it("does not persist as manual game for local game restore", async () => {
+    const { result } = renderHook(() => useRestoreBackup(sims4Game), {
+      wrapper: createWrapper(),
+    });
+
+    await act(() => result.current.mutateAsync({ backupId: "b1" }));
+
+    await waitFor(() => {
+      expect(mockAddManualGame).not.toHaveBeenCalled();
     });
   });
 
@@ -106,7 +182,7 @@ describe("useRestoreBackup", () => {
 
     await act(async () => {
       try {
-        await result.current.mutateAsync("b1");
+        await result.current.mutateAsync({ backupId: "b1" });
       } catch {
         // expected
       }

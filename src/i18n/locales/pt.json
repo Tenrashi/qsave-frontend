@@ -39,6 +39,8 @@
     "removeConfirmDescription": "Isso apenas o remove do QSave. Seus arquivos de save e backups na nuvem não serão afetados.",
     "remove": "Remover",
     "manualBadge": "Personalizado",
+    "cloudBadge": "Nuvem",
+    "cloudOnlyHint": "Backup feito em outro dispositivo",
     "removePath": "Remover caminho"
   },
   "history": {
@@ -68,6 +70,9 @@
     "error": "Falha na restauração",
     "tooltip": "Restaurar último backup",
     "tooltipPick": "Escolher um backup para restaurar",
+    "pickFolder": "Escolher local de restauração",
+    "restoreTo": "Restaurar em:",
+    "changePath": "Alterar",
     "confirmTitle": "Restaurar último backup?",
     "close": "Fechar",
     "deleteTitle": "Excluir este backup?",

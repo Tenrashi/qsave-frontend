@@ -10,6 +10,7 @@ import type { ZipMeta, ExtractResult } from "./restore.types";
 export const restoreGame = async (
   game: Game,
   backupId: string,
+  overrideTargetDirs?: string[],
 ): Promise<SyncRecord> => {
   const id = `${game.name}-restore-${Date.now()}`;
 
@@ -21,12 +22,9 @@ export const restoreGame = async (
       zipBytes: zipArray,
     });
 
-    // Determine target directories for extraction.
-    // If meta has save_paths recorded, map them to local paths by index.
-    // The game's current savePaths (resolved for this OS) are the targets.
-    const targetDirs = meta?.save_paths.length
-      ? game.savePaths.slice(0, meta.save_paths.length)
-      : game.savePaths.slice(0, 1);
+    const metaPathCount = meta?.save_paths.length ?? 1;
+    const targetDirs =
+      overrideTargetDirs ?? game.savePaths.slice(0, metaPathCount);
 
     if (targetDirs.length === 0) {
       throw new Error("No save paths available for restore");
@@ -49,7 +47,10 @@ export const restoreGame = async (
     };
 
     await addSyncRecord(record);
-    await notify(APP_NAME, `${game.name}: ${result.file_count} file(s) restored`);
+    await notify(
+      APP_NAME,
+      `${game.name}: ${result.file_count} file(s) restored`,
+    );
     return record;
   } catch (err) {
     const record: SyncRecord = {

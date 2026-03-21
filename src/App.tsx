@@ -5,6 +5,7 @@ import { useGames } from "@/hooks/queries/useGames/useGames";
 import { useSyncHistory } from "@/hooks/queries/useSyncHistory/useSyncHistory";
 import { useAutoSync } from "@/hooks/useAutoSync/useAutoSync";
 import { useGameDetectionNotify } from "@/hooks/useGameDetectionNotify/useGameDetectionNotify";
+import type { Game } from "@/domain/types";
 import { AppHeader } from "@/components/AppHeader/AppHeader";
 import { AuthStatus } from "@/components/AuthStatus/AuthStatus";
 import { GameToolbar } from "@/components/GameToolbar/GameToolbar";
@@ -15,7 +16,13 @@ import { StatusBar } from "@/components/StatusBar/StatusBar";
 
 const App = () => {
   const { init, auth } = useAuthStore();
-  const { initWatchPreferences, initSyncFingerprints, loadBackedUpGames } = useSyncStore();
+  const {
+    initWatchPreferences,
+    initSyncFingerprints,
+    loadBackedUpGames,
+    backedUpGames,
+    backedUpGamesLoaded,
+  } = useSyncStore();
   const games = useGames();
   const history = useSyncHistory();
   const [search, setSearch] = useState("");
@@ -37,16 +44,40 @@ const App = () => {
   useAutoSync(games.data, watching);
   useGameDetectionNotify(games.data);
 
+  const allGames = useMemo(() => {
+    const localGames = games.data ?? [];
+    if (!auth.isAuthenticated || !backedUpGamesLoaded) return localGames;
+
+    const localNames = new Set(localGames.map((game) => game.name));
+    const cloudOnlyGames: Game[] = [...backedUpGames]
+      .filter((name) => !localNames.has(name))
+      .map((name) => ({
+        name,
+        savePaths: [],
+        saveFiles: [],
+        isCloudOnly: true,
+      }));
+
+    return [...localGames, ...cloudOnlyGames].sort((gameA, gameB) =>
+      gameA.name.localeCompare(gameB.name),
+    );
+  }, [games.data, auth.isAuthenticated, backedUpGames, backedUpGamesLoaded]);
+
   const filteredGames = useMemo(() => {
-    if (!games.data) return [];
-    if (!deferredSearch.trim()) return games.data;
+    if (!deferredSearch.trim()) return allGames;
     const query = deferredSearch.toLowerCase();
-    return games.data.filter((game) => game.name.toLowerCase().includes(query));
-  }, [games.data, deferredSearch]);
+    return allGames.filter((game) => game.name.toLowerCase().includes(query));
+  }, [allGames, deferredSearch]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <AppHeader isFetching={games.isFetching} onRefresh={() => games.refetch()} />
+      <AppHeader
+        isFetching={games.isFetching}
+        onRefresh={() => {
+          games.refetch();
+          if (auth.isAuthenticated) loadBackedUpGames(true);
+        }}
+      />
       <AuthStatus />
       <GameToolbar search={search} onSearchChange={setSearch} />
       {games.error && <ErrorBanner message={games.error.message} />}
