@@ -48,10 +48,12 @@ export const useRestoreBackup = (game: Game) => {
 
         await addManualGame(game.name, params.targetPaths);
         const scanned = await scanManualGame(game.name, params.targetPaths);
+        await queryClient.cancelQueries({ queryKey: QUERY_KEYS.games });
         queryClient.setQueryData<Game[]>(QUERY_KEYS.games, (prev = []) =>
-          [...prev, scanned].sort((gameA, gameB) =>
-            gameA.name.localeCompare(gameB.name),
-          ),
+          [
+            ...prev.filter((existing) => existing.name !== game.name),
+            scanned,
+          ].sort((gameA, gameB) => gameA.name.localeCompare(gameB.name)),
         );
       } catch (error) {
         console.error("Post-restore update failed:", error);

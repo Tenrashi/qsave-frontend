@@ -6,7 +6,8 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import type { ReactNode } from "react";
 import { RECORD_STATUS, SYNC_STATUS } from "@/domain/types";
-import type { SyncRecord } from "@/domain/types";
+import type { Game, SyncRecord } from "@/domain/types";
+import { QUERY_KEYS } from "@/lib/constants/constants";
 import { useSyncStore } from "@/stores/sync";
 import { sims4Game, cloudOnlyGame } from "@/test/mocks/games";
 import { mockBackups } from "@/test/mocks/drive";
@@ -63,11 +64,12 @@ const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   });
-  return ({ children }: { children: ReactNode }) => (
+  const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
     </QueryClientProvider>
   );
+  return { wrapper, queryClient };
 };
 
 describe("useRestoreBackup", () => {
@@ -80,7 +82,7 @@ describe("useRestoreBackup", () => {
 
   it("restores a backup by id", async () => {
     const { result } = renderHook(() => useRestoreBackup(sims4Game), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper().wrapper,
     });
 
     await act(() => result.current.mutateAsync({ backupId: "b1" }));
@@ -90,7 +92,7 @@ describe("useRestoreBackup", () => {
 
   it("resolves latest backup when no id is provided", async () => {
     const { result } = renderHook(() => useRestoreBackup(sims4Game), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper().wrapper,
     });
 
     await act(() => result.current.mutateAsync(undefined));
@@ -101,7 +103,7 @@ describe("useRestoreBackup", () => {
 
   it("sets game status to success after restore", async () => {
     const { result } = renderHook(() => useRestoreBackup(sims4Game), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper().wrapper,
     });
 
     await act(() => result.current.mutateAsync({ backupId: "b1" }));
@@ -115,7 +117,7 @@ describe("useRestoreBackup", () => {
 
   it("passes targetPaths to restoreGame", async () => {
     const { result } = renderHook(() => useRestoreBackup(sims4Game), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper().wrapper,
     });
 
     await act(() =>
@@ -141,7 +143,7 @@ describe("useRestoreBackup", () => {
     mockAddManualGame.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useRestoreBackup(cloudOnlyGame), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper().wrapper,
     });
 
     await act(() =>
@@ -161,9 +163,43 @@ describe("useRestoreBackup", () => {
     });
   });
 
+  it("replaces cloud-only game in cache without duplicates", async () => {
+    const scannedGame = {
+      ...cloudOnlyGame,
+      savePaths: ["/saves/custom"],
+      saveFiles: [],
+      isManual: true,
+      isCloudOnly: undefined,
+    };
+    mockScanManualGame.mockResolvedValue(scannedGame);
+    mockAddManualGame.mockResolvedValue(undefined);
+
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData<Game[]>(QUERY_KEYS.games, [sims4Game]);
+
+    const { result } = renderHook(() => useRestoreBackup(cloudOnlyGame), {
+      wrapper,
+    });
+
+    await act(() =>
+      result.current.mutateAsync({
+        backupId: "b1",
+        targetPaths: ["/saves/custom"],
+      }),
+    );
+
+    await waitFor(() => {
+      const games = queryClient.getQueryData<Game[]>(QUERY_KEYS.games)!;
+      expect(games).toHaveLength(2);
+      expect(games.find((game) => game.name === "Cloud Save RPG")).toEqual(
+        scannedGame,
+      );
+    });
+  });
+
   it("does not persist as manual game for local game restore", async () => {
     const { result } = renderHook(() => useRestoreBackup(sims4Game), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper().wrapper,
     });
 
     await act(() => result.current.mutateAsync({ backupId: "b1" }));
@@ -177,7 +213,7 @@ describe("useRestoreBackup", () => {
     mockRestoreGame.mockRejectedValueOnce(new Error("Network error"));
 
     const { result } = renderHook(() => useRestoreBackup(sims4Game), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper().wrapper,
     });
 
     await act(async () => {
