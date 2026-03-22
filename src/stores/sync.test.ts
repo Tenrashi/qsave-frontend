@@ -93,6 +93,37 @@ describe("useSyncStore", () => {
       expect(useSyncStore.getState().isGameWatched("Sims 4")).toBe(true);
       expect(useSyncStore.getState().isGameWatched("Unknown")).toBe(false);
     });
+
+    it("sets all games watched", async () => {
+      await useSyncStore
+        .getState()
+        .setAllGamesWatched(["Sims 4", "Elden Ring"], true);
+
+      expect(useSyncStore.getState().watchedGames).toEqual({
+        "Sims 4": true,
+        "Elden Ring": true,
+      });
+      expect(mockSetWatchedGames).toHaveBeenCalledWith([
+        "Sims 4",
+        "Elden Ring",
+      ]);
+    });
+
+    it("sets all games unwatched", async () => {
+      useSyncStore.setState({
+        watchedGames: { "Sims 4": true, "Elden Ring": true },
+      });
+
+      await useSyncStore
+        .getState()
+        .setAllGamesWatched(["Sims 4", "Elden Ring"], false);
+
+      expect(useSyncStore.getState().watchedGames).toEqual({
+        "Sims 4": false,
+        "Elden Ring": false,
+      });
+      expect(mockSetWatchedGames).toHaveBeenCalledWith([]);
+    });
   });
 
   describe("sync fingerprints", () => {

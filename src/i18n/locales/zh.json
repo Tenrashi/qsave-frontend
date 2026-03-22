@@ -52,10 +52,12 @@
     "errorIcon": "同步失败"
   },
   "status": {
-    "watchingActive": "监控中",
-    "watchingInactive": "监控已停止",
+    "watchingActive": "监控全部",
+    "watchingInactive": "监控全部已关闭",
     "game_one": "{{count}}个游戏",
-    "game_other": "{{count}}个游戏"
+    "game_other": "{{count}}个游戏",
+    "autostartActive": "开机自启",
+    "autostartInactive": "开机自启已关闭"
   },
   "notifications": {
     "gameDetectedOne": "检测到 {{name}}",

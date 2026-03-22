@@ -7,6 +7,8 @@ const defaultProps: StatusBarProps = {
   games: [],
   watching: false,
   onToggleWatching: vi.fn(),
+  autostart: false,
+  onToggleAutostart: vi.fn(),
 };
 
 const renderStatusBar = (overrides: Partial<StatusBarProps> = {}) => {
@@ -45,5 +47,23 @@ describe("StatusBar", () => {
 
     rerender(<StatusBar {...defaultProps} watching={false} />);
     expect(screen.getByText("status.watchingInactive")).toBeInTheDocument();
+  });
+
+  it("shows autostart active when autostart is true", () => {
+    renderStatusBar({ autostart: true });
+    expect(screen.getByText("status.autostartActive")).toBeInTheDocument();
+  });
+
+  it("shows autostart inactive when autostart is false", () => {
+    renderStatusBar({ autostart: false });
+    expect(screen.getByText("status.autostartInactive")).toBeInTheDocument();
+  });
+
+  it("calls onToggleAutostart when clicking the autostart button", async () => {
+    const onToggle = vi.fn();
+    renderStatusBar({ autostart: false, onToggleAutostart: onToggle });
+
+    await user.click(screen.getByText("status.autostartInactive"));
+    expect(onToggle).toHaveBeenCalledOnce();
   });
 });

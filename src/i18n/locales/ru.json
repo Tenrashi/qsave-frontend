@@ -52,11 +52,13 @@
     "errorIcon": "Ошибка синхронизации"
   },
   "status": {
-    "watchingActive": "Мониторинг активен",
-    "watchingInactive": "Мониторинг неактивен",
+    "watchingActive": "Следить за всеми",
+    "watchingInactive": "Слежение за всеми выключено",
     "game_one": "{{count}} игра",
     "game_few": "{{count}} игры",
-    "game_many": "{{count}} игр"
+    "game_many": "{{count}} игр",
+    "autostartActive": "Автозапуск включён",
+    "autostartInactive": "Автозапуск выключен"
   },
   "notifications": {
     "gameDetectedOne": "{{name}} обнаружена",

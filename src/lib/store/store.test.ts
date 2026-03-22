@@ -17,6 +17,7 @@ import {
   setSyncFingerprint,
   getHideSteamCloud,
   setHideSteamCloud,
+  setAutostart,
 } from "./store";
 import type { SyncRecord, GameSyncFingerprint } from "@/domain/types";
 
@@ -274,6 +275,20 @@ describe("store", () => {
       mockSet.mockRejectedValueOnce(new Error("fail"));
 
       await expect(setHideSteamCloud(true)).resolves.toBeUndefined();
+    });
+  });
+
+  describe("autostart preference", () => {
+    it("persists the value", async () => {
+      await setAutostart(true);
+
+      expect(mockSet).toHaveBeenCalledWith("autostart", true);
+    });
+
+    it("does not throw on set error", async () => {
+      mockSet.mockRejectedValueOnce(new Error("fail"));
+
+      await expect(setAutostart(true)).resolves.toBeUndefined();
     });
   });
 

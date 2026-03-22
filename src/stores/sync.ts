@@ -16,6 +16,7 @@ type SyncStore = {
   initWatchPreferences: () => Promise<void>;
   toggleGameWatch: (gameName: string) => Promise<void>;
   isGameWatched: (gameName: string) => boolean;
+  setAllGamesWatched: (gameNames: string[], watched: boolean) => Promise<void>;
 
   syncFingerprints: Record<string, GameSyncFingerprint>;
   initSyncFingerprints: () => Promise<void>;
@@ -60,6 +61,16 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   },
 
   isGameWatched: (gameName) => get().watchedGames[gameName] ?? false,
+
+  setAllGamesWatched: async (gameNames, watched) => {
+    const updated: Record<string, boolean> = {};
+    for (const name of gameNames) {
+      updated[name] = watched;
+    }
+    set({ watchedGames: updated });
+    const names = watched ? gameNames : [];
+    await setWatchedGames(names);
+  },
 
   initSyncFingerprints: async () => {
     const fingerprints = await getSyncFingerprints();

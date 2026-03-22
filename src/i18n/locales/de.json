@@ -52,10 +52,12 @@
     "errorIcon": "Sync fehlgeschlagen"
   },
   "status": {
-    "watchingActive": "Überwachung aktiv",
-    "watchingInactive": "Überwachung inaktiv",
+    "watchingActive": "Alle überwachen",
+    "watchingInactive": "Alle überwachen aus",
     "game_one": "{{count}} Spiel",
-    "game_other": "{{count}} Spiele"
+    "game_other": "{{count}} Spiele",
+    "autostartActive": "Autostart aktiv",
+    "autostartInactive": "Autostart inaktiv"
   },
   "notifications": {
     "gameDetectedOne": "{{name}} erkannt",
