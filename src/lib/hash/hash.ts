@@ -9,10 +9,26 @@ const simpleHash = (input: string): string => {
   return (hash >>> 0).toString(36);
 };
 
-export const computeGameHash = (saveFiles: SaveFile[]): string => {
-  const sorted = [...saveFiles].sort((fileA, fileB) => fileA.path.localeCompare(fileB.path));
+const toRelativePath = (filePath: string, savePaths: string[]): string => {
+  const matchingBase = savePaths
+    .filter((basePath) => filePath.startsWith(basePath))
+    .sort((pathA, pathB) => pathB.length - pathA.length)[0];
+
+  if (!matchingBase) return filePath;
+
+  return filePath.slice(matchingBase.length).replace(/^[/\\]/, "");
+};
+
+export const computeGameHash = (
+  saveFiles: SaveFile[],
+  savePaths: string[],
+): string => {
+  const sorted = [...saveFiles].sort((fileA, fileB) =>
+    fileA.path.localeCompare(fileB.path),
+  );
   const parts = sorted.map(
-    (f) => `${f.path}:${f.sizeBytes}:${new Date(f.lastModified).getTime()}`,
+    (file) =>
+      `${toRelativePath(file.path, savePaths)}:${file.sizeBytes}:${new Date(file.lastModified).getTime()}`,
   );
   return simpleHash(parts.join("|"));
 };

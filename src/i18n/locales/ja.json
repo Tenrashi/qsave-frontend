@@ -65,7 +65,8 @@
     "syncSuccess": "{{name}} を同期しました",
     "syncFailed": "{{name}}: 同期に失敗しました",
     "restoreSuccess": "{{name}} を復元しました",
-    "restoreFailed": "{{name}}: 復元に失敗しました"
+    "restoreFailed": "{{name}}: 復元に失敗しました",
+    "sessionExpired": "セッションが期限切れです — 再度サインインしてください"
   },
   "restore": {
     "title": "{{name}} を復元",

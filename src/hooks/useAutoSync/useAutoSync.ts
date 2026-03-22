@@ -103,7 +103,10 @@ export const useAutoSync = (games: Game[] | undefined): void => {
           if (!currentGame) return;
 
           const currentStore = storeRef.current;
-          const hash = computeGameHash(currentGame.saveFiles);
+          const hash = computeGameHash(
+            currentGame.saveFiles,
+            currentGame.savePaths,
+          );
           const existing = currentStore.syncFingerprints[gameName];
           if (existing?.hash === hash) return;
 

@@ -16,13 +16,14 @@ export type GameCardProps = {
 
 export const GameCard = memo(({ game }: GameCardProps) => {
   const { t } = useTranslation();
-  const { gameStatuses, syncFingerprints } = useSyncStore();
+  const { gameStatuses, syncFingerprints, hasBackup } = useSyncStore();
 
   const status = gameStatuses[game.name] ?? SYNC_STATUS.idle;
   const isBusy =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
-  const currentHash = computeGameHash(game.saveFiles);
-  const isSynced = syncFingerprints[game.name]?.hash === currentHash;
+  const currentHash = computeGameHash(game.saveFiles, game.savePaths);
+  const isSynced =
+    syncFingerprints[game.name]?.hash === currentHash && hasBackup(game.name);
 
   return (
     <Card className="overflow-hidden !py-0">

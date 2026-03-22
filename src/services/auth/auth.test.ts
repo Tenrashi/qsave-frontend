@@ -13,12 +13,16 @@ const {
   mockGetAuthState,
   mockSetAuthState,
   mockClearAuth,
+  mockNotify,
+  mockLogout,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn(),
   mockFetch: vi.fn(),
   mockGetAuthState: vi.fn(),
   mockSetAuthState: vi.fn(),
   mockClearAuth: vi.fn(),
+  mockNotify: vi.fn(),
+  mockLogout: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -33,6 +37,16 @@ vi.mock("@/lib/store/store", () => ({
   getAuthState: mockGetAuthState,
   setAuthState: mockSetAuthState,
   clearAuth: mockClearAuth,
+}));
+
+vi.mock("@/lib/notify/notify", () => ({
+  notify: mockNotify,
+}));
+
+vi.mock("@/stores/auth", () => ({
+  useAuthStore: {
+    getState: () => ({ logout: mockLogout }),
+  },
 }));
 
 const mockJsonResponse = (data: unknown, ok = true, status = 200) => ({
@@ -220,6 +234,23 @@ describe("auth", () => {
 
       await expect(refreshAccessToken()).rejects.toThrow(
         "Token refresh failed: 401",
+      );
+    });
+
+    it("logs out and notifies user on refresh failure", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        refreshToken: "rt",
+      });
+
+      mockFetch.mockResolvedValueOnce(mockJsonResponse({}, false, 400));
+
+      await expect(refreshAccessToken()).rejects.toThrow();
+
+      expect(mockLogout).toHaveBeenCalledOnce();
+      expect(mockNotify).toHaveBeenCalledWith(
+        "QSave",
+        "notifications.sessionExpired",
       );
     });
   });

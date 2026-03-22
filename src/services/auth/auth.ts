@@ -2,7 +2,16 @@ import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import type { AuthState } from "@/domain/types";
 import { getAuthState, setAuthState, clearAuth } from "@/lib/store/store";
-import { TAURI_COMMANDS, OAUTH_ENDPOINTS, OAUTH_PARAMS, TOKEN_EXPIRY_BUFFER_MS } from "@/lib/constants/constants";
+import {
+  TAURI_COMMANDS,
+  OAUTH_ENDPOINTS,
+  OAUTH_PARAMS,
+  TOKEN_EXPIRY_BUFFER_MS,
+  APP_NAME,
+} from "@/lib/constants/constants";
+import { useAuthStore } from "@/stores/auth";
+import { notify } from "@/lib/notify/notify";
+import i18n from "@/i18n";
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
@@ -19,12 +28,18 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
   authUrl.searchParams.set("access_type", OAUTH_PARAMS.accessTypeOffline);
   authUrl.searchParams.set("prompt", OAUTH_PARAMS.promptConsent);
 
-  const code: string = await invoke(TAURI_COMMANDS.startOAuth, { authUrl: authUrl.toString() });
+  const code: string = await invoke(TAURI_COMMANDS.startOAuth, {
+    authUrl: authUrl.toString(),
+  });
   return exchangeCodeForTokens(code, redirectUri);
 };
 
-export const exchangeCodeForTokens = async (code: string, redirectUri?: string): Promise<AuthState> => {
-  const uri = redirectUri ?? (await invoke<string>(TAURI_COMMANDS.getOAuthRedirectUri));
+export const exchangeCodeForTokens = async (
+  code: string,
+  redirectUri?: string,
+): Promise<AuthState> => {
+  const uri =
+    redirectUri ?? (await invoke<string>(TAURI_COMMANDS.getOAuthRedirectUri));
   const res = await fetch(OAUTH_ENDPOINTS.token, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -39,7 +54,7 @@ export const exchangeCodeForTokens = async (code: string, redirectUri?: string):
 
   if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`);
 
-  const data = await res.json() as {
+  const data = (await res.json()) as {
     access_token: string;
     refresh_token?: string;
     expires_in: number;
@@ -48,8 +63,9 @@ export const exchangeCodeForTokens = async (code: string, redirectUri?: string):
   const userRes = await fetch(OAUTH_ENDPOINTS.userInfo, {
     headers: { Authorization: `Bearer ${data.access_token}` },
   });
-  if (!userRes.ok) throw new Error(`Failed to fetch user info: ${userRes.status}`);
-  const user = await userRes.json() as { email: string };
+  if (!userRes.ok)
+    throw new Error(`Failed to fetch user info: ${userRes.status}`);
+  const user = (await userRes.json()) as { email: string };
 
   const auth: AuthState = {
     isAuthenticated: true,
@@ -78,9 +94,16 @@ export const refreshAccessToken = async (): Promise<AuthState> => {
     }).toString(),
   });
 
-  if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
+  if (!res.ok) {
+    await useAuthStore.getState().logout();
+    notify(APP_NAME, i18n.t("notifications.sessionExpired"));
+    throw new Error(`Token refresh failed: ${res.status}`);
+  }
 
-  const data = await res.json() as { access_token: string; expires_in: number };
+  const data = (await res.json()) as {
+    access_token: string;
+    expires_in: number;
+  };
 
   const updated: AuthState = {
     ...auth,

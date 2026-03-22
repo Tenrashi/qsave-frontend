@@ -192,6 +192,21 @@ export const setAutostart = async (value: boolean): Promise<void> => {
   }
 };
 
+// Device ID
+export const getDeviceId = async (): Promise<string> => {
+  try {
+    const s = await getStore();
+    const existing = await s.get<string>(STORE_KEYS.deviceId);
+    if (existing) return existing;
+
+    const deviceId = crypto.randomUUID();
+    await s.set(STORE_KEYS.deviceId, deviceId);
+    return deviceId;
+  } catch {
+    return crypto.randomUUID();
+  }
+};
+
 // Sync fingerprints
 export const getSyncFingerprints = async (): Promise<
   Record<string, GameSyncFingerprint>

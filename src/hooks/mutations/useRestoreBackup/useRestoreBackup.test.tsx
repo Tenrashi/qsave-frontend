@@ -33,18 +33,23 @@ const defaultRecord: SyncRecord = {
 
 const {
   mockListGameBackups,
+  mockUpdateDevicePaths,
   mockRestoreGame,
   mockAddManualGame,
   mockScanManualGame,
+  mockGetDeviceId,
 } = vi.hoisted(() => ({
   mockListGameBackups: vi.fn(),
+  mockUpdateDevicePaths: vi.fn(),
   mockRestoreGame: vi.fn(),
   mockAddManualGame: vi.fn(),
   mockScanManualGame: vi.fn(),
+  mockGetDeviceId: vi.fn(() => Promise.resolve("test-device-id")),
 }));
 
 vi.mock("@/services/drive/drive", () => ({
   listGameBackups: mockListGameBackups,
+  updateDevicePaths: mockUpdateDevicePaths,
 }));
 
 vi.mock("@/services/restore/restore", () => ({
@@ -53,6 +58,7 @@ vi.mock("@/services/restore/restore", () => ({
 
 vi.mock("@/lib/store/store", () => ({
   addManualGame: mockAddManualGame,
+  getDeviceId: mockGetDeviceId,
   setSyncFingerprint: vi.fn(),
 }));
 

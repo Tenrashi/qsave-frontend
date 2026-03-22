@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { DialogClose } from "@/components/ui/dialog";
 import type { Game, DriveBackup } from "@/domain/types";
 import { TAURI_COMMANDS } from "@/lib/constants/constants";
+import { getDeviceId } from "@/lib/store/store";
+import { getDeviceGamePaths } from "@/services/drive/drive";
 import { useGameBackups } from "@/hooks/queries/useGameBackups/useGameBackups";
 import { useRestoreBackup } from "@/hooks/mutations/useRestoreBackup/useRestoreBackup";
 import { useDeleteBackup } from "@/hooks/mutations/useDeleteBackup/useDeleteBackup";
@@ -39,6 +41,18 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
     restoreMutation.reset();
     deleteMutation.reset();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !game.isCloudOnly) return;
+
+    const loadDevicePath = async () => {
+      const deviceId = await getDeviceId();
+      const paths = await getDeviceGamePaths(deviceId, game.name);
+      if (paths?.[0]) setTargetPath(paths[0]);
+    };
+
+    loadDevicePath();
+  }, [open, game.isCloudOnly, game.name]);
 
   const handlePickFolder = async () => {
     try {
