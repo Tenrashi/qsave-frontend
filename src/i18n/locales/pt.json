@@ -52,10 +52,12 @@
     "errorIcon": "Falha na sincronização"
   },
   "status": {
-    "watchingActive": "Monitoramento ativo",
-    "watchingInactive": "Monitoramento inativo",
+    "watchingActive": "Monitorar tudo",
+    "watchingInactive": "Monitorar tudo desativado",
     "game_one": "{{count}} jogo",
-    "game_other": "{{count}} jogos"
+    "game_other": "{{count}} jogos",
+    "autostartActive": "Início automático",
+    "autostartInactive": "Início automático desativado"
   },
   "notifications": {
     "gameDetectedOne": "{{name}} detectado",

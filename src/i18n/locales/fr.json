@@ -52,10 +52,12 @@
     "errorIcon": "Échec de la synchronisation"
   },
   "status": {
-    "watchingActive": "Surveillance active",
-    "watchingInactive": "Surveillance inactive",
+    "watchingActive": "Surveiller tout",
+    "watchingInactive": "Surveiller tout désactivé",
     "game_one": "{{count}} jeu",
-    "game_other": "{{count}} jeux"
+    "game_other": "{{count}} jeux",
+    "autostartActive": "Démarrage automatique",
+    "autostartInactive": "Démarrage automatique désactivé"
   },
   "notifications": {
     "gameDetectedOne": "{{name}} détecté",

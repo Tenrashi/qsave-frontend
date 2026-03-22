@@ -52,10 +52,12 @@
     "errorIcon": "Sync failed"
   },
   "status": {
-    "watchingActive": "Watching active",
-    "watchingInactive": "Watching inactive",
+    "watchingActive": "Watch all",
+    "watchingInactive": "Watch all off",
     "game_one": "{{count}} game",
-    "game_other": "{{count}} games"
+    "game_other": "{{count}} games",
+    "autostartActive": "Start with system",
+    "autostartInactive": "Start with system off"
   },
   "notifications": {
     "gameDetectedOne": "{{name}} detected",

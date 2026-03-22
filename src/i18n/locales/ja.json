@@ -52,10 +52,12 @@
     "errorIcon": "同期失敗"
   },
   "status": {
-    "watchingActive": "監視中",
-    "watchingInactive": "監視停止中",
+    "watchingActive": "すべて監視",
+    "watchingInactive": "すべて監視オフ",
     "game_one": "{{count}}ゲーム",
-    "game_other": "{{count}}ゲーム"
+    "game_other": "{{count}}ゲーム",
+    "autostartActive": "自動起動オン",
+    "autostartInactive": "自動起動オフ"
   },
   "notifications": {
     "gameDetectedOne": "{{name}} を検出しました",

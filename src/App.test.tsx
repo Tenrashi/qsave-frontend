@@ -12,17 +12,23 @@ import { RECORD_STATUS } from "@/domain/types";
 import type { AuthState, Game, SyncRecord } from "@/domain/types";
 import App from "./App";
 
-const { mockScanForGames, mockGetSyncHistory, mockGetAuthState } = vi.hoisted(
-  () => ({
-    mockScanForGames: vi.fn<() => Promise<Game[]>>(() => Promise.resolve([])),
-    mockGetSyncHistory: vi.fn<() => Promise<SyncRecord[]>>(() =>
-      Promise.resolve([]),
-    ),
-    mockGetAuthState: vi.fn<() => Promise<AuthState>>(() =>
-      Promise.resolve({ isAuthenticated: false }),
-    ),
-  }),
-);
+const {
+  mockScanForGames,
+  mockGetSyncHistory,
+  mockGetAuthState,
+  mockGetWatchedGames,
+} = vi.hoisted(() => ({
+  mockScanForGames: vi.fn<() => Promise<Game[]>>(() => Promise.resolve([])),
+  mockGetSyncHistory: vi.fn<() => Promise<SyncRecord[]>>(() =>
+    Promise.resolve([]),
+  ),
+  mockGetAuthState: vi.fn<() => Promise<AuthState>>(() =>
+    Promise.resolve({ isAuthenticated: false }),
+  ),
+  mockGetWatchedGames: vi.fn<() => Promise<string[]>>(() =>
+    Promise.resolve([]),
+  ),
+}));
 
 vi.mock("@/services/scanner/scanner", () => ({
   scanForGames: mockScanForGames,
@@ -31,7 +37,7 @@ vi.mock("@/services/scanner/scanner", () => ({
 vi.mock("@/lib/store/store", () => ({
   getAuthState: mockGetAuthState,
   getSyncHistory: mockGetSyncHistory,
-  getWatchedGames: vi.fn(() => Promise.resolve([])),
+  getWatchedGames: mockGetWatchedGames,
   getSyncFingerprints: vi.fn(() => Promise.resolve({})),
   setWatchedGames: vi.fn(),
   setSyncFingerprint: vi.fn(),
@@ -53,6 +59,12 @@ vi.mock("@/services/drive/drive", () => ({
 
 vi.mock("@/services/auth/auth", () => ({
   startOAuthFlow: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-autostart", () => ({
+  enable: vi.fn(() => Promise.resolve()),
+  disable: vi.fn(() => Promise.resolve()),
+  isEnabled: vi.fn(() => Promise.resolve(false)),
 }));
 
 vi.mock("@/components/SavesList/SavesList", () => ({
@@ -182,10 +194,19 @@ describe("App", () => {
     expect(screen.queryByText("history.title")).not.toBeInTheDocument();
   });
 
-  it("toggles watching state", async () => {
+  it("shows watching active when all games are watched", async () => {
+    mockScanForGames.mockResolvedValue([sims4Game]);
+    mockGetWatchedGames.mockResolvedValue(["The Sims 4"]);
     renderWithProviders(<App />);
-    const toggleButton = screen.getByText("status.watchingActive");
-    await user.click(toggleButton);
+    await screen.findByText("The Sims 4");
+    await waitFor(() => {
+      expect(screen.getByText("status.watchingActive")).toBeInTheDocument();
+    });
+  });
+
+  it("shows watching inactive when no games are watched", async () => {
+    renderWithProviders(<App />);
+    await waitFor(() => expect(mockGetAuthState).toHaveBeenCalled());
     expect(screen.getByText("status.watchingInactive")).toBeInTheDocument();
   });
 
@@ -218,6 +239,42 @@ describe("App", () => {
       await waitFor(() => {
         expect(screen.getByText("Portal 2")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("global watch toggle", () => {
+    it("shows watching active when all visible games are watched", async () => {
+      mockScanForGames.mockResolvedValue([sims4Game, steamCloudGame]);
+      mockGetWatchedGames.mockResolvedValue(["The Sims 4", "Portal 2"]);
+      renderWithProviders(<App />);
+      await screen.findByText("The Sims 4");
+      await waitFor(() => {
+        expect(screen.getByText("status.watchingActive")).toBeInTheDocument();
+      });
+    });
+
+    it("shows watching active when hidden steam cloud games are unwatched but all visible are watched", async () => {
+      mockScanForGames.mockResolvedValue([sims4Game, steamCloudGame]);
+      mockGetWatchedGames.mockResolvedValue(["The Sims 4"]);
+      renderWithProviders(<App />);
+      await screen.findByText("The Sims 4");
+
+      await user.click(screen.getByTitle("games.hideSteamCloud"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Portal 2")).not.toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(screen.getByText("status.watchingActive")).toBeInTheDocument();
+      });
+    });
+
+    it("shows watching inactive when a visible game is unwatched", async () => {
+      mockScanForGames.mockResolvedValue([sims4Game, cyberpunkGame]);
+      mockGetWatchedGames.mockResolvedValue(["The Sims 4"]);
+      renderWithProviders(<App />);
+      await screen.findByText("The Sims 4");
+      expect(screen.getByText("status.watchingInactive")).toBeInTheDocument();
     });
   });
 

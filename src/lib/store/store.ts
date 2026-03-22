@@ -182,6 +182,16 @@ export const setHideSteamCloud = async (value: boolean): Promise<void> => {
   }
 };
 
+// Autostart preference
+export const setAutostart = async (value: boolean): Promise<void> => {
+  try {
+    const s = await getStore();
+    await s.set(STORE_KEYS.autostart, value);
+  } catch {
+    // store write failed — preference not persisted
+  }
+};
+
 // Sync fingerprints
 export const getSyncFingerprints = async (): Promise<
   Record<string, GameSyncFingerprint>

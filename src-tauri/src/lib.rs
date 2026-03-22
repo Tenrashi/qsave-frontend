@@ -124,6 +124,8 @@ pub fn run() {
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
+                        #[cfg(target_os = "macos")]
+                        let _ = app.set_dock_visibility(true);
                         let Some(window) = app.get_webview_window("main") else { return };
                         let _ = window.show();
                         let _ = window.set_focus();
@@ -135,7 +137,10 @@ pub fn run() {
                 })
                 .on_tray_icon_event(|tray, event| {
                     let tauri::tray::TrayIconEvent::Click { .. } = event else { return };
-                    let Some(window) = tray.app_handle().get_webview_window("main") else { return };
+                    let app = tray.app_handle();
+                    #[cfg(target_os = "macos")]
+                    let _ = app.set_dock_visibility(true);
+                    let Some(window) = app.get_webview_window("main") else { return };
                     let _ = window.show();
                     let _ = window.set_focus();
                 })
@@ -147,12 +152,16 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
+                #[cfg(target_os = "macos")]
+                let _ = window.app_handle().set_dock_visibility(false);
             }
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
             let tauri::RunEvent::Reopen { .. } = event else { return };
+            #[cfg(target_os = "macos")]
+            let _ = app.set_dock_visibility(true);
             let Some(window) = app.get_webview_window("main") else { return };
             let _ = window.show();
             let _ = window.set_focus();

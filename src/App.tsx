@@ -9,7 +9,13 @@ import type { Game } from "@/domain/types";
 import {
   getHideSteamCloud,
   setHideSteamCloud as persistHideSteamCloud,
+  setAutostart as persistAutostart,
 } from "@/lib/store/store";
+import {
+  enable as enableAutostart,
+  disable as disableAutostart,
+  isEnabled as isAutostartEnabled,
+} from "@tauri-apps/plugin-autostart";
 import { AppHeader } from "@/components/AppHeader/AppHeader";
 import { AuthStatus } from "@/components/AuthStatus/AuthStatus";
 import { GameToolbar } from "@/components/GameToolbar/GameToolbar";
@@ -26,12 +32,14 @@ const App = () => {
     loadBackedUpGames,
     backedUpGames,
     backedUpGamesLoaded,
+    watchedGames,
+    setAllGamesWatched,
   } = useSyncStore();
   const games = useGames();
   const history = useSyncHistory();
   const [search, setSearch] = useState("");
-  const [watching, setWatching] = useState(true);
   const [hideSteamCloud, setHideSteamCloud] = useState(false);
+  const [autostart, setAutostart] = useState(false);
   const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
@@ -39,6 +47,9 @@ const App = () => {
     initWatchPreferences();
     initSyncFingerprints();
     getHideSteamCloud().then(setHideSteamCloud);
+    isAutostartEnabled()
+      .then(setAutostart)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -46,9 +57,6 @@ const App = () => {
       loadBackedUpGames();
     }
   }, [auth.isAuthenticated]);
-
-  useAutoSync(games.data, watching);
-  useGameDetectionNotify(games.data);
 
   const allGames = useMemo(() => {
     const localGames = games.data ?? [];
@@ -81,6 +89,32 @@ const App = () => {
     return result;
   }, [allGames, deferredSearch, hideSteamCloud]);
 
+  const watchableGameNames = useMemo(
+    () =>
+      filteredGames
+        .filter((game) => !game.isCloudOnly)
+        .map((game) => game.name),
+    [filteredGames],
+  );
+
+  const watching =
+    watchableGameNames.length > 0 &&
+    watchableGameNames.every((name) => watchedGames[name]);
+
+  const handleToggleAutostart = async () => {
+    const next = !autostart;
+    setAutostart(next);
+    try {
+      await (next ? enableAutostart() : disableAutostart());
+      await persistAutostart(next);
+    } catch {
+      setAutostart(!next);
+    }
+  };
+
+  useAutoSync(games.data, watching);
+  useGameDetectionNotify(games.data);
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <AppHeader
@@ -112,7 +146,11 @@ const App = () => {
       <StatusBar
         games={games.data ?? []}
         watching={watching}
-        onToggleWatching={() => setWatching((prev) => !prev)}
+        onToggleWatching={() =>
+          setAllGamesWatched(watchableGameNames, !watching)
+        }
+        autostart={autostart}
+        onToggleAutostart={handleToggleAutostart}
       />
     </div>
   );
