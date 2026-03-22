@@ -8,6 +8,9 @@ import {
   deleteGameBackup,
   downloadBackup,
   uploadGameArchive,
+  getDevicesMap,
+  getDeviceGamePaths,
+  updateDevicePaths,
 } from "./drive";
 
 const {
@@ -451,6 +454,191 @@ describe("drive", () => {
       await expect(listGameBackups("Sims 4")).rejects.toThrow(
         'Failed to list backups for "Sims 4"',
       );
+    });
+  });
+
+  describe("getDevicesMap", () => {
+    it("returns devices map when file exists", async () => {
+      const devicesData = {
+        "device-1": { os: "windows", games: { "Sims 4": ["/saves"] } },
+      };
+      // ensureQSaveFolder
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      // findFileInFolder
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "devices-file-id" }] }),
+      );
+      // download devices.json
+      mockFetch.mockResolvedValueOnce(okResponse(devicesData));
+
+      const result = await getDevicesMap();
+
+      expect(result).toEqual(devicesData);
+    });
+
+    it("returns empty object when file does not exist", async () => {
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      // findFileInFolder returns no files
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
+
+      const result = await getDevicesMap();
+
+      expect(result).toEqual({});
+    });
+
+    it("returns empty object on fetch error", async () => {
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "devices-file-id" }] }),
+      );
+      // download fails
+      mockFetch.mockResolvedValueOnce(errorResponse(500));
+
+      const result = await getDevicesMap();
+
+      expect(result).toEqual({});
+    });
+
+    it("returns empty object when ensureQSaveFolder throws", async () => {
+      mockGetDriveFolderId.mockRejectedValueOnce(new Error("fail"));
+
+      const result = await getDevicesMap();
+
+      expect(result).toEqual({});
+    });
+  });
+
+  describe("getDeviceGamePaths", () => {
+    it("returns paths for existing device and game", async () => {
+      const devicesData = {
+        "device-1": { os: "windows", games: { "Sims 4": ["/saves/sims"] } },
+      };
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [{ id: "df" }] }));
+      mockFetch.mockResolvedValueOnce(okResponse(devicesData));
+
+      const result = await getDeviceGamePaths("device-1", "Sims 4");
+
+      expect(result).toEqual(["/saves/sims"]);
+    });
+
+    it("returns undefined for unknown device", async () => {
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
+
+      const result = await getDeviceGamePaths("unknown", "Sims 4");
+
+      expect(result).toBeUndefined();
+    });
+
+    it("returns undefined for unknown game", async () => {
+      const devicesData = {
+        "device-1": { os: "windows", games: {} },
+      };
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [{ id: "df" }] }));
+      mockFetch.mockResolvedValueOnce(okResponse(devicesData));
+
+      const result = await getDeviceGamePaths("device-1", "Unknown Game");
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe("updateDevicePaths", () => {
+    it("creates devices.json when it does not exist", async () => {
+      // ensureQSaveFolder (for updateDevicePaths)
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      // getDevicesMap -> ensureQSaveFolder
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      // getDevicesMap -> findFileInFolder (no file)
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
+      // findFileInFolder for existing check (no file)
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
+      // create (POST)
+      mockFetch.mockResolvedValueOnce(okResponse({ id: "new-devices-file" }));
+
+      await updateDevicePaths("device-1", "Sims 4", ["/saves"]);
+
+      const postCall = mockFetch.mock.calls.find(
+        (call: unknown[]) => (call[1] as RequestInit)?.method === "POST",
+      );
+      expect(postCall).toBeDefined();
+    });
+
+    it("updates existing devices.json", async () => {
+      const existing = {
+        "device-1": { os: "windows", games: { "Other Game": ["/other"] } },
+      };
+      // ensureQSaveFolder
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      // getDevicesMap -> ensureQSaveFolder
+      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "root-id" }] }),
+      );
+      // getDevicesMap -> findFileInFolder
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "existing-file" }] }),
+      );
+      // getDevicesMap -> download
+      mockFetch.mockResolvedValueOnce(okResponse(existing));
+      // findFileInFolder for existing check
+      mockFetch.mockResolvedValueOnce(
+        okResponse({ files: [{ id: "existing-file" }] }),
+      );
+      // PATCH
+      mockFetch.mockResolvedValueOnce(okResponse({ id: "existing-file" }));
+
+      await updateDevicePaths("device-1", "Sims 4", ["/saves"]);
+
+      const patchCall = mockFetch.mock.calls.find(
+        (call: unknown[]) => (call[1] as RequestInit)?.method === "PATCH",
+      );
+      expect(patchCall).toBeDefined();
+    });
+
+    it("wraps errors with context", async () => {
+      mockGetDriveFolderId.mockRejectedValueOnce(new Error("fail"));
+
+      await expect(
+        updateDevicePaths("device-1", "Sims 4", ["/saves"]),
+      ).rejects.toThrow("Failed to update device paths");
+    });
+
+    it("handles non-Error throw in wrapping", async () => {
+      mockGetDriveFolderId.mockRejectedValueOnce("string error");
+
+      await expect(
+        updateDevicePaths("device-1", "Sims 4", ["/saves"]),
+      ).rejects.toThrow("Failed to update device paths");
     });
   });
 });

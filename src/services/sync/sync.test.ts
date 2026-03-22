@@ -1,24 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RECORD_STATUS } from "@/domain/types";
-import { sims4Game } from "@/test/mocks/games";
+import { sims4Game, manualGame } from "@/test/mocks/games";
 import { syncGame, syncAllGames } from "./sync";
 
-const { mockUploadGameArchive, mockAddSyncRecord, mockNotify } = vi.hoisted(
-  () => ({
-    mockUploadGameArchive: vi.fn(() =>
-      Promise.resolve({ fileId: "drive-file-123" }),
-    ),
-    mockAddSyncRecord: vi.fn(),
-    mockNotify: vi.fn(),
-  }),
-);
+const {
+  mockUploadGameArchive,
+  mockUpdateDevicePaths,
+  mockAddSyncRecord,
+  mockGetDeviceId,
+  mockNotify,
+} = vi.hoisted(() => ({
+  mockUploadGameArchive: vi.fn(() =>
+    Promise.resolve({ fileId: "drive-file-123" }),
+  ),
+  mockUpdateDevicePaths: vi.fn(() => Promise.resolve()),
+  mockAddSyncRecord: vi.fn(),
+  mockGetDeviceId: vi.fn(() => Promise.resolve("test-device-id")),
+  mockNotify: vi.fn(),
+}));
 
 vi.mock("@/services/drive/drive", () => ({
   uploadGameArchive: mockUploadGameArchive,
+  updateDevicePaths: mockUpdateDevicePaths,
 }));
 
 vi.mock("@/lib/store/store", () => ({
   addSyncRecord: mockAddSyncRecord,
+  getDeviceId: mockGetDeviceId,
 }));
 
 vi.mock("@/lib/notify/notify", () => ({
@@ -84,6 +92,33 @@ describe("syncGame", () => {
 
     expect(record.status).toBe(RECORD_STATUS.error);
     expect(record.error).toBe("string error");
+  });
+
+  it("updates device paths for manual games", async () => {
+    await syncGame(manualGame);
+
+    await vi.waitFor(() => {
+      expect(mockGetDeviceId).toHaveBeenCalledOnce();
+      expect(mockUpdateDevicePaths).toHaveBeenCalledWith(
+        "test-device-id",
+        manualGame.name,
+        manualGame.savePaths,
+      );
+    });
+  });
+
+  it("does not update device paths for auto-detected games", async () => {
+    await syncGame(sims4Game);
+
+    expect(mockUpdateDevicePaths).not.toHaveBeenCalled();
+  });
+
+  it("does not block sync when device paths update fails", async () => {
+    mockUpdateDevicePaths.mockRejectedValueOnce(new Error("Drive error"));
+
+    const record = await syncGame(manualGame);
+
+    expect(record.status).toBe(RECORD_STATUS.success);
   });
 });
 

@@ -1,8 +1,8 @@
 import { RECORD_STATUS } from "@/domain/types";
 import type { Game, SyncRecord } from "@/domain/types";
 import { APP_NAME } from "@/lib/constants/constants";
-import { uploadGameArchive } from "@/services/drive/drive";
-import { addSyncRecord } from "@/lib/store/store";
+import { uploadGameArchive, updateDevicePaths } from "@/services/drive/drive";
+import { addSyncRecord, getDeviceId } from "@/lib/store/store";
 import { notify } from "@/lib/notify/notify";
 import i18n from "@/i18n";
 
@@ -16,6 +16,14 @@ export const syncGame = async (game: Game): Promise<SyncRecord> => {
       game.savePaths,
       filePaths,
     );
+
+    if (game.isManual) {
+      getDeviceId()
+        .then((deviceId) =>
+          updateDevicePaths(deviceId, game.name, game.savePaths),
+        )
+        .catch(() => {});
+    }
 
     const record: SyncRecord = {
       id,

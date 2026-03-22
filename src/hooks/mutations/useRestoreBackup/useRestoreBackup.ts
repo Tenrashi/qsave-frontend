@@ -3,10 +3,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Game } from "@/domain/types";
 import { SYNC_STATUS, RECORD_STATUS } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
-import { listGameBackups } from "@/services/drive/drive";
+import { listGameBackups, updateDevicePaths } from "@/services/drive/drive";
 import { restoreGame } from "@/services/restore/restore";
 import { scanManualGame } from "@/services/scanner/scanner";
-import { addManualGame } from "@/lib/store/store";
+import { addManualGame, getDeviceId } from "@/lib/store/store";
 import { useSyncStore } from "@/stores/sync";
 import { computeGameHash } from "@/lib/hash/hash";
 
@@ -37,7 +37,7 @@ export const useRestoreBackup = (game: Game) => {
     onSuccess: async (_data, params) => {
       try {
         setGameStatus(game.name, SYNC_STATUS.success);
-        const newHash = computeGameHash(game.saveFiles);
+        const newHash = computeGameHash(game.saveFiles, game.savePaths);
         await updateSyncFingerprint(game.name, newHash);
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
 
@@ -47,6 +47,8 @@ export const useRestoreBackup = (game: Game) => {
         }
 
         await addManualGame(game.name, params.targetPaths);
+        const deviceId = await getDeviceId();
+        await updateDevicePaths(deviceId, game.name, params.targetPaths);
         const scanned = await scanManualGame(game.name, params.targetPaths);
         await queryClient.cancelQueries({ queryKey: QUERY_KEYS.games });
         queryClient.setQueryData<Game[]>(QUERY_KEYS.games, (prev = []) =>

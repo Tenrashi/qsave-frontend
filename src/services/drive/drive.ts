@@ -113,6 +113,127 @@ export const ensureGameFolder = async (gameName: string): Promise<string> => {
   }
 };
 
+const DEVICES_FILENAME = "devices.json";
+
+type DeviceEntry = {
+  os: string;
+  games: Record<string, string[]>;
+};
+
+export type DevicesMap = Record<string, DeviceEntry>;
+
+const findFileInFolder = async (
+  folderId: string,
+  fileName: string,
+): Promise<string | null> => {
+  try {
+    const headers = await authHeaders();
+    const query = `'${folderId}' in parents and name='${fileName}' and trashed=false`;
+    const res = await fetch(
+      `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id)`,
+      { headers },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { files: { id: string }[] };
+    return data.files[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const currentOS = (): string => {
+  const platform = navigator.userAgent;
+  if (platform.includes("Win")) return "windows";
+  if (platform.includes("Mac")) return "macos";
+  return "linux";
+};
+
+export const getDevicesMap = async (): Promise<DevicesMap> => {
+  try {
+    const rootId = await ensureQSaveFolder();
+    const fileId = await findFileInFolder(rootId, DEVICES_FILENAME);
+    if (!fileId) return {};
+
+    const headers = await authHeaders();
+    const res = await fetch(
+      `${DRIVE_ENDPOINTS.api}/files/${fileId}?alt=media`,
+      { headers },
+    );
+    if (!res.ok) return {};
+    return (await res.json()) as DevicesMap;
+  } catch {
+    return {};
+  }
+};
+
+export const getDeviceGamePaths = async (
+  deviceId: string,
+  gameName: string,
+): Promise<string[] | undefined> => {
+  const devices = await getDevicesMap();
+  return devices[deviceId]?.games[gameName];
+};
+
+export const updateDevicePaths = async (
+  deviceId: string,
+  gameName: string,
+  paths: string[],
+): Promise<void> => {
+  try {
+    const rootId = await ensureQSaveFolder();
+    const devices = await getDevicesMap();
+
+    if (!devices[deviceId]) {
+      devices[deviceId] = { os: currentOS(), games: {} };
+    }
+    devices[deviceId].games[gameName] = paths;
+
+    const content = new TextEncoder().encode(JSON.stringify(devices, null, 2));
+    const headers = await authHeaders();
+    const existingFileId = await findFileInFolder(rootId, DEVICES_FILENAME);
+
+    if (existingFileId) {
+      const res = await fetch(
+        `${DRIVE_ENDPOINTS.upload}/files/${existingFileId}?uploadType=media`,
+        {
+          method: "PATCH",
+          headers: {
+            ...headers,
+            "Content-Type": MIME_TYPES.jsonUtf8,
+          },
+          body: content as unknown as BodyInit,
+        },
+      );
+      await assertOk(res, "Failed to update devices");
+      return;
+    }
+
+    const metadata = JSON.stringify({
+      name: DEVICES_FILENAME,
+      parents: [rootId],
+    });
+    const boundary = "qsave_devices_" + Date.now();
+    const body = buildMultipartBody(boundary, metadata, content);
+    const res = await fetch(
+      `${DRIVE_ENDPOINTS.upload}/files?uploadType=multipart`,
+      {
+        method: "POST",
+        headers: {
+          ...headers,
+          "Content-Type": `multipart/related; boundary=${boundary}`,
+        },
+        body: body as unknown as BodyInit,
+      },
+    );
+    await assertOk(res, "Failed to create devices");
+  } catch (error) {
+    throw new Error(
+      `Failed to update device paths: ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
+};
+
 const listFilesInFolder = async (
   folderId: string,
 ): Promise<{ id: string; name: string; createdTime: string }[]> => {
