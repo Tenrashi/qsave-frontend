@@ -9,14 +9,18 @@ const simpleHash = (input: string): string => {
   return (hash >>> 0).toString(36);
 };
 
+const normalizeSeparators = (path: string): string => path.replace(/\\/g, "/");
+
 const toRelativePath = (filePath: string, savePaths: string[]): string => {
+  const normalizedFile = normalizeSeparators(filePath);
   const matchingBase = savePaths
-    .filter((basePath) => filePath.startsWith(basePath))
+    .map(normalizeSeparators)
+    .filter((basePath) => normalizedFile.startsWith(basePath))
     .sort((pathA, pathB) => pathB.length - pathA.length)[0];
 
-  if (!matchingBase) return filePath;
+  if (!matchingBase) return normalizedFile;
 
-  return filePath.slice(matchingBase.length).replace(/^[/\\]/, "");
+  return normalizedFile.slice(matchingBase.length).replace(/^\//, "");
 };
 
 export const computeGameHash = (

@@ -9,6 +9,7 @@ const {
   mockAddSyncRecord,
   mockGetDeviceId,
   mockNotify,
+  mockMarkGameBackedUp,
 } = vi.hoisted(() => ({
   mockUploadGameArchive: vi.fn(() =>
     Promise.resolve({ fileId: "drive-file-123" }),
@@ -17,6 +18,7 @@ const {
   mockAddSyncRecord: vi.fn(),
   mockGetDeviceId: vi.fn(() => Promise.resolve("test-device-id")),
   mockNotify: vi.fn(),
+  mockMarkGameBackedUp: vi.fn(),
 }));
 
 vi.mock("@/operations/drive/backups/backups", () => ({
@@ -34,6 +36,14 @@ vi.mock("@/lib/store/store", () => ({
 
 vi.mock("@/lib/notify/notify", () => ({
   notify: mockNotify,
+}));
+
+vi.mock("@/stores/sync", () => ({
+  useSyncStore: {
+    getState: () => ({
+      markGameBackedUp: mockMarkGameBackedUp,
+    }),
+  },
 }));
 
 describe("syncGame", () => {
@@ -100,14 +110,12 @@ describe("syncGame", () => {
   it("updates device paths for manual games", async () => {
     await syncGame(manualGame);
 
-    await vi.waitFor(() => {
-      expect(mockGetDeviceId).toHaveBeenCalledOnce();
-      expect(mockSaveDevicePaths).toHaveBeenCalledWith(
-        "test-device-id",
-        manualGame.name,
-        manualGame.savePaths,
-      );
-    });
+    expect(mockGetDeviceId).toHaveBeenCalledOnce();
+    expect(mockSaveDevicePaths).toHaveBeenCalledWith(
+      "test-device-id",
+      manualGame.name,
+      manualGame.savePaths,
+    );
   });
 
   it("does not update device paths for auto-detected games", async () => {
@@ -121,10 +129,16 @@ describe("syncGame", () => {
     mockSaveDevicePaths.mockRejectedValueOnce(new Error("Drive error"));
 
     const record = await syncGame(manualGame);
-    await vi.waitFor(() => expect(warnSpy).toHaveBeenCalled());
 
     expect(record.status).toBe(RECORD_STATUS.success);
+    expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+
+  it("marks game as backed up after successful sync", async () => {
+    await syncGame(sims4Game);
+
+    expect(mockMarkGameBackedUp).toHaveBeenCalledWith("The Sims 4");
   });
 });
 

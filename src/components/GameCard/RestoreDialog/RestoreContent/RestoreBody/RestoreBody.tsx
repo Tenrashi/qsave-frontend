@@ -51,7 +51,9 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
       if (paths?.[0]) setTargetPath(paths[0]);
     };
 
-    loadDevicePath();
+    loadDevicePath().catch((error) =>
+      console.warn("Failed to load device path:", error),
+    );
   }, [open, game.isCloudOnly, game.name]);
 
   const handlePickFolder = async () => {

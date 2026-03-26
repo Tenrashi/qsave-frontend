@@ -99,6 +99,14 @@ describe("devices", () => {
       expect(result).toBeUndefined();
     });
 
+    it("returns undefined when ensureDevicesFolder throws", async () => {
+      mockEnsureDevicesFolder.mockRejectedValueOnce(new Error("fail"));
+
+      const result = await findDeviceGamePaths("device-1", "Sims 4");
+
+      expect(result).toBeUndefined();
+    });
+
     it("returns undefined for unknown game in existing device", async () => {
       const deviceEntry = { os: "windows", games: {} };
       mockGetFile.mockResolvedValueOnce("device-file");

@@ -96,6 +96,23 @@ describe("drive service", () => {
 
       expect(result).toBeNull();
     });
+
+    it("returns null on network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      const result = await getFolder("QSave", "root");
+
+      expect(result).toBeNull();
+    });
+
+    it("escapes single quotes in folder name", async () => {
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
+
+      await getFolder("Tom Clancy's", "root");
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain(encodeURIComponent("Tom Clancy\\'s"));
+    });
   });
 
   describe("getFile", () => {

@@ -53,6 +53,33 @@ describe("computeGameHash", () => {
     expect(computeGameHash([], SAVE_PATHS)).toBeTruthy();
   });
 
+  it("handles files with no matching base path", () => {
+    const file = makeSaveFile({
+      path: "/unrelated/save.dat",
+    });
+
+    const hash = computeGameHash([file], ["/games"]);
+
+    expect(hash).toBeTruthy();
+  });
+
+  it("normalizes mixed path separators across devices", () => {
+    const winFile = makeSaveFile({
+      path: "C:\\Users\\alice\\AppData\\Game\\save.dat",
+    });
+    const unixFile = makeSaveFile({
+      path: "C:/Users/bob/AppData/Game/save.dat",
+    });
+
+    const winHash = computeGameHash(
+      [winFile],
+      ["C:\\Users\\alice\\AppData\\Game"],
+    );
+    const unixHash = computeGameHash([unixFile], ["C:/Users/bob/AppData/Game"]);
+
+    expect(winHash).toBe(unixHash);
+  });
+
   it("produces the same hash for identical files under different base paths", () => {
     const aliceFile = makeSaveFile({
       path: "C:\\Users\\alice\\AppData\\Game\\save.dat",

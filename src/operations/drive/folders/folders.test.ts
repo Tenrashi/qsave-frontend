@@ -41,6 +41,7 @@ describe("folders", () => {
 
       expect(result).toBe("cached-id");
       expect(mockGetFolder).toHaveBeenCalledWith("QSave", "root");
+      expect(mockSetDriveFolderId).not.toHaveBeenCalled();
     });
 
     it("finds existing folder when cache misses", async () => {
@@ -67,14 +68,14 @@ describe("folders", () => {
       expect(mockPostFolder).toHaveBeenCalledWith("QSave", "root");
     });
 
-    it("re-fetches when cached ID doesn't match Drive", async () => {
+    it("updates cache when Drive ID differs from cached", async () => {
       mockGetDriveFolderId.mockResolvedValueOnce("stale-cached-id");
-      mockGetFolder.mockResolvedValueOnce("different-id");
       mockGetFolder.mockResolvedValueOnce("different-id");
 
       const result = await ensureQSaveFolder();
 
       expect(result).toBe("different-id");
+      expect(mockGetFolder).toHaveBeenCalledTimes(1);
       expect(mockSetDriveFolderId).toHaveBeenCalledWith(
         "__root__",
         "different-id",

@@ -16,6 +16,9 @@ const assertOk = async (res: Response, context: string) => {
   }
 };
 
+const escapeQueryValue = (value: string): string =>
+  value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
 export const postFolder = async (
   name: string,
   parentId: string,
@@ -43,16 +46,20 @@ export const getFolder = async (
   name: string,
   parentId: string,
 ): Promise<string | null> => {
-  const headers = await authHeaders();
-  const query = `name='${name}' and '${parentId}' in parents and mimeType='${MIME_TYPES.googleFolder}' and trashed=false`;
-  const res = await fetch(
-    `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id)`,
-    { headers },
-  );
+  try {
+    const headers = await authHeaders();
+    const query = `name='${escapeQueryValue(name)}' and '${parentId}' in parents and mimeType='${MIME_TYPES.googleFolder}' and trashed=false`;
+    const res = await fetch(
+      `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id)`,
+      { headers },
+    );
 
-  if (!res.ok) return null;
-  const data = (await res.json()) as { files: { id: string }[] };
-  return data.files.length > 0 ? data.files[0].id : null;
+    if (!res.ok) return null;
+    const data = (await res.json()) as { files: { id: string }[] };
+    return data.files.length > 0 ? data.files[0].id : null;
+  } catch {
+    return null;
+  }
 };
 
 export const getFile = async (
@@ -61,7 +68,7 @@ export const getFile = async (
 ): Promise<string | null> => {
   try {
     const headers = await authHeaders();
-    const query = `name='${name}' and '${parentId}' in parents and trashed=false`;
+    const query = `name='${escapeQueryValue(name)}' and '${parentId}' in parents and trashed=false`;
     const res = await fetch(
       `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id)`,
       { headers },
@@ -114,7 +121,7 @@ export const putDeviceFile = async (
   entry: DeviceEntry,
   existingFileId: string | null,
 ): Promise<void> => {
-  const content = new TextEncoder().encode(JSON.stringify(entry, null, 2));
+  const content = JSON.stringify(entry, null, 2);
   const headers = await authHeaders();
   const fileName = `${deviceId}.json`;
 
@@ -127,7 +134,7 @@ export const putDeviceFile = async (
           ...headers,
           "Content-Type": MIME_TYPES.jsonUtf8,
         },
-        body: content as unknown as BodyInit,
+        body: content,
       },
     );
     await assertOk(res, "Failed to update device file");
@@ -139,7 +146,11 @@ export const putDeviceFile = async (
     parents: [folderId],
   });
   const boundary = "qsave_device_" + Date.now();
-  const body = buildMultipartBody(boundary, metadata, content);
+  const body = buildMultipartBody(
+    boundary,
+    metadata,
+    new TextEncoder().encode(content),
+  );
   const res = await fetch(
     `${DRIVE_ENDPOINTS.upload}/files?uploadType=multipart`,
     {
@@ -148,7 +159,7 @@ export const putDeviceFile = async (
         ...headers,
         "Content-Type": `multipart/related; boundary=${boundary}`,
       },
-      body: body as unknown as BodyInit,
+      body: body.buffer as ArrayBuffer,
     },
   );
   await assertOk(res, "Failed to create device file");
@@ -204,7 +215,7 @@ export const postFile = async (
           ...headers,
           "Content-Type": `multipart/related; boundary=${boundary}`,
         },
-        body: body as unknown as BodyInit,
+        body: body.buffer as ArrayBuffer,
       },
     );
 

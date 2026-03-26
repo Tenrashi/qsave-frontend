@@ -8,11 +8,13 @@ import {
 import { ensureDevicesFolder } from "@/operations/drive/folders/folders";
 
 const currentOS = (): string => {
-  const platform = navigator.platform;
-  if (platform.startsWith("Win")) return "windows";
-  if (platform.startsWith("Mac")) return "macos";
+  const ua = navigator.userAgent;
+  if (ua.includes("Windows")) return "windows";
+  if (ua.includes("Macintosh")) return "macos";
   return "linux";
 };
+
+let saveDevicePathsLock: Promise<void> = Promise.resolve();
 
 export const buildDevicesMap = async (): Promise<DevicesMap> => {
   try {
@@ -52,7 +54,18 @@ export const findDeviceGamePaths = async (
   }
 };
 
-export const saveDevicePaths = async (
+export const saveDevicePaths = (
+  deviceId: string,
+  gameName: string,
+  paths: string[],
+): Promise<void> => {
+  saveDevicePathsLock = saveDevicePathsLock.then(() =>
+    saveDevicePathsUnsafe(deviceId, gameName, paths),
+  );
+  return saveDevicePathsLock;
+};
+
+const saveDevicePathsUnsafe = async (
   deviceId: string,
   gameName: string,
   paths: string[],

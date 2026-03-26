@@ -193,6 +193,8 @@ export const setAutostart = async (value: boolean): Promise<void> => {
 };
 
 // Device ID
+let fallbackDeviceId: string | null = null;
+
 export const getDeviceId = async (): Promise<string> => {
   try {
     const s = await getStore();
@@ -203,7 +205,8 @@ export const getDeviceId = async (): Promise<string> => {
     await s.set(STORE_KEYS.deviceId, deviceId);
     return deviceId;
   } catch {
-    return crypto.randomUUID();
+    if (!fallbackDeviceId) fallbackDeviceId = crypto.randomUUID();
+    return fallbackDeviceId;
   }
 };
 

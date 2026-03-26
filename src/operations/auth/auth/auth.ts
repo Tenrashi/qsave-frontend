@@ -82,16 +82,17 @@ export const refreshAccessToken = async (): Promise<AuthState> => {
 };
 
 export const getValidToken = async (): Promise<string> => {
-  let auth = await getAuthState();
+  const auth = await getAuthState();
   if (!auth.isAuthenticated || !auth.accessToken) {
     throw new Error("Not authenticated");
   }
 
   if (auth.expiresAt && auth.expiresAt - Date.now() < TOKEN_EXPIRY_BUFFER_MS) {
-    auth = await refreshAccessToken();
+    const refreshed = await refreshAccessToken();
+    return refreshed.accessToken ?? auth.accessToken;
   }
 
-  return auth.accessToken!;
+  return auth.accessToken;
 };
 
 export const logout = async (): Promise<void> => {

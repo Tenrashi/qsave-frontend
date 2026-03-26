@@ -311,12 +311,14 @@ describe("store", () => {
       expect(mockSet).toHaveBeenCalledWith("deviceId", deviceId);
     });
 
-    it("returns a UUID even on store error", async () => {
-      mockGet.mockRejectedValueOnce(new Error("fail"));
+    it("returns a consistent UUID on store error", async () => {
+      mockGet.mockRejectedValue(new Error("fail"));
 
-      const deviceId = await getDeviceId();
+      const firstId = await getDeviceId();
+      const secondId = await getDeviceId();
 
-      expect(deviceId).toBeTruthy();
+      expect(firstId).toBeTruthy();
+      expect(firstId).toBe(secondId);
     });
   });
 
