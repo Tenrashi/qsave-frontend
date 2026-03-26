@@ -24,7 +24,7 @@ vi.mock("@/lib/store/store", () => ({
   setSyncFingerprint: mockSetSyncFingerprint,
 }));
 
-vi.mock("@/services/drive/drive", () => ({
+vi.mock("@/operations/drive/backups/backups", () => ({
   listBackedUpGameNames: mockListBackedUpGameNames,
 }));
 

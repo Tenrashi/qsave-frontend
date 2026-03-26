@@ -18,6 +18,7 @@ import {
   getHideSteamCloud,
   setHideSteamCloud,
   setAutostart,
+  getDeviceId,
 } from "./store";
 import type { SyncRecord, GameSyncFingerprint } from "@/domain/types";
 
@@ -289,6 +290,35 @@ describe("store", () => {
       mockSet.mockRejectedValueOnce(new Error("fail"));
 
       await expect(setAutostart(true)).resolves.toBeUndefined();
+    });
+  });
+
+  describe("device ID", () => {
+    it("returns persisted device ID", async () => {
+      mockGet.mockResolvedValueOnce("existing-device-id");
+
+      expect(await getDeviceId()).toBe("existing-device-id");
+    });
+
+    it("generates and persists a new UUID when none stored", async () => {
+      mockGet.mockResolvedValueOnce(null);
+
+      const deviceId = await getDeviceId();
+
+      expect(deviceId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+      expect(mockSet).toHaveBeenCalledWith("deviceId", deviceId);
+    });
+
+    it("returns a consistent UUID on store error", async () => {
+      mockGet.mockRejectedValue(new Error("fail"));
+
+      const firstId = await getDeviceId();
+      const secondId = await getDeviceId();
+
+      expect(firstId).toBeTruthy();
+      expect(firstId).toBe(secondId);
     });
   });
 

@@ -15,6 +15,7 @@ export const STORE_KEYS = {
   manualGames: "manualGames",
   hideSteamCloud: "hideSteamCloud",
   autostart: "autostart",
+  deviceId: "deviceId",
 } as const;
 
 export const TAURI_COMMANDS = {

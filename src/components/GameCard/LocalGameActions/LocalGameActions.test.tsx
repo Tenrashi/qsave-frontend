@@ -34,7 +34,7 @@ vi.mock("../utils/formatSize", () => ({
   formatSize: (bytes: number) => `${bytes} bytes`,
 }));
 
-vi.mock("@/services/sync/sync", () => ({
+vi.mock("@/operations/sync/sync/sync", () => ({
   syncGame: mockSyncGame,
 }));
 
@@ -214,6 +214,7 @@ describe("LocalGameActions", () => {
       syncFingerprints: {
         "The Sims 4": { hash: "mock-hash", syncedAt: new Date().toISOString() },
       },
+      backedUpGames: new Set(["The Sims 4"]),
     });
     renderActions();
     expect(screen.getByText("games.sync").closest("button")).toBeDisabled();

@@ -37,11 +37,11 @@ vi.mock("@/lib/autoSync/autoSync", () => ({
   cancelAllAutoSyncs: mockCancelAllAutoSyncs,
 }));
 
-vi.mock("@/services/sync/sync", () => ({
+vi.mock("@/operations/sync/sync/sync", () => ({
   syncGame: mockSyncGame,
 }));
 
-vi.mock("@/services/scanner/scanner", () => ({
+vi.mock("@/operations/scanner/scanner/scanner", () => ({
   rescanGame: mockRescanGame,
 }));
 

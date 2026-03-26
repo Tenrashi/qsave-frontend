@@ -1,8 +1,10 @@
 import { RECORD_STATUS } from "@/domain/types";
 import type { Game, SyncRecord } from "@/domain/types";
 import { APP_NAME } from "@/lib/constants/constants";
-import { uploadGameArchive } from "@/services/drive/drive";
-import { addSyncRecord } from "@/lib/store/store";
+import { uploadGameArchive } from "@/operations/drive/backups/backups";
+import { saveDevicePaths } from "@/operations/devices/devices";
+import { addSyncRecord, getDeviceId } from "@/lib/store/store";
+import { useSyncStore } from "@/stores/sync";
 import { notify } from "@/lib/notify/notify";
 import i18n from "@/i18n";
 
@@ -16,6 +18,17 @@ export const syncGame = async (game: Game): Promise<SyncRecord> => {
       game.savePaths,
       filePaths,
     );
+
+    if (game.isManual) {
+      try {
+        const deviceId = await getDeviceId();
+        await saveDevicePaths(deviceId, game.name, game.savePaths);
+      } catch (error) {
+        console.warn("Failed to update device paths:", error);
+      }
+    }
+
+    useSyncStore.getState().markGameBackedUp(game.name);
 
     const record: SyncRecord = {
       id,

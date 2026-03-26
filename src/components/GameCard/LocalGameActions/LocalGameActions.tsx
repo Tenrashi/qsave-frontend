@@ -22,7 +22,7 @@ import {
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
-import { syncGame } from "@/services/sync/sync";
+import { syncGame } from "@/operations/sync/sync/sync";
 import { computeGameHash } from "@/lib/hash/hash";
 import { removeManualGame } from "@/lib/store/store";
 import { useAuthStore } from "@/stores/auth";
@@ -56,8 +56,9 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
   const isBusy =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
   // const watched = isGameWatched(game.name);
-  const currentHash = computeGameHash(game.saveFiles);
-  const isSynced = syncFingerprints[game.name]?.hash === currentHash;
+  const currentHash = computeGameHash(game.saveFiles, game.savePaths);
+  const isSynced =
+    syncFingerprints[game.name]?.hash === currentHash && hasBackup(game.name);
 
   const totalSize = game.saveFiles.reduce(
     (sum, file) => sum + file.sizeBytes,

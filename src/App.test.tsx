@@ -30,7 +30,7 @@ const {
   ),
 }));
 
-vi.mock("@/services/scanner/scanner", () => ({
+vi.mock("@/operations/scanner/scanner/scanner", () => ({
   scanForGames: mockScanForGames,
 }));
 
@@ -53,11 +53,11 @@ vi.mock("@/hooks/useGameDetectionNotify/useGameDetectionNotify", () => ({
   useGameDetectionNotify: vi.fn(),
 }));
 
-vi.mock("@/services/drive/drive", () => ({
+vi.mock("@/operations/drive/backups/backups", () => ({
   listBackedUpGameNames: vi.fn(() => Promise.resolve([])),
 }));
 
-vi.mock("@/services/auth/auth", () => ({
+vi.mock("@/operations/auth/auth/auth", () => ({
   startOAuthFlow: vi.fn(),
 }));
 

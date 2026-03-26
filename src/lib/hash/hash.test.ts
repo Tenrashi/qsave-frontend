@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { computeGameHash } from "./hash";
 import type { SaveFile } from "@/domain/types";
 
+const SAVE_PATHS = ["/games"];
+
 const makeSaveFile = (overrides: Partial<SaveFile> = {}): SaveFile => ({
   name: "save.dat",
   path: "/games/save.dat",
@@ -14,32 +16,87 @@ const makeSaveFile = (overrides: Partial<SaveFile> = {}): SaveFile => ({
 describe("computeGameHash", () => {
   it("returns a consistent hash for the same input", () => {
     const files = [makeSaveFile()];
-    expect(computeGameHash(files)).toBe(computeGameHash(files));
+    expect(computeGameHash(files, SAVE_PATHS)).toBe(
+      computeGameHash(files, SAVE_PATHS),
+    );
   });
 
   it("returns different hashes for different file sizes", () => {
-    const a = [makeSaveFile({ sizeBytes: 100 })];
-    const b = [makeSaveFile({ sizeBytes: 200 })];
-    expect(computeGameHash(a)).not.toBe(computeGameHash(b));
+    const fileA = [makeSaveFile({ sizeBytes: 100 })];
+    const fileB = [makeSaveFile({ sizeBytes: 200 })];
+    expect(computeGameHash(fileA, SAVE_PATHS)).not.toBe(
+      computeGameHash(fileB, SAVE_PATHS),
+    );
   });
 
   it("returns different hashes for different timestamps", () => {
-    const a = [makeSaveFile({ lastModified: new Date("2026-01-01") })];
-    const b = [makeSaveFile({ lastModified: new Date("2026-01-02") })];
-    expect(computeGameHash(a)).not.toBe(computeGameHash(b));
+    const fileA = [makeSaveFile({ lastModified: new Date("2026-01-01") })];
+    const fileB = [makeSaveFile({ lastModified: new Date("2026-01-02") })];
+    expect(computeGameHash(fileA, SAVE_PATHS)).not.toBe(
+      computeGameHash(fileB, SAVE_PATHS),
+    );
   });
 
   it("is order-independent", () => {
-    const fileA = makeSaveFile({ path: "/a.dat", name: "a.dat" });
-    const fileB = makeSaveFile({ path: "/b.dat", name: "b.dat" });
-    expect(computeGameHash([fileA, fileB])).toBe(computeGameHash([fileB, fileA]));
+    const fileA = makeSaveFile({ path: "/games/a.dat", name: "a.dat" });
+    const fileB = makeSaveFile({ path: "/games/b.dat", name: "b.dat" });
+    expect(computeGameHash([fileA, fileB], SAVE_PATHS)).toBe(
+      computeGameHash([fileB, fileA], SAVE_PATHS),
+    );
   });
 
   it("returns a non-empty string", () => {
-    expect(computeGameHash([makeSaveFile()])).toBeTruthy();
+    expect(computeGameHash([makeSaveFile()], SAVE_PATHS)).toBeTruthy();
   });
 
   it("handles empty file list", () => {
-    expect(computeGameHash([])).toBeTruthy();
+    expect(computeGameHash([], SAVE_PATHS)).toBeTruthy();
+  });
+
+  it("handles files with no matching base path", () => {
+    const file = makeSaveFile({
+      path: "/unrelated/save.dat",
+    });
+
+    const hash = computeGameHash([file], ["/games"]);
+
+    expect(hash).toBeTruthy();
+  });
+
+  it("normalizes mixed path separators across devices", () => {
+    const winFile = makeSaveFile({
+      path: "C:\\Users\\alice\\AppData\\Game\\save.dat",
+    });
+    const unixFile = makeSaveFile({
+      path: "C:/Users/bob/AppData/Game/save.dat",
+    });
+
+    const winHash = computeGameHash(
+      [winFile],
+      ["C:\\Users\\alice\\AppData\\Game"],
+    );
+    const unixHash = computeGameHash([unixFile], ["C:/Users/bob/AppData/Game"]);
+
+    expect(winHash).toBe(unixHash);
+  });
+
+  it("produces the same hash for identical files under different base paths", () => {
+    const aliceFile = makeSaveFile({
+      path: "C:\\Users\\alice\\AppData\\Game\\save.dat",
+    });
+    const bobFile = makeSaveFile({
+      path: "C:\\Users\\bob\\AppData\\Game\\save.dat",
+    });
+
+    const aliceHash = computeGameHash(
+      [aliceFile],
+      ["C:\\Users\\alice\\AppData\\Game"],
+    );
+    const bobHash = computeGameHash(
+      [bobFile],
+      ["C:\\Users\\bob\\AppData\\Game"],
+    );
+
+    expect(aliceHash).toBe(bobHash);
   });
 });

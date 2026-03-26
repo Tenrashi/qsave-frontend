@@ -8,8 +8,8 @@ import { useAuthStore } from "@/stores/auth";
 import { startWatching, stopWatching } from "@/lib/watcher/watcher";
 import { scheduleAutoSync, cancelAllAutoSyncs } from "@/lib/autoSync/autoSync";
 import { computeGameHash } from "@/lib/hash/hash";
-import { syncGame } from "@/services/sync/sync";
-import { rescanGame } from "@/services/scanner/scanner";
+import { syncGame } from "@/operations/sync/sync/sync";
+import { rescanGame } from "@/operations/scanner/scanner/scanner";
 
 export const useAutoSync = (games: Game[] | undefined): void => {
   const queryClient = useQueryClient();
@@ -103,7 +103,10 @@ export const useAutoSync = (games: Game[] | undefined): void => {
           if (!currentGame) return;
 
           const currentStore = storeRef.current;
-          const hash = computeGameHash(currentGame.saveFiles);
+          const hash = computeGameHash(
+            currentGame.saveFiles,
+            currentGame.savePaths,
+          );
           const existing = currentStore.syncFingerprints[gameName];
           if (existing?.hash === hash) return;
 

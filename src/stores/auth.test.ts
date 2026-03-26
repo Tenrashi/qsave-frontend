@@ -14,7 +14,7 @@ vi.mock("@/lib/store/store", () => ({
   clearAuth: mockClearAuth,
 }));
 
-vi.mock("@/services/auth/auth", () => ({
+vi.mock("@/operations/auth/auth/auth", () => ({
   startOAuthFlow: mockStartOAuthFlow,
 }));
 

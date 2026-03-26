@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { addManualGame } from "@/lib/store/store";
 import { TAURI_COMMANDS, QUERY_KEYS } from "@/lib/constants/constants";
-import { scanManualGame } from "@/services/scanner/scanner";
+import { scanManualGame } from "@/operations/scanner/scanner/scanner";
 import type { Game } from "@/domain/types";
 
 export type AddGameContentProps = {

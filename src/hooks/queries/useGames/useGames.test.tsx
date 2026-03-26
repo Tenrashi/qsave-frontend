@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useGames } from "./useGames";
 
-vi.mock("@/services/scanner/scanner", () => ({
+vi.mock("@/operations/scanner/scanner/scanner", () => ({
   scanForGames: vi.fn(() =>
     Promise.resolve([
       { name: "Elden Ring", savePaths: ["/saves/elden"], saveFiles: [] },
@@ -23,7 +23,9 @@ const createWrapper = () => {
 
 describe("useGames", () => {
   it("returns games from scanner", async () => {
-    const { result } = renderHook(() => useGames(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useGames(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(1);

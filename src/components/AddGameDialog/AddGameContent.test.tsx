@@ -26,7 +26,7 @@ vi.mock("@/lib/store/store", () => ({
   addManualGame: mockAddManualGame,
 }));
 
-vi.mock("@/services/scanner/scanner", () => ({
+vi.mock("@/operations/scanner/scanner/scanner", () => ({
   scanManualGame: mockScanManualGame,
 }));
 

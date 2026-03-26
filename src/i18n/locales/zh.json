@@ -65,7 +65,8 @@
     "syncSuccess": "{{name}} 已同步",
     "syncFailed": "{{name}}：同步失败",
     "restoreSuccess": "{{name}} 已恢复",
-    "restoreFailed": "{{name}}：恢复失败"
+    "restoreFailed": "{{name}}：恢复失败",
+    "sessionExpired": "会话已过期 — 请重新登录"
   },
   "restore": {
     "title": "恢复 {{name}}",

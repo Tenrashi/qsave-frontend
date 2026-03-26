@@ -65,7 +65,8 @@
     "syncSuccess": "{{name}} synced",
     "syncFailed": "{{name}}: sync failed",
     "restoreSuccess": "{{name}} restored",
-    "restoreFailed": "{{name}}: restore failed"
+    "restoreFailed": "{{name}}: restore failed",
+    "sessionExpired": "Session expired — please sign in again"
   },
   "restore": {
     "title": "Restore {{name}}",

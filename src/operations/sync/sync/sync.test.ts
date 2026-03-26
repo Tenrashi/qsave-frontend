@@ -1,28 +1,49 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RECORD_STATUS } from "@/domain/types";
-import { sims4Game } from "@/test/mocks/games";
+import { sims4Game, manualGame } from "@/test/mocks/games";
 import { syncGame, syncAllGames } from "./sync";
 
-const { mockUploadGameArchive, mockAddSyncRecord, mockNotify } = vi.hoisted(
-  () => ({
-    mockUploadGameArchive: vi.fn(() =>
-      Promise.resolve({ fileId: "drive-file-123" }),
-    ),
-    mockAddSyncRecord: vi.fn(),
-    mockNotify: vi.fn(),
-  }),
-);
+const {
+  mockUploadGameArchive,
+  mockSaveDevicePaths,
+  mockAddSyncRecord,
+  mockGetDeviceId,
+  mockNotify,
+  mockMarkGameBackedUp,
+} = vi.hoisted(() => ({
+  mockUploadGameArchive: vi.fn(() =>
+    Promise.resolve({ fileId: "drive-file-123" }),
+  ),
+  mockSaveDevicePaths: vi.fn(() => Promise.resolve()),
+  mockAddSyncRecord: vi.fn(),
+  mockGetDeviceId: vi.fn(() => Promise.resolve("test-device-id")),
+  mockNotify: vi.fn(),
+  mockMarkGameBackedUp: vi.fn(),
+}));
 
-vi.mock("@/services/drive/drive", () => ({
+vi.mock("@/operations/drive/backups/backups", () => ({
   uploadGameArchive: mockUploadGameArchive,
+}));
+
+vi.mock("@/operations/devices/devices", () => ({
+  saveDevicePaths: mockSaveDevicePaths,
 }));
 
 vi.mock("@/lib/store/store", () => ({
   addSyncRecord: mockAddSyncRecord,
+  getDeviceId: mockGetDeviceId,
 }));
 
 vi.mock("@/lib/notify/notify", () => ({
   notify: mockNotify,
+}));
+
+vi.mock("@/stores/sync", () => ({
+  useSyncStore: {
+    getState: () => ({
+      markGameBackedUp: mockMarkGameBackedUp,
+    }),
+  },
 }));
 
 describe("syncGame", () => {
@@ -84,6 +105,40 @@ describe("syncGame", () => {
 
     expect(record.status).toBe(RECORD_STATUS.error);
     expect(record.error).toBe("string error");
+  });
+
+  it("updates device paths for manual games", async () => {
+    await syncGame(manualGame);
+
+    expect(mockGetDeviceId).toHaveBeenCalledOnce();
+    expect(mockSaveDevicePaths).toHaveBeenCalledWith(
+      "test-device-id",
+      manualGame.name,
+      manualGame.savePaths,
+    );
+  });
+
+  it("does not update device paths for auto-detected games", async () => {
+    await syncGame(sims4Game);
+
+    expect(mockSaveDevicePaths).not.toHaveBeenCalled();
+  });
+
+  it("does not block sync when device paths update fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockSaveDevicePaths.mockRejectedValueOnce(new Error("Drive error"));
+
+    const record = await syncGame(manualGame);
+
+    expect(record.status).toBe(RECORD_STATUS.success);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("marks game as backed up after successful sync", async () => {
+    await syncGame(sims4Game);
+
+    expect(mockMarkGameBackedUp).toHaveBeenCalledWith("The Sims 4");
   });
 });
 

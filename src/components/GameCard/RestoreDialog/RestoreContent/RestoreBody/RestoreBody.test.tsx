@@ -28,27 +28,40 @@ const defaultRestoreRecord: SyncRecord = {
 
 const {
   mockListGameBackups,
+  mockGetDeviceGamePaths,
   mockRestoreGame,
   mockDeleteGameBackup,
   mockInvoke,
+  mockGetDeviceId,
 } = vi.hoisted(() => ({
   mockListGameBackups: vi.fn(),
+  mockGetDeviceGamePaths: vi.fn(() => Promise.resolve(undefined)),
   mockRestoreGame: vi.fn(),
   mockDeleteGameBackup: vi.fn(),
   mockInvoke: vi.fn(),
+  mockGetDeviceId: vi.fn(() => Promise.resolve("test-device-id")),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: mockInvoke,
 }));
 
-vi.mock("@/services/drive/drive", () => ({
+vi.mock("@/operations/drive/backups/backups", () => ({
   listGameBackups: mockListGameBackups,
   deleteGameBackup: mockDeleteGameBackup,
 }));
 
-vi.mock("@/services/restore/restore", () => ({
+vi.mock("@/operations/devices/devices", () => ({
+  findDeviceGamePaths: mockGetDeviceGamePaths,
+}));
+
+vi.mock("@/operations/restore/restore/restore", () => ({
   restoreGame: mockRestoreGame,
+}));
+
+vi.mock("@/lib/store/store", () => ({
+  getDeviceId: mockGetDeviceId,
+  setSyncFingerprint: vi.fn(),
 }));
 
 vi.mock("@/components/ui/status-message", () => ({

@@ -17,7 +17,7 @@ vi.mock("./utils/formatSize", () => ({
   formatSize: (bytes: number) => `${bytes} bytes`,
 }));
 
-vi.mock("@/services/sync/sync", () => ({
+vi.mock("@/operations/sync/sync/sync", () => ({
   syncGame: vi.fn(),
 }));
 
@@ -65,11 +65,12 @@ describe("GameCard", () => {
   });
 
   it("shows green checkmark when game is synced", () => {
-    const hash = computeGameHash(sims4Game.saveFiles);
+    const hash = computeGameHash(sims4Game.saveFiles, sims4Game.savePaths);
     useSyncStore.setState({
       syncFingerprints: {
         "The Sims 4": { hash, syncedAt: new Date().toISOString() },
       },
+      backedUpGames: new Set(["The Sims 4"]),
     });
 
     renderGameCard();

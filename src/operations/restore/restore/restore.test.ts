@@ -3,7 +3,7 @@ import { RECORD_STATUS } from "@/domain/types";
 import { sims4Game } from "@/test/mocks/games";
 import { restoreGame } from "./restore";
 
-const { mockInvoke, mockDownloadBackup, mockAddSyncRecord, mockNotify } =
+const { mockInvoke, mockGetBackupFile, mockAddSyncRecord, mockNotify } =
   vi.hoisted(() => ({
     mockInvoke: vi.fn((command: string): Promise<unknown> => {
       if (command === "read_zip_meta")
@@ -14,7 +14,7 @@ const { mockInvoke, mockDownloadBackup, mockAddSyncRecord, mockNotify } =
       if (command === "extract_zip") return Promise.resolve({ file_count: 3 });
       return Promise.resolve();
     }),
-    mockDownloadBackup: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
+    mockGetBackupFile: vi.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
     mockAddSyncRecord: vi.fn(),
     mockNotify: vi.fn(),
   }));
@@ -24,7 +24,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 vi.mock("@/services/drive/drive", () => ({
-  downloadBackup: mockDownloadBackup,
+  getBackupFile: mockGetBackupFile,
 }));
 
 vi.mock("@/lib/store/store", () => ({
@@ -52,7 +52,7 @@ describe("restoreGame", () => {
   it("downloads the backup by id", async () => {
     await restoreGame(sims4Game, "backup-123");
 
-    expect(mockDownloadBackup).toHaveBeenCalledWith("backup-123");
+    expect(mockGetBackupFile).toHaveBeenCalledWith("backup-123");
   });
 
   it("persists a restore sync record", async () => {
@@ -75,7 +75,7 @@ describe("restoreGame", () => {
   });
 
   it("sends a translated notification on failure", async () => {
-    mockDownloadBackup.mockRejectedValueOnce(new Error("Download failed"));
+    mockGetBackupFile.mockRejectedValueOnce(new Error("Download failed"));
 
     await restoreGame(sims4Game, "backup-123");
 
@@ -86,7 +86,7 @@ describe("restoreGame", () => {
   });
 
   it("returns an error record when download fails", async () => {
-    mockDownloadBackup.mockRejectedValueOnce(new Error("Download failed"));
+    mockGetBackupFile.mockRejectedValueOnce(new Error("Download failed"));
 
     const record = await restoreGame(sims4Game, "backup-123");
 
@@ -96,7 +96,7 @@ describe("restoreGame", () => {
   });
 
   it("handles non-Error rejection in error record", async () => {
-    mockDownloadBackup.mockRejectedValueOnce("string error");
+    mockGetBackupFile.mockRejectedValueOnce("string error");
 
     const record = await restoreGame(sims4Game, "backup-123");
 

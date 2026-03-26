@@ -1,44 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  buildMultipartBody,
-  ensureQSaveFolder,
-  ensureGameFolder,
-  listBackedUpGameNames,
-  listGameBackups,
-  deleteGameBackup,
-  downloadBackup,
-  uploadGameArchive,
+  postFolder,
+  getFolder,
+  getFile,
+  getFilesInFolder,
+  deleteFile,
+  getBackupFile,
+  postFile,
+  getFolderNames,
 } from "./drive";
 
-const {
-  mockInvoke,
-  mockFetch,
-  mockGetValidToken,
-  mockGetDriveFolderId,
-  mockSetDriveFolderId,
-} = vi.hoisted(() => ({
-  mockInvoke: vi.fn(),
+const { mockFetch, mockGetValidToken } = vi.hoisted(() => ({
   mockFetch: vi.fn(),
   mockGetValidToken: vi.fn(() => Promise.resolve("test-token")),
-  mockGetDriveFolderId: vi.fn(),
-  mockSetDriveFolderId: vi.fn(),
-}));
-
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: mockInvoke,
 }));
 
 vi.mock("@tauri-apps/plugin-http", () => ({
   fetch: mockFetch,
 }));
 
-vi.mock("@/services/auth/auth", () => ({
+vi.mock("@/operations/auth/auth/auth", () => ({
   getValidToken: mockGetValidToken,
 }));
 
-vi.mock("@/lib/store/store", () => ({
-  getDriveFolderId: mockGetDriveFolderId,
-  setDriveFolderId: mockSetDriveFolderId,
+vi.mock("@/lib/drive/multipart/multipart", () => ({
+  buildMultipartBody: vi.fn(() => new Uint8Array([1, 2, 3])),
 }));
 
 const okResponse = (data: unknown) => ({
@@ -46,6 +32,7 @@ const okResponse = (data: unknown) => ({
   status: 200,
   json: () => Promise.resolve(data),
   text: () => Promise.resolve(JSON.stringify(data)),
+  arrayBuffer: () => Promise.resolve(new ArrayBuffer(4)),
 });
 
 const errorResponse = (status = 500) => ({
@@ -56,238 +43,137 @@ const errorResponse = (status = 500) => ({
   text: () => Promise.resolve("error body"),
 });
 
-describe("drive", () => {
+describe("drive service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("buildMultipartBody", () => {
-    const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+  describe("postFolder", () => {
+    it("creates a folder and returns its ID", async () => {
+      mockFetch.mockResolvedValueOnce(okResponse({ id: "new-folder-id" }));
 
-    it("wraps metadata and file content with boundary markers", () => {
-      const metadata = JSON.stringify({ name: "test.zip" });
-      const content = new TextEncoder().encode("file-data");
-      const result = decode(
-        buildMultipartBody("test_boundary", metadata, content),
+      const result = await postFolder("MyFolder", "root");
+
+      expect(result).toBe("new-folder-id");
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/files"),
+        expect.objectContaining({ method: "POST" }),
       );
+    });
 
-      expect(result).toContain("--test_boundary\r\n");
-      expect(result).toContain(metadata);
-      expect(result).toContain("file-data");
-      expect(result.endsWith("\r\n--test_boundary--")).toBe(true);
+    it("throws on failure", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(403));
+
+      await expect(postFolder("F", "root")).rejects.toThrow(
+        "Failed to create folder",
+      );
     });
   });
 
-  describe("ensureQSaveFolder", () => {
-    it("returns cached folder ID when it matches Drive", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce("cached-id");
+  describe("getFolder", () => {
+    it("returns folder ID when found", async () => {
       mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "cached-id" }] }),
+        okResponse({ files: [{ id: "folder-id" }] }),
       );
 
-      const result = await ensureQSaveFolder();
+      const result = await getFolder("QSave", "root");
 
-      expect(result).toBe("cached-id");
+      expect(result).toBe("folder-id");
     });
 
-    it("finds existing folder when cache misses", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce(undefined);
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "existing-id" }] }),
-      );
+    it("returns null when not found", async () => {
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
 
-      const result = await ensureQSaveFolder();
+      const result = await getFolder("Missing", "root");
 
-      expect(result).toBe("existing-id");
-      expect(mockSetDriveFolderId).toHaveBeenCalledWith(
-        "__root__",
-        "existing-id",
-      );
+      expect(result).toBeNull();
     });
 
-    it("creates folder when not found", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce(undefined);
-      mockFetch
-        .mockResolvedValueOnce(okResponse({ files: [] }))
-        .mockResolvedValueOnce(okResponse({ id: "new-id" }));
+    it("returns null on error response", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(500));
 
-      const result = await ensureQSaveFolder();
+      const result = await getFolder("QSave", "root");
 
-      expect(result).toBe("new-id");
+      expect(result).toBeNull();
     });
 
-    it("wraps errors with context", async () => {
-      mockGetDriveFolderId.mockRejectedValueOnce(new Error("store fail"));
+    it("returns null on network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-      await expect(ensureQSaveFolder()).rejects.toThrow(
-        "Failed to ensure QSave folder",
-      );
+      const result = await getFolder("QSave", "root");
+
+      expect(result).toBeNull();
     });
 
-    it("handles non-Error throw in wrapping", async () => {
-      mockGetDriveFolderId.mockRejectedValueOnce("string error");
+    it("escapes single quotes in folder name", async () => {
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
 
-      await expect(ensureQSaveFolder()).rejects.toThrow(
-        "Failed to ensure QSave folder",
-      );
-    });
+      await getFolder("Tom Clancy's", "root");
 
-    it("re-fetches when cached ID doesn't match Drive", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce("stale-cached-id");
-      // findFolder returns different ID than cached
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "different-id" }] }),
-      );
-      // second findFolder call (after cache miss path)
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "different-id" }] }),
-      );
-
-      const result = await ensureQSaveFolder();
-
-      expect(result).toBe("different-id");
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain(encodeURIComponent("Tom Clancy\\'s"));
     });
   });
 
-  describe("ensureGameFolder", () => {
-    beforeEach(() => {
-      // Mock ensureQSaveFolder to return root ID
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+  describe("getFile", () => {
+    it("returns file ID when found", async () => {
       mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "root-id" }] }),
-      );
-    });
-
-    it("returns cached game folder ID when valid", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce("game-folder");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "game-folder" }] }),
+        okResponse({ files: [{ id: "file-id" }] }),
       );
 
-      const result = await ensureGameFolder("Sims 4");
+      const result = await getFile("devices.json", "folder-id");
 
-      expect(result).toBe("game-folder");
+      expect(result).toBe("file-id");
     });
 
-    it("finds existing game folder", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce(undefined);
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "found-id" }] }),
-      );
+    it("returns null when not found", async () => {
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
 
-      const result = await ensureGameFolder("Sims 4");
+      const result = await getFile("missing.json", "folder-id");
 
-      expect(result).toBe("found-id");
-    });
-
-    it("creates game folder when not found", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce(undefined);
-      mockFetch
-        .mockResolvedValueOnce(okResponse({ files: [] }))
-        .mockResolvedValueOnce(okResponse({ id: "created-id" }));
-
-      const result = await ensureGameFolder("Sims 4");
-
-      expect(result).toBe("created-id");
+      expect(result).toBeNull();
     });
   });
 
-  describe("listBackedUpGameNames", () => {
-    it("returns game folder names", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
-      mockFetch
-        .mockResolvedValueOnce(okResponse({ files: [{ id: "root-id" }] }))
-        .mockResolvedValueOnce(
-          okResponse({ files: [{ name: "Sims 4" }, { name: "Elden Ring" }] }),
-        );
+  describe("getFilesInFolder", () => {
+    it("returns list of files", async () => {
+      const files = [
+        { id: "1", name: "a.zip", createdTime: "2024-01-01" },
+        { id: "2", name: "b.zip", createdTime: "2024-01-02" },
+      ];
+      mockFetch.mockResolvedValueOnce(okResponse({ files }));
 
-      const result = await listBackedUpGameNames();
+      const result = await getFilesInFolder("folder-id");
 
-      expect(result).toEqual(["Sims 4", "Elden Ring"]);
+      expect(result).toEqual(files);
     });
 
-    it("returns empty array on error", async () => {
-      mockGetDriveFolderId.mockRejectedValueOnce(new Error("fail"));
+    it("throws on failure", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(500));
 
-      const result = await listBackedUpGameNames();
-
-      expect(result).toEqual([]);
-    });
-
-    it("returns empty array on non-ok response", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
-      mockFetch
-        .mockResolvedValueOnce(okResponse({ files: [{ id: "root-id" }] }))
-        .mockResolvedValueOnce(errorResponse(403));
-
-      const result = await listBackedUpGameNames();
-
-      expect(result).toEqual([]);
+      await expect(getFilesInFolder("folder-id")).rejects.toThrow(
+        "Failed to list files",
+      );
     });
   });
 
-  describe("listGameBackups", () => {
-    it("returns backups in reverse order", async () => {
-      // ensureQSaveFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "root-id" }] }),
-      );
-      // ensureGameFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("game-folder");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "game-folder" }] }),
-      );
-      // listFilesInFolder
-      mockFetch.mockResolvedValueOnce(
-        okResponse({
-          files: [
-            { id: "1", name: "old.zip", createdTime: "2024-01-01" },
-            { id: "2", name: "new.zip", createdTime: "2024-01-02" },
-          ],
-        }),
-      );
-
-      const result = await listGameBackups("Sims 4");
-
-      expect(result[0].id).toBe("2");
-      expect(result[1].id).toBe("1");
-    });
-  });
-
-  describe("deleteGameBackup", () => {
-    it("deletes file by ID", async () => {
+  describe("deleteFile", () => {
+    it("sends DELETE request", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve(""),
       });
 
-      await deleteGameBackup("file-123");
+      await deleteFile("file-123");
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/files/file-123"),
         expect.objectContaining({ method: "DELETE" }),
       );
     });
-
-    it("wraps errors with fileId context", async () => {
-      mockFetch.mockResolvedValueOnce(errorResponse(404));
-
-      await expect(deleteGameBackup("file-123")).rejects.toThrow(
-        'Failed to delete backup "file-123"',
-      );
-    });
-
-    it("handles non-Error throw in wrapping", async () => {
-      mockGetValidToken.mockRejectedValueOnce("auth expired");
-
-      await expect(deleteGameBackup("file-123")).rejects.toThrow(
-        'Failed to delete backup "file-123"',
-      );
-    });
   });
 
-  describe("downloadBackup", () => {
+  describe("getBackupFile", () => {
     it("returns file as Uint8Array", async () => {
       const buffer = new ArrayBuffer(4);
       mockFetch.mockResolvedValueOnce({
@@ -295,7 +181,7 @@ describe("drive", () => {
         arrayBuffer: () => Promise.resolve(buffer),
       });
 
-      const result = await downloadBackup("file-123");
+      const result = await getBackupFile("file-123");
 
       expect(result).toBeInstanceOf(Uint8Array);
       expect(result.length).toBe(4);
@@ -304,153 +190,51 @@ describe("drive", () => {
     it("wraps errors with fileId context", async () => {
       mockFetch.mockResolvedValueOnce(errorResponse(404));
 
-      await expect(downloadBackup("file-123")).rejects.toThrow(
-        'Failed to download backup "file-123"',
-      );
-    });
-
-    it("handles non-Error throw in wrapping", async () => {
-      mockGetValidToken.mockRejectedValueOnce("auth expired");
-
-      await expect(downloadBackup("file-123")).rejects.toThrow(
+      await expect(getBackupFile("file-123")).rejects.toThrow(
         'Failed to download backup "file-123"',
       );
     });
   });
 
-  describe("uploadGameArchive", () => {
-    it("creates zip, uploads, and returns fileId", async () => {
-      mockInvoke.mockResolvedValueOnce([1, 2, 3]);
-      // ensureQSaveFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "root-id" }] }),
-      );
-      // ensureGameFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("game-folder");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "game-folder" }] }),
-      );
-      // listFilesInFolder (cleanup)
-      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
-      // upload
+  describe("postFile", () => {
+    it("uploads file and returns fileId", async () => {
       mockFetch.mockResolvedValueOnce(okResponse({ id: "uploaded-id" }));
 
-      const result = await uploadGameArchive(
-        "Sims 4",
-        ["/saves"],
-        ["/saves/file.sav"],
+      const result = await postFile(
+        "folder-id",
+        "save.zip",
+        new Uint8Array([1]),
       );
 
       expect(result.fileId).toBe("uploaded-id");
-      expect(mockInvoke).toHaveBeenCalledWith("create_zip", {
-        savePaths: ["/saves"],
-        files: ["/saves/file.sav"],
-      });
     });
 
-    it("deletes old saves when at limit", async () => {
-      mockInvoke.mockResolvedValueOnce([1]);
-      // ensureQSaveFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "root-id" }] }),
-      );
-      // ensureGameFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("gf");
-      mockFetch.mockResolvedValueOnce(okResponse({ files: [{ id: "gf" }] }));
-      // listFilesInFolder - 5 existing files (at limit)
-      const existingFiles = Array.from({ length: 5 }, (_, index) => ({
-        id: `file-${index}`,
-        name: `save-${index}.zip`,
-        createdTime: "2024-01-01",
-      }));
-      mockFetch.mockResolvedValueOnce(okResponse({ files: existingFiles }));
-      // deleteFile for oldest
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: () => Promise.resolve(""),
-      });
-      // upload
-      mockFetch.mockResolvedValueOnce(okResponse({ id: "new-id" }));
-
-      const result = await uploadGameArchive("Game", ["/s"], ["/s/f"]);
-
-      expect(result.fileId).toBe("new-id");
-    });
-
-    it("wraps errors with gameName context", async () => {
-      mockInvoke.mockRejectedValueOnce(new Error("zip fail"));
-
-      await expect(uploadGameArchive("Game", ["/s"], ["/s/f"])).rejects.toThrow(
-        'Failed to upload archive for "Game"',
-      );
-    });
-
-    it("handles non-Error throw in upload wrapping", async () => {
-      mockInvoke.mockRejectedValueOnce("string error");
-
-      await expect(uploadGameArchive("Game", ["/s"], ["/s/f"])).rejects.toThrow(
-        'Failed to upload archive for "Game"',
-      );
-    });
-
-    it("continues upload when cleanup fails", async () => {
-      mockInvoke.mockResolvedValueOnce([1]);
-      // ensureQSaveFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "root-id" }] }),
-      );
-      // ensureGameFolder
-      mockGetDriveFolderId.mockResolvedValueOnce("gf");
-      mockFetch.mockResolvedValueOnce(okResponse({ files: [{ id: "gf" }] }));
-      // listFilesInFolder throws
+    it("wraps errors with fileName context", async () => {
       mockFetch.mockResolvedValueOnce(errorResponse(500));
-      // upload still succeeds
-      mockFetch.mockResolvedValueOnce(okResponse({ id: "uploaded-id" }));
 
-      const result = await uploadGameArchive("Game", ["/s"], ["/s/f"]);
-
-      expect(result.fileId).toBe("uploaded-id");
+      await expect(
+        postFile("folder-id", "save.zip", new Uint8Array([1])),
+      ).rejects.toThrow('Failed to upload file "save.zip"');
     });
   });
 
-  describe("ensureGameFolder errors", () => {
-    it("wraps errors with gameName context", async () => {
-      // ensureQSaveFolder succeeds
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
+  describe("getFolderNames", () => {
+    it("returns folder names", async () => {
       mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "root-id" }] }),
+        okResponse({ files: [{ name: "Sims 4" }, { name: "Elden Ring" }] }),
       );
-      // getDriveFolderId for game throws
-      mockGetDriveFolderId.mockRejectedValueOnce(new Error("store fail"));
 
-      await expect(ensureGameFolder("Sims 4")).rejects.toThrow(
-        'Failed to ensure game folder "Sims 4"',
-      );
+      const result = await getFolderNames("parent-id");
+
+      expect(result).toEqual(["Sims 4", "Elden Ring"]);
     });
 
-    it("handles non-Error throw in game folder wrapping", async () => {
-      mockGetDriveFolderId.mockResolvedValueOnce("root-id");
-      mockFetch.mockResolvedValueOnce(
-        okResponse({ files: [{ id: "root-id" }] }),
-      );
-      mockGetDriveFolderId.mockRejectedValueOnce("string error");
+    it("returns empty array on error", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(500));
 
-      await expect(ensureGameFolder("Sims 4")).rejects.toThrow(
-        'Failed to ensure game folder "Sims 4"',
-      );
-    });
-  });
+      const result = await getFolderNames("parent-id");
 
-  describe("listGameBackups errors", () => {
-    it("wraps errors with gameName context", async () => {
-      mockGetDriveFolderId.mockRejectedValueOnce(new Error("fail"));
-
-      await expect(listGameBackups("Sims 4")).rejects.toThrow(
-        'Failed to list backups for "Sims 4"',
-      );
+      expect(result).toEqual([]);
     });
   });
 });

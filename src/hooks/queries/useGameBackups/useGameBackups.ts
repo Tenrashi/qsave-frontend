@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { listGameBackups } from "@/services/drive/drive";
+import { listGameBackups } from "@/operations/drive/backups/backups";
 
 export const GAME_BACKUPS_KEY = (gameName: string) => ["gameBackups", gameName];
 

@@ -8,7 +8,7 @@ const { mockDeleteGameBackup } = vi.hoisted(() => ({
   mockDeleteGameBackup: vi.fn(),
 }));
 
-vi.mock("@/services/drive/drive", () => ({
+vi.mock("@/operations/drive/backups/backups", () => ({
   deleteGameBackup: mockDeleteGameBackup,
 }));
 

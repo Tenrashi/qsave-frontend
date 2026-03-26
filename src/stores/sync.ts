@@ -6,7 +6,7 @@ import {
   getSyncFingerprints,
   setSyncFingerprint,
 } from "@/lib/store/store";
-import { listBackedUpGameNames } from "@/services/drive/drive";
+import { listBackedUpGameNames } from "@/operations/drive/backups/backups";
 
 type SyncStore = {
   gameStatuses: Record<string, SyncStatus>;

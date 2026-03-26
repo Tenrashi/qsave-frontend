@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { RECORD_STATUS } from "@/domain/types";
 import type { Game, SyncRecord } from "@/domain/types";
 import { APP_NAME, TAURI_COMMANDS } from "@/lib/constants/constants";
-import { downloadBackup } from "@/services/drive/drive";
+import { getBackupFile } from "@/services/drive/drive";
 import { addSyncRecord } from "@/lib/store/store";
 import { notify } from "@/lib/notify/notify";
 import i18n from "@/i18n";
@@ -16,7 +16,7 @@ export const restoreGame = async (
   const id = `${game.name}-restore-${Date.now()}`;
 
   try {
-    const zipBytes = await downloadBackup(backupId);
+    const zipBytes = await getBackupFile(backupId);
     const zipArray = Array.from(zipBytes);
 
     const meta: ZipMeta | null = await invoke(TAURI_COMMANDS.readZipMeta, {

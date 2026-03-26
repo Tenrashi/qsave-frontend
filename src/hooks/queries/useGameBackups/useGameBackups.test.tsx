@@ -9,7 +9,7 @@ const { mockListGameBackups } = vi.hoisted(() => ({
   mockListGameBackups: vi.fn(),
 }));
 
-vi.mock("@/services/drive/drive", () => ({
+vi.mock("@/operations/drive/backups/backups", () => ({
   listGameBackups: mockListGameBackups,
 }));
 
