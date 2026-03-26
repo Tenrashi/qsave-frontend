@@ -102,6 +102,30 @@ describe("auth", () => {
 
       expect(token).toBe("new-token");
     });
+
+    it("falls back to original token when refresh returns no accessToken", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        accessToken: "original-token",
+        refreshToken: "refresh-token",
+        expiresAt: Date.now() + 60_000,
+      });
+
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        refreshToken: "refresh-token",
+        expiresAt: Date.now() + 60_000,
+      });
+
+      mockPostTokenRefresh.mockResolvedValueOnce({
+        access_token: undefined,
+        expires_in: 3600,
+      });
+
+      const token = await getValidToken();
+
+      expect(token).toBe("original-token");
+    });
   });
 
   describe("logout", () => {

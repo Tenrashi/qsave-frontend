@@ -132,6 +132,50 @@ describe("devices", () => {
       );
     });
 
+    it("detects Windows OS from userAgent", async () => {
+      const original = navigator.userAgent;
+      Object.defineProperty(navigator, "userAgent", {
+        value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        configurable: true,
+      });
+      mockGetFile.mockResolvedValueOnce(null);
+
+      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+
+      expect(mockPutDeviceFile).toHaveBeenCalledWith(
+        "devices-folder",
+        "device-1",
+        expect.objectContaining({ os: "windows" }),
+        null,
+      );
+      Object.defineProperty(navigator, "userAgent", {
+        value: original,
+        configurable: true,
+      });
+    });
+
+    it("detects macOS from userAgent", async () => {
+      const original = navigator.userAgent;
+      Object.defineProperty(navigator, "userAgent", {
+        value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+        configurable: true,
+      });
+      mockGetFile.mockResolvedValueOnce(null);
+
+      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+
+      expect(mockPutDeviceFile).toHaveBeenCalledWith(
+        "devices-folder",
+        "device-1",
+        expect.objectContaining({ os: "macos" }),
+        null,
+      );
+      Object.defineProperty(navigator, "userAgent", {
+        value: original,
+        configurable: true,
+      });
+    });
+
     it("merges games into existing device entry", async () => {
       const existingEntry = {
         os: "windows",
@@ -149,6 +193,20 @@ describe("devices", () => {
           os: "windows",
           games: { "Other Game": ["/other"], "Sims 4": ["/saves"] },
         },
+        "existing-file",
+      );
+    });
+
+    it("uses default entry when existing file content is null", async () => {
+      mockGetFile.mockResolvedValueOnce("existing-file");
+      mockGetDeviceFile.mockResolvedValueOnce(null);
+
+      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+
+      expect(mockPutDeviceFile).toHaveBeenCalledWith(
+        "devices-folder",
+        "device-1",
+        expect.objectContaining({ games: { "Sims 4": ["/saves"] } }),
         "existing-file",
       );
     });

@@ -198,5 +198,13 @@ describe("folders", () => {
         "Failed to ensure devices folder",
       );
     });
+
+    it("handles non-Error throw in wrapping", async () => {
+      mockGetDriveFolderId.mockRejectedValueOnce("string error");
+
+      await expect(ensureDevicesFolder()).rejects.toThrow(
+        "Failed to ensure devices folder",
+      );
+    });
   });
 });
