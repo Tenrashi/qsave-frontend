@@ -55,6 +55,8 @@ export const MIME_TYPES = {
   octetStream: "application/octet-stream",
 } as const;
 
+export const SYSTEM_FOLDERS = ["devices"] as const;
+
 export const MAX_SAVES_PER_GAME = 5;
 export const MAX_SYNC_HISTORY_RECORDS = 100;
 export const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;

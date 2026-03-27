@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { DriveBackup } from "@/domain/types";
-import { TAURI_COMMANDS, MAX_SAVES_PER_GAME } from "@/lib/constants/constants";
+import {
+  TAURI_COMMANDS,
+  SYSTEM_FOLDERS,
+  MAX_SAVES_PER_GAME,
+} from "@/lib/constants/constants";
 import {
   getFilesInFolder,
   deleteFile,
@@ -12,10 +16,13 @@ import {
   ensureGameFolder,
 } from "@/operations/drive/folders/folders";
 
+const systemFolders = new Set<string>(SYSTEM_FOLDERS);
+
 export const listBackedUpGameNames = async (): Promise<string[]> => {
   try {
     const rootId = await ensureQSaveFolder();
-    return await getFolderNames(rootId);
+    const names = await getFolderNames(rootId);
+    return names.filter((name) => !systemFolders.has(name));
   } catch {
     return [];
   }

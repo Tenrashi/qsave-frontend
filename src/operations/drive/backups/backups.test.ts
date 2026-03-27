@@ -56,6 +56,19 @@ describe("backups", () => {
       expect(mockGetFolderNames).toHaveBeenCalledWith("root-id");
     });
 
+    it("excludes system folders like devices", async () => {
+      mockEnsureQSaveFolder.mockResolvedValueOnce("root-id");
+      mockGetFolderNames.mockResolvedValueOnce([
+        "Sims 4",
+        "devices",
+        "Elden Ring",
+      ]);
+
+      const result = await listBackedUpGameNames();
+
+      expect(result).toEqual(["Sims 4", "Elden Ring"]);
+    });
+
     it("returns empty array on error", async () => {
       mockEnsureQSaveFolder.mockRejectedValueOnce(new Error("fail"));
 
