@@ -12,7 +12,6 @@ import {
   findDeviceGamePaths,
   getCloudGameHash,
 } from "@/operations/devices/devices";
-import { rescanGame } from "@/operations/scanner/scanner/scanner";
 import { useSyncStore } from "@/stores/sync";
 import { useGameBackups } from "@/hooks/queries/useGameBackups/useGameBackups";
 import { useRestoreBackup } from "@/hooks/mutations/useRestoreBackup/useRestoreBackup";
@@ -58,14 +57,16 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
     if (!open || !game.isCloudOnly) return;
 
     const loadDevicePath = async () => {
-      const deviceId = await getDeviceId();
-      const paths = await findDeviceGamePaths(deviceId, game.name);
-      if (paths?.[0]) setTargetPath(paths[0]);
+      try {
+        const deviceId = await getDeviceId();
+        const paths = await findDeviceGamePaths(deviceId, game.name);
+        if (paths?.[0]) setTargetPath(paths[0]);
+      } catch (error) {
+        console.warn("Failed to load device path:", error);
+      }
     };
 
-    loadDevicePath().catch((error) =>
-      console.warn("Failed to load device path:", error),
-    );
+    loadDevicePath();
   }, [open, game.isCloudOnly, game.name]);
 
   const handlePickFolder = async () => {
@@ -87,12 +88,8 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
       const fingerprint = syncFingerprints[game.name];
       if (fingerprint) {
         try {
-          const fresh = await rescanGame(game);
-          const filePaths = fresh.saveFiles.map((file) => file.path);
-          const localHash = await computeContentHash(
-            fresh.savePaths,
-            filePaths,
-          );
+          const filePaths = game.saveFiles.map((file) => file.path);
+          const localHash = await computeContentHash(game.savePaths, filePaths);
           const cloudHash = await getCloudGameHash(game.name);
           const localDiverged = localHash !== fingerprint.hash;
           const cloudDiffers = cloudHash && cloudHash.hash !== localHash;

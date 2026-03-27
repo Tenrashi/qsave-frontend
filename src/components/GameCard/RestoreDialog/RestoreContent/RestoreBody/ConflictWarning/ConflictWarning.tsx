@@ -1,13 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Game } from "@/domain/types";
-import { SYNC_STATUS } from "@/domain/types";
-import { QUERY_KEYS } from "@/lib/constants/constants";
-import { syncGame } from "@/operations/sync/sync/sync";
-import { useSyncStore } from "@/stores/sync";
+import { useSyncAndUpdate } from "@/hooks/useSyncAndUpdate/useSyncAndUpdate";
 
 export type ConflictWarningProps = {
   game: Game;
@@ -21,29 +17,15 @@ export const ConflictWarning = ({
   onClose,
 }: ConflictWarningProps) => {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { setGameStatus, updateSyncFingerprint, markGameBackedUp } =
-    useSyncStore();
+  const syncAndUpdate = useSyncAndUpdate();
   const [uploading, setUploading] = useState(false);
 
   const handleUploadFirst = async () => {
     setUploading(true);
-    setGameStatus(game.name, SYNC_STATUS.syncing);
     try {
-      const result = await syncGame(game);
-      const newStatus =
-        result.status === SYNC_STATUS.error
-          ? SYNC_STATUS.error
-          : SYNC_STATUS.success;
-      setGameStatus(game.name, newStatus);
-      if (newStatus === SYNC_STATUS.success && result.contentHash) {
-        await updateSyncFingerprint(game.name, result.contentHash);
-        markGameBackedUp(game.name);
-      }
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
+      await syncAndUpdate(game);
       onClose();
     } catch {
-      setGameStatus(game.name, SYNC_STATUS.error);
       setUploading(false);
     }
   };

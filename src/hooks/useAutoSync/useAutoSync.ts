@@ -8,41 +8,30 @@ import { useAuthStore } from "@/stores/auth";
 import { startWatching, stopWatching } from "@/lib/watcher/watcher";
 import { scheduleAutoSync, cancelAllAutoSyncs } from "@/lib/autoSync/autoSync";
 import { computeContentHash } from "@/lib/hash/hash";
-import { syncGame } from "@/operations/sync/sync/sync";
 import { rescanGame } from "@/operations/scanner/scanner/scanner";
+import { useSyncAndUpdate } from "@/hooks/useSyncAndUpdate/useSyncAndUpdate";
 
 export const useAutoSync = (games: Game[] | undefined): void => {
   const queryClient = useQueryClient();
   const gamesRef = useRef<Game[]>([]);
   gamesRef.current = games ?? [];
 
-  const {
-    isGameWatched,
-    watchedGames,
-    gameStatuses,
-    setGameStatus,
-    syncFingerprints,
-    updateSyncFingerprint,
-  } = useSyncStore();
+  const { isGameWatched, watchedGames, gameStatuses, syncFingerprints } =
+    useSyncStore();
   const { auth } = useAuthStore();
+  const syncAndUpdate = useSyncAndUpdate();
 
   // Keep refs to avoid stale closures in the watcher callback
   const storeRef = useRef({
     isGameWatched,
     gameStatuses,
     syncFingerprints,
-    setGameStatus,
-    updateSyncFingerprint,
     auth,
   });
-  storeRef.current = {
-    isGameWatched,
-    gameStatuses,
-    syncFingerprints,
-    setGameStatus,
-    updateSyncFingerprint,
-    auth,
-  };
+  storeRef.current = { isGameWatched, gameStatuses, syncFingerprints, auth };
+
+  const syncRef = useRef(syncAndUpdate);
+  syncRef.current = syncAndUpdate;
 
   // Cancel everything on unmount only (not on dep changes)
   useEffect(() => () => cancelAllAutoSyncs(), []);
@@ -102,32 +91,18 @@ export const useAutoSync = (games: Game[] | undefined): void => {
           );
           if (!currentGame) return;
 
-          const currentStore = storeRef.current;
-
           try {
             const filePaths = currentGame.saveFiles.map((file) => file.path);
             const hash = await computeContentHash(
               currentGame.savePaths,
               filePaths,
             );
-            const existing = currentStore.syncFingerprints[gameName];
+            const existing = storeRef.current.syncFingerprints[gameName];
             if (existing?.hash === hash) return;
 
-            currentStore.setGameStatus(gameName, SYNC_STATUS.syncing);
-            const record = await syncGame(currentGame);
-            const status =
-              record.status === SYNC_STATUS.error
-                ? SYNC_STATUS.error
-                : SYNC_STATUS.success;
-            currentStore.setGameStatus(gameName, status);
-            if (status === SYNC_STATUS.success && record.contentHash) {
-              currentStore.updateSyncFingerprint(gameName, record.contentHash);
-            }
-            queryClient.invalidateQueries({
-              queryKey: QUERY_KEYS.syncHistory,
-            });
+            await syncRef.current(currentGame);
           } catch {
-            currentStore.setGameStatus(gameName, SYNC_STATUS.error);
+            useSyncStore.getState().setGameStatus(gameName, SYNC_STATUS.error);
           }
         });
       }

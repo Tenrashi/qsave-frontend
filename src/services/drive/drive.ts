@@ -10,10 +10,14 @@ const authHeaders = async (): Promise<Record<string, string>> => {
 };
 
 const assertOk = async (res: Response, context: string) => {
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`${context}: ${res.status} ${res.statusText} ${body}`);
+  if (res.ok) return;
+  let body = "";
+  try {
+    body = await res.text();
+  } catch {
+    // body stays empty
   }
+  throw new Error(`${context}: ${res.status} ${res.statusText} ${body}`);
 };
 
 const escapeQueryValue = (value: string): string =>

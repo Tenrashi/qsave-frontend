@@ -23,9 +23,9 @@ import {
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
-import { syncGame } from "@/operations/sync/sync/sync";
 import { getCloudGameHash } from "@/operations/devices/devices";
 import { removeManualGame } from "@/lib/store/store";
+import { useSyncAndUpdate } from "@/hooks/useSyncAndUpdate/useSyncAndUpdate";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { dateFnsLocales } from "@/lib/date-locales/date-locales";
@@ -44,14 +44,12 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
   const { auth } = useAuthStore();
   const {
     gameStatuses,
-    setGameStatus,
     syncFingerprints,
-    updateSyncFingerprint,
-    markGameBackedUp,
     // isGameWatched,
     // toggleGameWatch,
     hasBackup,
   } = useSyncStore();
+  const doSyncAndUpdate = useSyncAndUpdate();
   const locale = dateFnsLocales[i18n.language] ?? enUS;
 
   const [showConflict, setShowConflict] = useState(false);
@@ -84,22 +82,11 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
   };
 
   const doSync = async () => {
-    setGameStatus(game.name, SYNC_STATUS.syncing);
     try {
-      const result = await syncGame(game);
-      const newStatus =
-        result.status === SYNC_STATUS.error
-          ? SYNC_STATUS.error
-          : SYNC_STATUS.success;
-      setGameStatus(game.name, newStatus);
-      if (newStatus === SYNC_STATUS.success && result.contentHash) {
-        await updateSyncFingerprint(game.name, result.contentHash);
-        markGameBackedUp(game.name);
-      }
+      await doSyncAndUpdate(game);
     } catch {
-      setGameStatus(game.name, SYNC_STATUS.error);
+      // Errors already handled by useSyncAndUpdate (sets error status)
     }
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
   };
 
   const handleSync = async () => {
@@ -111,8 +98,8 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
           setShowConflict(true);
           return;
         }
-      } catch {
-        // If conflict check fails, proceed with sync
+      } catch (error) {
+        console.warn("Conflict check failed, proceeding with sync:", error);
       }
     }
     doSync();
