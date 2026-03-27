@@ -57,13 +57,13 @@ export const uploadGameArchive = async (
   gameName: string,
   savePaths: string[],
   filePaths: string[],
-): Promise<{ fileId: string }> => {
+): Promise<{ fileId: string; contentHash: string }> => {
   try {
-    const zipBytes: number[] = await invoke(TAURI_COMMANDS.createZip, {
-      savePaths,
-      files: filePaths,
-    });
-    const zipData = new Uint8Array(zipBytes);
+    const result: { zip_bytes: number[]; content_hash: string } = await invoke(
+      TAURI_COMMANDS.createZip,
+      { savePaths, files: filePaths },
+    );
+    const zipData = new Uint8Array(result.zip_bytes);
 
     const folderId = await ensureGameFolder(gameName);
 
@@ -83,7 +83,8 @@ export const uploadGameArchive = async (
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const archiveName = `${gameName}_${timestamp}.zip`;
 
-    return await postFile(folderId, archiveName, zipData);
+    const uploaded = await postFile(folderId, archiveName, zipData);
+    return { ...uploaded, contentHash: result.content_hash };
   } catch (error) {
     throw new Error(
       `Failed to upload archive for "${gameName}": ${error instanceof Error ? error.message : error}`,

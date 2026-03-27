@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { useSyncStore } from "@/stores/sync";
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
-import { computeGameHash } from "@/lib/hash/hash";
 import { GameBanner } from "./GameBanner/GameBanner";
 import { CloudOnlyActions } from "./CloudOnlyActions/CloudOnlyActions";
 import { LocalGameActions } from "./LocalGameActions/LocalGameActions";
@@ -16,14 +15,12 @@ export type GameCardProps = {
 
 export const GameCard = memo(({ game }: GameCardProps) => {
   const { t } = useTranslation();
-  const { gameStatuses, syncFingerprints, hasBackup } = useSyncStore();
+  const { gameStatuses, hasBackup } = useSyncStore();
 
   const status = gameStatuses[game.name] ?? SYNC_STATUS.idle;
   const isBusy =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
-  const currentHash = computeGameHash(game.saveFiles, game.savePaths);
-  const isSynced =
-    syncFingerprints[game.name]?.hash === currentHash && hasBackup(game.name);
+  const isSynced = status === SYNC_STATUS.success || hasBackup(game.name);
 
   return (
     <Card className="overflow-hidden !py-0">

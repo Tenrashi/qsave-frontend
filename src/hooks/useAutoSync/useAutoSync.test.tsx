@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { SYNC_STATUS } from "@/domain/types";
 import type { SyncRecord } from "@/domain/types";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
+import { renderHook, waitFor } from "@/test/test-utils";
 import { sims4Game, cyberpunkGame } from "@/test/mocks/games";
 import { useAutoSync } from "./useAutoSync";
 
@@ -16,7 +16,7 @@ const {
   mockCancelAllAutoSyncs,
   mockSyncGame,
   mockRescanGame,
-  mockComputeGameHash,
+  mockComputeContentHash,
 } = vi.hoisted(() => ({
   mockStartWatching: vi.fn(),
   mockStopWatching: vi.fn(),
@@ -24,7 +24,7 @@ const {
   mockCancelAllAutoSyncs: vi.fn(),
   mockSyncGame: vi.fn(),
   mockRescanGame: vi.fn(),
-  mockComputeGameHash: vi.fn(() => "hash-abc"),
+  mockComputeContentHash: vi.fn(() => Promise.resolve("hash-abc")),
 }));
 
 vi.mock("@/lib/watcher/watcher", () => ({
@@ -46,7 +46,7 @@ vi.mock("@/operations/scanner/scanner/scanner", () => ({
 }));
 
 vi.mock("@/lib/hash/hash", () => ({
-  computeGameHash: mockComputeGameHash,
+  computeContentHash: mockComputeContentHash,
 }));
 
 const createWrapper = () => {
@@ -121,11 +121,11 @@ describe("useAutoSync", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/Slot_001.save"]);
-    });
+    triggerWatcherCallback(["/saves/sims4/Slot_001.save"]);
 
-    expect(mockRescanGame).toHaveBeenCalledWith(sims4Game);
+    await waitFor(() => {
+      expect(mockRescanGame).toHaveBeenCalledWith(sims4Game);
+    });
   });
 
   it("skips auto sync when not authenticated", async () => {
@@ -136,8 +136,10 @@ describe("useAutoSync", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/save.dat"]);
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockRescanGame).toHaveBeenCalled();
     });
 
     expect(mockScheduleAutoSync).not.toHaveBeenCalled();
@@ -155,8 +157,10 @@ describe("useAutoSync", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/save.dat"]);
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockRescanGame).toHaveBeenCalled();
     });
 
     expect(mockScheduleAutoSync).not.toHaveBeenCalled();
@@ -171,14 +175,14 @@ describe("useAutoSync", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/save.dat"]);
-    });
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
 
-    expect(mockScheduleAutoSync).toHaveBeenCalledWith(
-      "The Sims 4",
-      expect.any(Function),
-    );
+    await waitFor(() => {
+      expect(mockScheduleAutoSync).toHaveBeenCalledWith(
+        "The Sims 4",
+        expect.any(Function),
+      );
+    });
   });
 
   it("skips sync when fingerprint hash matches", async () => {
@@ -190,18 +194,24 @@ describe("useAutoSync", () => {
       },
     });
     mockRescanGame.mockResolvedValueOnce(sims4Game);
-    mockComputeGameHash.mockReturnValueOnce("hash-abc");
+    mockComputeContentHash.mockResolvedValueOnce("hash-abc");
 
     renderHook(() => useAutoSync([sims4Game]), {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/save.dat"]);
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockScheduleAutoSync).toHaveBeenCalled();
     });
 
     const syncCallback = mockScheduleAutoSync.mock.calls[0][1];
     syncCallback();
+
+    await waitFor(() => {
+      expect(mockComputeContentHash).toHaveBeenCalled();
+    });
 
     expect(mockSyncGame).not.toHaveBeenCalled();
   });
@@ -210,27 +220,27 @@ describe("useAutoSync", () => {
     useAuthStore.setState({ auth: { isAuthenticated: true } });
     useSyncStore.setState({ watchedGames: { "The Sims 4": true } });
     mockRescanGame.mockResolvedValueOnce(sims4Game);
-    mockComputeGameHash.mockReturnValueOnce("new-hash");
-    const syncPromise = Promise.resolve({
+    mockComputeContentHash.mockResolvedValueOnce("new-hash");
+    mockSyncGame.mockResolvedValueOnce({
       status: SYNC_STATUS.success,
     } as SyncRecord);
-    mockSyncGame.mockReturnValueOnce(syncPromise);
 
     renderHook(() => useAutoSync([sims4Game]), {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/save.dat"]);
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockScheduleAutoSync).toHaveBeenCalled();
     });
 
     const syncCallback = mockScheduleAutoSync.mock.calls[0][1];
-    await act(async () => {
-      syncCallback();
-      await syncPromise;
-    });
+    syncCallback();
 
-    expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+    await waitFor(() => {
+      expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+    });
   });
 
   it("sets error status when sync fails", async () => {
@@ -243,46 +253,48 @@ describe("useAutoSync", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/save.dat"]);
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockScheduleAutoSync).toHaveBeenCalled();
     });
 
     const syncCallback = mockScheduleAutoSync.mock.calls[0][1];
-    await act(() => {
-      syncCallback();
-    });
+    syncCallback();
 
-    expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
-      SYNC_STATUS.error,
-    );
+    await waitFor(() => {
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.error,
+      );
+    });
   });
 
   it("sets error status when sync record has error status", async () => {
     useAuthStore.setState({ auth: { isAuthenticated: true } });
     useSyncStore.setState({ watchedGames: { "The Sims 4": true } });
     mockRescanGame.mockResolvedValueOnce(sims4Game);
-    const syncPromise = Promise.resolve({
+    mockSyncGame.mockResolvedValueOnce({
       status: SYNC_STATUS.error,
     } as SyncRecord);
-    mockSyncGame.mockReturnValueOnce(syncPromise);
 
     renderHook(() => useAutoSync([sims4Game]), {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/sims4/save.dat"]);
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockScheduleAutoSync).toHaveBeenCalled();
     });
 
     const syncCallback = mockScheduleAutoSync.mock.calls[0][1];
-    await act(async () => {
-      syncCallback();
-      await syncPromise;
-    });
+    syncCallback();
 
-    expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
-      SYNC_STATUS.error,
-    );
+    await waitFor(() => {
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.error,
+      );
+    });
   });
 
   it("ignores changed paths that don't match any watched game", async () => {
@@ -292,9 +304,7 @@ describe("useAutoSync", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => {
-      triggerWatcherCallback(["/saves/unknown/save.dat"]);
-    });
+    triggerWatcherCallback(["/saves/unknown/save.dat"]);
 
     expect(mockRescanGame).not.toHaveBeenCalled();
   });

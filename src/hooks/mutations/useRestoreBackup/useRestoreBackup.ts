@@ -4,12 +4,12 @@ import type { Game } from "@/domain/types";
 import { SYNC_STATUS, RECORD_STATUS } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
 import { listGameBackups } from "@/operations/drive/backups/backups";
-import { saveDevicePaths } from "@/operations/devices/devices";
+import { saveDeviceSync } from "@/operations/devices/devices";
+import { getCloudGameHash } from "@/operations/devices/devices";
 import { restoreGame } from "@/operations/restore/restore/restore";
 import { scanManualGame } from "@/operations/scanner/scanner/scanner";
 import { addManualGame, getDeviceId } from "@/lib/store/store";
 import { useSyncStore } from "@/stores/sync";
-import { computeGameHash } from "@/lib/hash/hash";
 
 export const useRestoreBackup = (game: Game) => {
   const { t } = useTranslation();
@@ -38,8 +38,10 @@ export const useRestoreBackup = (game: Game) => {
     onSuccess: async (_data, params) => {
       try {
         setGameStatus(game.name, SYNC_STATUS.success);
-        const newHash = computeGameHash(game.saveFiles, game.savePaths);
-        await updateSyncFingerprint(game.name, newHash);
+        const cloudHash = await getCloudGameHash(game.name);
+        if (cloudHash) {
+          await updateSyncFingerprint(game.name, cloudHash.hash);
+        }
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
 
         if (!game.isCloudOnly || !params?.targetPaths?.length) {
@@ -49,7 +51,7 @@ export const useRestoreBackup = (game: Game) => {
 
         await addManualGame(game.name, params.targetPaths);
         const deviceId = await getDeviceId();
-        await saveDevicePaths(deviceId, game.name, params.targetPaths);
+        await saveDeviceSync(deviceId, game.name, params.targetPaths);
         const scanned = await scanManualGame(game.name, params.targetPaths);
         await queryClient.cancelQueries({ queryKey: QUERY_KEYS.games });
         queryClient.setQueryData<Game[]>(QUERY_KEYS.games, (prev = []) =>

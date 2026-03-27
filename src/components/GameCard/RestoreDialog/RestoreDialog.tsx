@@ -5,16 +5,25 @@ import { RestoreContent } from "./RestoreContent/RestoreContent";
 
 export type RestoreDialogProps = {
   game: Game;
-  trigger: React.ReactElement;
   quick?: boolean;
-};
+} & (
+  | { trigger: React.ReactElement; open?: never; onOpenChange?: never }
+  | { trigger?: never; open: boolean; onOpenChange: (open: boolean) => void }
+);
 
-export const RestoreDialog = ({ game, trigger, quick }: RestoreDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const RestoreDialog = ({
+  game,
+  trigger,
+  quick,
+  ...controlled
+}: RestoreDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlled.open ?? internalOpen;
+  const setOpen = controlled.onOpenChange ?? setInternalOpen;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger} />
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogPopup className="max-w-md">
         <RestoreContent game={game} quick={quick} open={open} />
       </DialogPopup>

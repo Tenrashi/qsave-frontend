@@ -3,6 +3,7 @@ use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use zip::write::SimpleFileOptions;
 use zip::CompressionMethod;
 
@@ -12,6 +13,12 @@ const META_FILENAME: &str = "_qsave_meta.json";
 pub struct ZipMeta {
     pub platform: String,
     pub save_paths: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateZipResult {
+    pub zip_bytes: Vec<u8>,
+    pub content_hash: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -39,36 +46,28 @@ fn find_base_index(file_path: &Path, save_paths: &[String]) -> Option<usize> {
         .map(|(index, _)| index)
 }
 
-/// Compresses files into an in-memory zip archive.
-/// Files are stored with paths relative to their matching save_path,
-/// prefixed by the save_path index (e.g., `0/subdir/save.dat`).
-/// A `_qsave_meta.json` entry records the platform and save paths for restore.
-pub fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<Vec<u8>, String> {
-    let buffer = Cursor::new(Vec::new());
-    let mut zip = zip::ZipWriter::new(buffer);
-    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+/// Reads files and resolves their relative paths for archiving/hashing.
+struct ResolvedFile {
+    relative_path: String,
+    contents: Vec<u8>,
+    /// The index-prefixed entry name for the zip (e.g., `0/subdir/save.dat`).
+    entry_name: String,
+}
 
-    let meta = ZipMeta {
-        platform: current_platform(),
-        save_paths: save_paths.clone(),
-    };
-    let meta_json =
-        serde_json::to_string_pretty(&meta).map_err(|e| format!("Failed to serialize meta: {e}"))?;
-    zip.start_file(META_FILENAME, options)
-        .map_err(|e| format!("Failed to add meta to zip: {e}"))?;
-    zip.write_all(meta_json.as_bytes())
-        .map_err(|e| format!("Failed to write meta to zip: {e}"))?;
+fn resolve_files(save_paths: &[String], files: &[String]) -> Result<Vec<ResolvedFile>, String> {
+    let mut resolved: Vec<ResolvedFile> = Vec::with_capacity(files.len());
 
-    for file_path in &files {
+    for file_path in files {
         let path = Path::new(file_path);
 
-        let base_index = find_base_index(path, &save_paths)
+        let base_index = find_base_index(path, save_paths)
             .ok_or_else(|| format!("No matching save path for: {file_path}"))?;
 
         let relative = path
             .strip_prefix(&save_paths[base_index])
             .map_err(|e| format!("Failed to compute relative path for {file_path}: {e}"))?
-            .to_string_lossy();
+            .to_string_lossy()
+            .replace('\\', "/");
 
         let entry_name = format!("{base_index}/{relative}");
 
@@ -78,16 +77,77 @@ pub fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<Vec<u8>
         file.read_to_end(&mut contents)
             .map_err(|e| format!("Failed to read {file_path}: {e}"))?;
 
-        zip.start_file(&entry_name, options)
-            .map_err(|e| format!("Failed to add {entry_name} to zip: {e}"))?;
-        zip.write_all(&contents)
-            .map_err(|e| format!("Failed to write {entry_name} to zip: {e}"))?;
+        resolved.push(ResolvedFile {
+            relative_path: relative.to_string(),
+            contents,
+            entry_name,
+        });
+    }
+
+    Ok(resolved)
+}
+
+/// Computes a SHA-256 content hash over sorted (relative_path, file_bytes) pairs.
+/// Cross-device comparable: no timestamps or absolute paths.
+fn compute_hash(resolved: &[ResolvedFile]) -> String {
+    let mut sorted_indices: Vec<usize> = (0..resolved.len()).collect();
+    sorted_indices.sort_by(|a, b| resolved[*a].relative_path.cmp(&resolved[*b].relative_path));
+
+    let mut hasher = Sha256::new();
+    for index in sorted_indices {
+        let file = &resolved[index];
+        hasher.update(file.relative_path.as_bytes());
+        hasher.update(b"\0");
+        hasher.update(&file.contents);
+        hasher.update(b"\0");
+    }
+    let result = hasher.finalize();
+    result.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+/// Computes a content hash for save files without creating a zip.
+pub fn compute_save_hash(save_paths: Vec<String>, files: Vec<String>) -> Result<String, String> {
+    let resolved = resolve_files(&save_paths, &files)?;
+    Ok(compute_hash(&resolved))
+}
+
+/// Compresses files into an in-memory zip archive and computes a content hash.
+/// Files are stored with paths relative to their matching save_path,
+/// prefixed by the save_path index (e.g., `0/subdir/save.dat`).
+/// A `_qsave_meta.json` entry records the platform and save paths for restore.
+pub fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZipResult, String> {
+    let resolved = resolve_files(&save_paths, &files)?;
+    let content_hash = compute_hash(&resolved);
+
+    let buffer = Cursor::new(Vec::new());
+    let mut zip = zip::ZipWriter::new(buffer);
+    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+
+    let meta = ZipMeta {
+        platform: current_platform(),
+        save_paths,
+    };
+    let meta_json =
+        serde_json::to_string_pretty(&meta).map_err(|e| format!("Failed to serialize meta: {e}"))?;
+    zip.start_file(META_FILENAME, options)
+        .map_err(|e| format!("Failed to add meta to zip: {e}"))?;
+    zip.write_all(meta_json.as_bytes())
+        .map_err(|e| format!("Failed to write meta to zip: {e}"))?;
+
+    for file in &resolved {
+        zip.start_file(&file.entry_name, options)
+            .map_err(|e| format!("Failed to add {} to zip: {e}", file.entry_name))?;
+        zip.write_all(&file.contents)
+            .map_err(|e| format!("Failed to write {} to zip: {e}", file.entry_name))?;
     }
 
     let cursor = zip
         .finish()
         .map_err(|e| format!("Failed to finalize zip: {e}"))?;
-    Ok(cursor.into_inner())
+    Ok(CreateZipResult {
+        zip_bytes: cursor.into_inner(),
+        content_hash,
+    })
 }
 
 /// Creates temporary staging directories next to each target (same filesystem for rename).
@@ -281,7 +341,7 @@ mod tests {
         write_file(&file_a, b"hello");
         write_file(&file_b, b"world");
 
-        let zip_bytes = create_zip(
+        let result = create_zip(
             vec![base.to_string_lossy().to_string()],
             vec![
                 file_a.to_string_lossy().to_string(),
@@ -290,7 +350,7 @@ mod tests {
         )
         .unwrap();
 
-        let cursor = Cursor::new(zip_bytes);
+        let cursor = Cursor::new(result.zip_bytes);
         let mut archive = zip::ZipArchive::new(cursor).unwrap();
 
         let mut names: Vec<String> = (0..archive.len())
@@ -308,15 +368,100 @@ mod tests {
         let file = base.join("save.dat");
         write_file(&file, b"data");
 
-        let zip_bytes = create_zip(
+        let result = create_zip(
             vec![base.to_string_lossy().to_string()],
             vec![file.to_string_lossy().to_string()],
         )
         .unwrap();
 
-        let meta = read_zip_meta(zip_bytes).unwrap().unwrap();
+        let meta = read_zip_meta(result.zip_bytes).unwrap().unwrap();
         assert_eq!(meta.save_paths, vec![base.to_string_lossy().to_string()]);
         assert!(!meta.platform.is_empty());
+    }
+
+    #[test]
+    fn create_zip_returns_content_hash() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file = base.join("save.dat");
+        write_file(&file, b"data");
+
+        let result = create_zip(
+            vec![base.to_string_lossy().to_string()],
+            vec![file.to_string_lossy().to_string()],
+        )
+        .unwrap();
+
+        assert!(!result.content_hash.is_empty());
+        assert_eq!(result.content_hash.len(), 64); // SHA-256 hex
+    }
+
+    #[test]
+    fn content_hash_matches_compute_save_hash() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file_a = base.join("save1.dat");
+        let file_b = base.join("subdir/save2.dat");
+        write_file(&file_a, b"hello");
+        write_file(&file_b, b"world");
+
+        let save_paths = vec![base.to_string_lossy().to_string()];
+        let files = vec![
+            file_a.to_string_lossy().to_string(),
+            file_b.to_string_lossy().to_string(),
+        ];
+
+        let zip_result = create_zip(save_paths.clone(), files.clone()).unwrap();
+        let standalone_hash = compute_save_hash(save_paths, files).unwrap();
+
+        assert_eq!(zip_result.content_hash, standalone_hash);
+    }
+
+    #[test]
+    fn content_hash_is_stable_regardless_of_file_order() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file_a = base.join("aaa.dat");
+        let file_b = base.join("zzz.dat");
+        write_file(&file_a, b"first");
+        write_file(&file_b, b"second");
+
+        let save_paths = vec![base.to_string_lossy().to_string()];
+        let hash_ab = compute_save_hash(
+            save_paths.clone(),
+            vec![
+                file_a.to_string_lossy().to_string(),
+                file_b.to_string_lossy().to_string(),
+            ],
+        )
+        .unwrap();
+        let hash_ba = compute_save_hash(
+            save_paths,
+            vec![
+                file_b.to_string_lossy().to_string(),
+                file_a.to_string_lossy().to_string(),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(hash_ab, hash_ba);
+    }
+
+    #[test]
+    fn content_hash_changes_when_file_content_changes() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file = base.join("save.dat");
+        let save_paths = vec![base.to_string_lossy().to_string()];
+        let files = vec![file.to_string_lossy().to_string()];
+
+        write_file(&file, b"version1");
+        let hash1 = compute_save_hash(save_paths.clone(), files.clone()).unwrap();
+
+        write_file(&file, b"version2");
+        let hash2 = compute_save_hash(save_paths, files).unwrap();
+
+        assert_ne!(hash1, hash2);
     }
 
     #[test]
@@ -328,7 +473,7 @@ mod tests {
         write_file(&file_a, b"hello");
         write_file(&file_b, b"world");
 
-        let zip_bytes = create_zip(
+        let zip_result = create_zip(
             vec![base.to_string_lossy().to_string()],
             vec![
                 file_a.to_string_lossy().to_string(),
@@ -339,7 +484,7 @@ mod tests {
 
         let extract_dir = dir.path().join("restored");
         let result = extract_zip(
-            zip_bytes,
+            zip_result.zip_bytes,
             vec![extract_dir.to_string_lossy().to_string()],
         )
         .unwrap();
@@ -362,7 +507,7 @@ mod tests {
         write_file(&config_file, b"[config]");
         write_file(&save_file, b"savedata");
 
-        let zip_bytes = create_zip(
+        let zip_result = create_zip(
             vec![
                 config_base.to_string_lossy().to_string(),
                 saves_base.to_string_lossy().to_string(),
@@ -377,7 +522,7 @@ mod tests {
         let restore_config = dir.path().join("restore_config");
         let restore_saves = dir.path().join("restore_saves");
         let result = extract_zip(
-            zip_bytes,
+            zip_result.zip_bytes,
             vec![
                 restore_config.to_string_lossy().to_string(),
                 restore_saves.to_string_lossy().to_string(),
@@ -438,7 +583,7 @@ mod tests {
         let file_a = base.join("save1.dat");
         write_file(&file_a, b"original");
 
-        let zip_bytes = create_zip(
+        let zip_result = create_zip(
             vec![base.to_string_lossy().to_string()],
             vec![file_a.to_string_lossy().to_string()],
         )
@@ -450,7 +595,7 @@ mod tests {
         write_file(&extract_dir.join("extra.dat"), b"should be removed");
 
         let result = extract_zip(
-            zip_bytes,
+            zip_result.zip_bytes,
             vec![extract_dir.to_string_lossy().to_string()],
         )
         .unwrap();
@@ -471,8 +616,8 @@ mod tests {
 
     #[test]
     fn creates_empty_zip_with_meta_only() {
-        let zip_bytes = create_zip(vec![], vec![]).unwrap();
-        let cursor = Cursor::new(&zip_bytes);
+        let result = create_zip(vec![], vec![]).unwrap();
+        let cursor = Cursor::new(&result.zip_bytes);
         let archive = zip::ZipArchive::new(cursor).unwrap();
         assert_eq!(archive.len(), 1);
     }
@@ -486,11 +631,11 @@ mod tests {
         let data = "abcdefgh".repeat(10_000);
         write_file(&file, data.as_bytes());
 
-        let zip_bytes = create_zip(
+        let result = create_zip(
             vec![base.to_string_lossy().to_string()],
             vec![file.to_string_lossy().to_string()],
         )
         .unwrap();
-        assert!(zip_bytes.len() < data.len());
+        assert!(result.zip_bytes.len() < data.len());
     }
 }

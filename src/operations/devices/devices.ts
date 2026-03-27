@@ -1,4 +1,5 @@
-import type { DeviceEntry, DevicesMap } from "./devices.types";
+import type { DeviceEntry, DevicesMap, GameDeviceInfo } from "./devices.types";
+import { normalizeGameInfo } from "./devices.types";
 import {
   getDeviceFile,
   getFile,
@@ -14,7 +15,7 @@ const currentOS = (): string => {
   return "linux";
 };
 
-let saveDevicePathsLock: Promise<void> = Promise.resolve();
+let saveDeviceSyncLock: Promise<void> = Promise.resolve();
 
 export const buildDevicesMap = async (): Promise<DevicesMap> => {
   try {
@@ -48,27 +49,35 @@ export const findDeviceGamePaths = async (
     if (!fileId) return undefined;
 
     const entry = await getDeviceFile(fileId);
-    return entry?.games[gameName];
+    if (!entry) return undefined;
+    const gameInfo = entry.games[gameName];
+    if (!gameInfo) return undefined;
+    return normalizeGameInfo(gameInfo).paths;
   } catch {
     return undefined;
   }
 };
 
-export const saveDevicePaths = (
+export const saveDeviceSync = (
   deviceId: string,
   gameName: string,
   paths: string[],
+  contentHash?: string,
 ): Promise<void> => {
-  saveDevicePathsLock = saveDevicePathsLock.then(() =>
-    saveDevicePathsUnsafe(deviceId, gameName, paths),
+  saveDeviceSyncLock = saveDeviceSyncLock.then(() =>
+    saveDeviceSyncUnsafe(deviceId, gameName, paths, contentHash),
   );
-  return saveDevicePathsLock;
+  return saveDeviceSyncLock;
 };
 
-const saveDevicePathsUnsafe = async (
+/** @deprecated Use saveDeviceSync instead */
+export const saveDevicePaths = saveDeviceSync;
+
+const saveDeviceSyncUnsafe = async (
   deviceId: string,
   gameName: string,
   paths: string[],
+  contentHash?: string,
 ): Promise<void> => {
   try {
     const folderId = await ensureDevicesFolder();
@@ -80,12 +89,45 @@ const saveDevicePathsUnsafe = async (
       if (existing) entry = existing;
     }
 
-    entry.games[gameName] = paths;
+    const gameInfo: GameDeviceInfo = {
+      paths,
+      ...(contentHash && {
+        lastHash: contentHash,
+        lastSyncedAt: new Date().toISOString(),
+      }),
+    };
+    entry.games[gameName] = gameInfo;
     await putDeviceFile(folderId, deviceId, entry, existingFileId);
   } catch (error) {
     throw new Error(
       `Failed to update device paths: ${error instanceof Error ? error.message : error}`,
       { cause: error },
     );
+  }
+};
+
+export const getCloudGameHash = async (
+  gameName: string,
+): Promise<{ hash: string; syncedAt: string } | null> => {
+  try {
+    const devicesMap = await buildDevicesMap();
+    let latest: { hash: string; syncedAt: string } | null = null;
+
+    for (const entry of Object.values(devicesMap)) {
+      const raw = entry.games[gameName];
+      if (!raw) continue;
+      const gameInfo = normalizeGameInfo(raw);
+      if (!gameInfo.lastHash || !gameInfo.lastSyncedAt) continue;
+      if (!latest || gameInfo.lastSyncedAt > latest.syncedAt) {
+        latest = {
+          hash: gameInfo.lastHash,
+          syncedAt: gameInfo.lastSyncedAt,
+        };
+      }
+    }
+
+    return latest;
+  } catch {
+    return null;
   }
 };

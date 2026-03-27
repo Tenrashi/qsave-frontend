@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -23,7 +24,7 @@ import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
 import { syncGame } from "@/operations/sync/sync/sync";
-import { computeGameHash } from "@/lib/hash/hash";
+import { getCloudGameHash } from "@/operations/devices/devices";
 import { removeManualGame } from "@/lib/store/store";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
@@ -31,6 +32,7 @@ import { dateFnsLocales } from "@/lib/date-locales/date-locales";
 import { RemoveGameDialog } from "../RemoveGameDialog/RemoveGameDialog";
 import { RestoreDialog } from "../RestoreDialog/RestoreDialog";
 import { formatSize } from "../utils/formatSize";
+import { SyncConflictDialog } from "./SyncConflictDialog/SyncConflictDialog";
 
 export type LocalGameActionsProps = {
   game: Game;
@@ -52,13 +54,13 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
   } = useSyncStore();
   const locale = dateFnsLocales[i18n.language] ?? enUS;
 
+  const [showConflict, setShowConflict] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+
   const status = gameStatuses[game.name] ?? SYNC_STATUS.idle;
   const isBusy =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
   // const watched = isGameWatched(game.name);
-  const currentHash = computeGameHash(game.saveFiles, game.savePaths);
-  const isSynced =
-    syncFingerprints[game.name]?.hash === currentHash && hasBackup(game.name);
 
   const totalSize = game.saveFiles.reduce(
     (sum, file) => sum + file.sizeBytes,
@@ -81,7 +83,7 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
     }
   };
 
-  const handleSync = async () => {
+  const doSync = async () => {
     setGameStatus(game.name, SYNC_STATUS.syncing);
     try {
       const result = await syncGame(game);
@@ -90,14 +92,30 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
           ? SYNC_STATUS.error
           : SYNC_STATUS.success;
       setGameStatus(game.name, newStatus);
-      if (newStatus === SYNC_STATUS.success) {
-        await updateSyncFingerprint(game.name, currentHash);
+      if (newStatus === SYNC_STATUS.success && result.contentHash) {
+        await updateSyncFingerprint(game.name, result.contentHash);
         markGameBackedUp(game.name);
       }
     } catch {
       setGameStatus(game.name, SYNC_STATUS.error);
     }
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
+  };
+
+  const handleSync = async () => {
+    const fingerprint = syncFingerprints[game.name];
+    if (fingerprint) {
+      try {
+        const cloudHash = await getCloudGameHash(game.name);
+        if (cloudHash && cloudHash.hash !== fingerprint.hash) {
+          setShowConflict(true);
+          return;
+        }
+      } catch {
+        // If conflict check fails, proceed with sync
+      }
+    }
+    doSync();
   };
 
   return (
@@ -205,7 +223,7 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
             size="sm"
             variant="secondary"
             onClick={handleSync}
-            disabled={isBusy || isSynced}
+            disabled={isBusy}
           >
             {status === SYNC_STATUS.syncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -214,6 +232,18 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
             )}
             {t("games.sync")}
           </Button>
+          <SyncConflictDialog
+            open={showConflict}
+            onOpenChange={setShowConflict}
+            onUploadAnyway={doSync}
+            onDownloadCloud={() => setRestoreOpen(true)}
+          />
+          <RestoreDialog
+            game={game}
+            quick
+            open={restoreOpen}
+            onOpenChange={setRestoreOpen}
+          />
         </>
       )}
     </>

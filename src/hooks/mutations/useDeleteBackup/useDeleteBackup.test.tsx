@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { renderHook, waitFor } from "@/test/test-utils";
 import { useDeleteBackup } from "./useDeleteBackup";
 
 const { mockDeleteGameBackup } = vi.hoisted(() => ({
@@ -29,7 +29,7 @@ describe("useDeleteBackup", () => {
       wrapper: createWrapper(),
     });
 
-    await act(() => result.current.mutateAsync("b1"));
+    await result.current.mutateAsync("b1");
 
     expect(mockDeleteGameBackup).toHaveBeenCalledWith("b1");
   });
@@ -43,7 +43,7 @@ describe("useDeleteBackup", () => {
       { wrapper: createWrapper() },
     );
 
-    await act(() => result.current.mutateAsync("b1"));
+    await result.current.mutateAsync("b1");
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce());
   });
@@ -55,13 +55,7 @@ describe("useDeleteBackup", () => {
       wrapper: createWrapper(),
     });
 
-    await act(async () => {
-      try {
-        await result.current.mutateAsync("b1");
-      } catch {
-        // expected
-      }
-    });
+    result.current.mutate("b1");
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });

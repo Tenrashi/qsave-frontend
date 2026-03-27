@@ -90,7 +90,16 @@
     "delete": "Löschen",
     "deleting": "Wird gelöscht...",
     "deleteSuccess": "Backup gelöscht",
-    "deleteError": "Backup konnte nicht gelöscht werden"
+    "deleteError": "Backup konnte nicht gelöscht werden",
+    "conflictWarning": "Deine lokalen Speicherstände haben sich seit dem letzten Backup geändert. Beim Wiederherstellen wird nicht gesicherter Fortschritt überschrieben.",
+    "uploadFirst": "Zuerst hochladen",
+    "restoreAnyway": "Trotzdem wiederherstellen"
+  },
+  "sync": {
+    "conflictTitle": "Neueres Backup vorhanden",
+    "conflictDescription": "Ein anderes Gerät hat seit Ihrer letzten Synchronisierung ein neueres Backup hochgeladen. Das Hochladen wird es überschreiben.",
+    "uploadAnyway": "Trotzdem hochladen",
+    "downloadCloud": "Cloud herunterladen"
   },
   "settings": {
     "language": "Sprache"

@@ -2,35 +2,38 @@ import { RECORD_STATUS } from "@/domain/types";
 import type { Game, SyncRecord } from "@/domain/types";
 import { APP_NAME } from "@/lib/constants/constants";
 import { uploadGameArchive } from "@/operations/drive/backups/backups";
-import { saveDevicePaths } from "@/operations/devices/devices";
+import { saveDeviceSync } from "@/operations/devices/devices";
+import { rescanGame } from "@/operations/scanner/scanner/scanner";
 import { addSyncRecord, getDeviceId } from "@/lib/store/store";
 import { useSyncStore } from "@/stores/sync";
 import { notify } from "@/lib/notify/notify";
 import i18n from "@/i18n";
 
-export const syncGame = async (game: Game): Promise<SyncRecord> => {
+export type SyncResult = SyncRecord & { contentHash?: string };
+
+export const syncGame = async (game: Game): Promise<SyncResult> => {
   const id = `${game.name}-${Date.now()}`;
-  const filePaths = game.saveFiles.map((file) => file.path);
 
   try {
-    const { fileId } = await uploadGameArchive(
+    const fresh = await rescanGame(game);
+    const filePaths = fresh.saveFiles.map((file) => file.path);
+
+    const { fileId, contentHash } = await uploadGameArchive(
       game.name,
-      game.savePaths,
+      fresh.savePaths,
       filePaths,
     );
 
-    if (game.isManual) {
-      try {
-        const deviceId = await getDeviceId();
-        await saveDevicePaths(deviceId, game.name, game.savePaths);
-      } catch (error) {
-        console.warn("Failed to update device paths:", error);
-      }
+    try {
+      const deviceId = await getDeviceId();
+      await saveDeviceSync(deviceId, game.name, fresh.savePaths, contentHash);
+    } catch (error) {
+      console.warn("Failed to update device sync info:", error);
     }
 
     useSyncStore.getState().markGameBackedUp(game.name);
 
-    const record: SyncRecord = {
+    const record: SyncResult = {
       id,
       gameName: game.name,
       fileName: `${game.name}.zip`,
@@ -38,6 +41,7 @@ export const syncGame = async (game: Game): Promise<SyncRecord> => {
       driveFileId: fileId,
       revisionCount: 1,
       status: RECORD_STATUS.success,
+      contentHash,
     };
 
     await addSyncRecord(record);
@@ -47,7 +51,7 @@ export const syncGame = async (game: Game): Promise<SyncRecord> => {
     );
     return record;
   } catch (err) {
-    const record: SyncRecord = {
+    const record: SyncResult = {
       id,
       gameName: game.name,
       fileName: `${game.name}.zip`,
@@ -67,8 +71,8 @@ export const syncGame = async (game: Game): Promise<SyncRecord> => {
   }
 };
 
-export const syncAllGames = async (games: Game[]): Promise<SyncRecord[]> => {
-  const results: SyncRecord[] = [];
+export const syncAllGames = async (games: Game[]): Promise<SyncResult[]> => {
+  const results: SyncResult[] = [];
   for (const game of games) {
     const record = await syncGame(game);
     results.push(record);

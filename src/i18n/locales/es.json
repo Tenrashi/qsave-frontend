@@ -90,7 +90,16 @@
     "delete": "Eliminar",
     "deleting": "Eliminando...",
     "deleteSuccess": "Copia de seguridad eliminada",
-    "deleteError": "Error al eliminar la copia de seguridad"
+    "deleteError": "Error al eliminar la copia de seguridad",
+    "conflictWarning": "Tus guardados locales han cambiado desde la última copia de seguridad. Restaurar sobrescribirá el progreso no guardado.",
+    "uploadFirst": "Subir primero",
+    "restoreAnyway": "Restaurar de todos modos"
+  },
+  "sync": {
+    "conflictTitle": "Existe una copia más reciente",
+    "conflictDescription": "Otro dispositivo subió una copia más reciente desde tu última sincronización. Subir la reemplazará.",
+    "uploadAnyway": "Subir de todos modos",
+    "downloadCloud": "Descargar de la nube"
   },
   "settings": {
     "language": "Idioma"

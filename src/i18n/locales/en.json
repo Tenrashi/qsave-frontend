@@ -90,7 +90,16 @@
     "delete": "Delete",
     "deleting": "Deleting...",
     "deleteSuccess": "Backup deleted",
-    "deleteError": "Failed to delete backup"
+    "deleteError": "Failed to delete backup",
+    "conflictWarning": "Your local saves have changed since your last backup. Restoring will overwrite unsaved progress.",
+    "uploadFirst": "Upload first",
+    "restoreAnyway": "Restore anyway"
+  },
+  "sync": {
+    "conflictTitle": "Newer backup exists",
+    "conflictDescription": "Another device uploaded a newer backup since your last sync. Uploading will overwrite it.",
+    "uploadAnyway": "Upload anyway",
+    "downloadCloud": "Download cloud"
   },
   "settings": {
     "language": "Language"

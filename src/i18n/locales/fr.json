@@ -90,7 +90,16 @@
     "delete": "Supprimer",
     "deleting": "Suppression...",
     "deleteSuccess": "Sauvegarde supprimée",
-    "deleteError": "Échec de la suppression"
+    "deleteError": "Échec de la suppression",
+    "conflictWarning": "Vos sauvegardes locales ont changé depuis votre dernier backup. La restauration écrasera la progression non sauvegardée.",
+    "uploadFirst": "Sauvegarder d'abord",
+    "restoreAnyway": "Restaurer quand même"
+  },
+  "sync": {
+    "conflictTitle": "Sauvegarde plus récente existante",
+    "conflictDescription": "Un autre appareil a envoyé une sauvegarde plus récente depuis votre dernière synchronisation. L'envoi l'écrasera.",
+    "uploadAnyway": "Envoyer quand même",
+    "downloadCloud": "Télécharger depuis le cloud"
   },
   "settings": {
     "language": "Langue"
