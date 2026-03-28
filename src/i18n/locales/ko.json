@@ -114,6 +114,11 @@
     "removeGameFailed": "게임 제거 실패",
     "scanFailed": "게임 검색 실패"
   },
+  "update": {
+    "available": "QSave {{version}} 업데이트가 있습니다",
+    "install": "지금 업데이트",
+    "installing": "업데이트 중..."
+  },
   "settings": {
     "language": "언어"
   }

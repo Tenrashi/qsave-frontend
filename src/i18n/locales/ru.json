@@ -115,6 +115,11 @@
     "removeGameFailed": "Не удалось удалить игру",
     "scanFailed": "Не удалось найти игры"
   },
+  "update": {
+    "available": "Доступна QSave {{version}}",
+    "install": "Обновить сейчас",
+    "installing": "Обновление..."
+  },
   "settings": {
     "language": "Язык"
   }

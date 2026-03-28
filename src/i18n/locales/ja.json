@@ -114,6 +114,11 @@
     "removeGameFailed": "ゲームの削除に失敗しました",
     "scanFailed": "ゲームのスキャンに失敗しました"
   },
+  "update": {
+    "available": "QSave {{version}} が利用可能です",
+    "install": "今すぐ更新",
+    "installing": "更新中..."
+  },
   "settings": {
     "language": "言語"
   }

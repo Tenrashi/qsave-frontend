@@ -6,6 +6,7 @@ import { useSyncHistory } from "@/hooks/queries/useSyncHistory/useSyncHistory";
 // TODO: autosync is WIP — re-enable once stable
 // import { useAutoSync } from "@/hooks/useAutoSync/useAutoSync";
 import { useGameDetectionNotify } from "@/hooks/useGameDetectionNotify/useGameDetectionNotify";
+import { useAppUpdate } from "@/hooks/useAppUpdate/useAppUpdate";
 import type { Game } from "@/domain/types";
 import {
   getHideSteamCloud,
@@ -23,6 +24,7 @@ import { GameToolbar } from "@/components/GameToolbar/GameToolbar";
 import { GameListPanel } from "@/components/GameListPanel/GameListPanel";
 import { SyncHistory } from "@/components/SyncHistory/SyncHistory";
 import { StatusBar } from "@/components/StatusBar/StatusBar";
+import { UpdateBanner } from "@/components/AppHeader/UpdateBanner/UpdateBanner";
 
 const App = () => {
   const { init, auth } = useAuthStore();
@@ -115,6 +117,7 @@ const App = () => {
 
   // useAutoSync(games.data);
   useGameDetectionNotify(games.data);
+  const appUpdate = useAppUpdate();
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -125,6 +128,16 @@ const App = () => {
           if (auth.isAuthenticated) loadBackedUpGames(true);
         }}
       />
+      {appUpdate.version &&
+        (appUpdate.status === "available" ||
+          appUpdate.status === "downloading" ||
+          appUpdate.status === "installing") && (
+          <UpdateBanner
+            status={appUpdate.status}
+            version={appUpdate.version}
+            onInstall={appUpdate.install}
+          />
+        )}
       <AuthStatus />
       <GameToolbar
         search={search}

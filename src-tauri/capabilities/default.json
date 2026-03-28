@@ -8,9 +8,7 @@
     "fs:default",
     {
       "identifier": "fs:allow-watch",
-      "allow": [
-        { "path": "$HOME/**" }
-      ]
+      "allow": [{ "path": "$HOME/**" }]
     },
     "fs:allow-unwatch",
     "store:default",
@@ -31,9 +29,9 @@
     },
     {
       "identifier": "fs:allow-read-file",
-      "allow": [
-        { "path": "$HOME/**" }
-      ]
-    }
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    "updater:default",
+    "process:allow-restart"
   ]
 }

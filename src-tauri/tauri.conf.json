@@ -22,6 +22,14 @@
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com; img-src 'self' data:"
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/Tenrashi/qsave/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg3RDk3NDcyREIxNzFEN0YKUldSL0hSZmJjblRaaDMvYm1kN1JZTzdIOUxWazdDdmZQcWZjcjZWd3hmSXU2RExUTFp6T2QvUUUK"
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

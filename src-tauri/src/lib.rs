@@ -120,6 +120,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![scan_games, create_zip, compute_save_hash, extract_zip, read_zip_meta, get_oauth_redirect_uri, start_oauth, send_native_notification, scan_manual_game, pick_folder])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;

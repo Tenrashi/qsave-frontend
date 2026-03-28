@@ -114,6 +114,11 @@
     "removeGameFailed": "No se pudo eliminar el juego",
     "scanFailed": "No se pudieron buscar juegos"
   },
+  "update": {
+    "available": "QSave {{version}} está disponible",
+    "install": "Actualizar ahora",
+    "installing": "Actualizando..."
+  },
   "settings": {
     "language": "Idioma"
   }
