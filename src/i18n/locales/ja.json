@@ -90,7 +90,16 @@
     "delete": "削除",
     "deleting": "削除中...",
     "deleteSuccess": "バックアップを削除しました",
-    "deleteError": "バックアップの削除に失敗しました"
+    "deleteError": "バックアップの削除に失敗しました",
+    "conflictWarning": "前回のバックアップ以降、ローカルのセーブデータが変更されています。復元すると未保存の進行状況が上書きされます。",
+    "uploadFirst": "先にアップロード",
+    "restoreAnyway": "それでも復元"
+  },
+  "sync": {
+    "conflictTitle": "より新しいバックアップが存在します",
+    "conflictDescription": "前回の同期以降、別のデバイスがより新しいバックアップをアップロードしました。アップロードすると上書きされます。",
+    "uploadAnyway": "それでもアップロード",
+    "downloadCloud": "クラウドからダウンロード"
   },
   "settings": {
     "language": "言語"

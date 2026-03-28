@@ -22,6 +22,7 @@ export const TAURI_COMMANDS = {
   getOAuthRedirectUri: "get_oauth_redirect_uri",
   startOAuth: "start_oauth",
   createZip: "create_zip",
+  computeSaveHash: "compute_save_hash",
   extractZip: "extract_zip",
   readZipMeta: "read_zip_meta",
   sendNativeNotification: "send_native_notification",
@@ -53,6 +54,8 @@ export const MIME_TYPES = {
   jsonUtf8: "application/json; charset=UTF-8",
   octetStream: "application/octet-stream",
 } as const;
+
+export const SYSTEM_FOLDERS = ["devices"] as const;
 
 export const MAX_SAVES_PER_GAME = 5;
 export const MAX_SYNC_HISTORY_RECORDS = 100;

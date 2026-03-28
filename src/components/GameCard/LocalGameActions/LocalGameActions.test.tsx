@@ -12,7 +12,7 @@ import type { SyncRecord } from "@/domain/types";
 import { sims4Game, manualGame } from "@/test/mocks/games";
 import { LocalGameActions } from "./LocalGameActions";
 
-const { mockSyncGame, mockRemoveManualGame, mockComputeGameHash } = vi.hoisted(
+const { mockSyncGame, mockRemoveManualGame, mockGetCloudGameHash } = vi.hoisted(
   () => ({
     mockSyncGame: vi.fn(() =>
       Promise.resolve({
@@ -23,10 +23,13 @@ const { mockSyncGame, mockRemoveManualGame, mockComputeGameHash } = vi.hoisted(
         driveFileId: "file-123",
         revisionCount: 1,
         status: RECORD_STATUS.success,
+        contentHash: "hash-abc",
       } as SyncRecord),
     ),
     mockRemoveManualGame: vi.fn(),
-    mockComputeGameHash: vi.fn(() => "mock-hash"),
+    mockGetCloudGameHash: vi.fn(() =>
+      Promise.resolve(null as { hash: string; syncedAt: string } | null),
+    ),
   }),
 );
 
@@ -44,8 +47,8 @@ vi.mock("@/lib/store/store", () => ({
   setSyncFingerprint: vi.fn(),
 }));
 
-vi.mock("@/lib/hash/hash", () => ({
-  computeGameHash: mockComputeGameHash,
+vi.mock("@/operations/devices/devices", () => ({
+  getCloudGameHash: mockGetCloudGameHash,
 }));
 
 const renderActions = (game = sims4Game) =>
@@ -208,32 +211,6 @@ describe("LocalGameActions", () => {
     });
   });
 
-  it("disables sync button when saves are unchanged", () => {
-    authenticateUser();
-    useSyncStore.setState({
-      syncFingerprints: {
-        "The Sims 4": { hash: "mock-hash", syncedAt: new Date().toISOString() },
-      },
-      backedUpGames: new Set(["The Sims 4"]),
-    });
-    renderActions();
-    expect(screen.getByText("games.sync").closest("button")).toBeDisabled();
-  });
-
-  it("enables sync button when saves have changed", () => {
-    authenticateUser();
-    useSyncStore.setState({
-      syncFingerprints: {
-        "The Sims 4": {
-          hash: "stale-hash",
-          syncedAt: new Date().toISOString(),
-        },
-      },
-    });
-    renderActions();
-    expect(screen.getByText("games.sync").closest("button")).toBeEnabled();
-  });
-
   it("sets error status when sync throws", async () => {
     authenticateUser();
     mockSyncGame.mockRejectedValueOnce(new Error("network error"));
@@ -245,6 +222,118 @@ describe("LocalGameActions", () => {
       expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
         SYNC_STATUS.error,
       );
+    });
+  });
+
+  describe("upload-side conflict detection", () => {
+    it("shows conflict dialog when cloud has newer backup", async () => {
+      authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-cloud",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": {
+            hash: "hash-old",
+            syncedAt: "2026-03-13T12:00:00Z",
+          },
+        },
+      });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(screen.getByText("sync.conflictTitle")).toBeInTheDocument();
+      });
+      expect(mockSyncGame).not.toHaveBeenCalled();
+    });
+
+    it("syncs directly when no fingerprint exists", async () => {
+      authenticateUser();
+      useSyncStore.setState({ syncFingerprints: {} });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+      });
+    });
+
+    it("syncs directly when cloud hash matches fingerprint", async () => {
+      authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-same",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": {
+            hash: "hash-same",
+            syncedAt: "2026-03-13T12:00:00Z",
+          },
+        },
+      });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+      });
+    });
+
+    it("syncs directly when no cloud hash exists", async () => {
+      authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue(null);
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": {
+            hash: "hash-old",
+            syncedAt: "2026-03-13T12:00:00Z",
+          },
+        },
+      });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+      });
+    });
+
+    it("syncs when upload anyway is clicked after conflict", async () => {
+      authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-cloud",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": {
+            hash: "hash-old",
+            syncedAt: "2026-03-13T12:00:00Z",
+          },
+        },
+      });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(screen.getByText("sync.conflictTitle")).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "sync.uploadAnyway" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+      });
     });
   });
 });

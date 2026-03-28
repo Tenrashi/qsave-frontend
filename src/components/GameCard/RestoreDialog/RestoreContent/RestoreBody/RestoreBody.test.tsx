@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act } from "@testing-library/react";
 import {
   renderWithProviders,
   screen,
@@ -29,17 +28,27 @@ const defaultRestoreRecord: SyncRecord = {
 const {
   mockListGameBackups,
   mockGetDeviceGamePaths,
+  mockGetCloudGameHash,
+  mockRescanGame,
   mockRestoreGame,
   mockDeleteGameBackup,
   mockInvoke,
   mockGetDeviceId,
+  mockComputeContentHash,
 } = vi.hoisted(() => ({
   mockListGameBackups: vi.fn(),
-  mockGetDeviceGamePaths: vi.fn(() => Promise.resolve(undefined)),
+  mockGetDeviceGamePaths: vi.fn(() =>
+    Promise.resolve(undefined as string[] | undefined),
+  ),
+  mockGetCloudGameHash: vi.fn(() =>
+    Promise.resolve(null as { hash: string; syncedAt: string } | null),
+  ),
+  mockRescanGame: vi.fn((game: unknown) => Promise.resolve(game)),
   mockRestoreGame: vi.fn(),
   mockDeleteGameBackup: vi.fn(),
   mockInvoke: vi.fn(),
   mockGetDeviceId: vi.fn(() => Promise.resolve("test-device-id")),
+  mockComputeContentHash: vi.fn(() => Promise.resolve("hash-abc")),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -53,15 +62,27 @@ vi.mock("@/operations/drive/backups/backups", () => ({
 
 vi.mock("@/operations/devices/devices", () => ({
   findDeviceGamePaths: mockGetDeviceGamePaths,
+  getCloudGameHash: mockGetCloudGameHash,
+  saveDeviceSync: vi.fn(),
 }));
 
 vi.mock("@/operations/restore/restore/restore", () => ({
   restoreGame: mockRestoreGame,
 }));
 
+vi.mock("@/operations/scanner/scanner/scanner", () => ({
+  rescanGame: mockRescanGame,
+  scanManualGame: vi.fn(),
+}));
+
 vi.mock("@/lib/store/store", () => ({
   getDeviceId: mockGetDeviceId,
   setSyncFingerprint: vi.fn(),
+  addManualGame: vi.fn(),
+}));
+
+vi.mock("@/lib/hash/hash", () => ({
+  computeContentHash: mockComputeContentHash,
 }));
 
 vi.mock("@/components/ui/status-message", () => ({
@@ -84,6 +105,29 @@ vi.mock("./BackupsSkeleton/BackupsSkeleton", () => ({
 
 vi.mock("./EmptyBackups/EmptyBackups", () => ({
   EmptyBackups: () => <div data-testid="empty-backups" />,
+}));
+
+vi.mock("./ConflictWarning/ConflictWarning", () => ({
+  ConflictWarning: ({
+    onRestoreAnyway,
+    onClose,
+  }: {
+    onRestoreAnyway: () => void;
+    onClose: () => void;
+  }) => (
+    <div data-testid="conflict-warning">
+      <button
+        type="button"
+        onClick={onRestoreAnyway}
+        aria-label="restore-anyway"
+      >
+        Restore anyway
+      </button>
+      <button type="button" onClick={onClose} aria-label="close-conflict">
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("./BackupList/BackupList", () => ({
@@ -210,8 +254,10 @@ describe("RestoreBody", () => {
       );
     });
 
-    await act(() => {
-      resolveRestore!(defaultRestoreRecord);
+    resolveRestore!(defaultRestoreRecord);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status-success")).toBeInTheDocument();
     });
   });
 
@@ -327,6 +373,136 @@ describe("RestoreBody", () => {
       expect(screen.getByTestId("status-error")).toHaveTextContent(
         "Permission denied",
       );
+    });
+  });
+
+  describe("conflict detection", () => {
+    it("shows conflict warning when local saves diverged", async () => {
+      mockComputeContentHash.mockResolvedValue("hash-different");
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-cloud",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": { hash: "hash-abc", syncedAt: "2026-03-14T12:00:00Z" },
+        },
+      });
+
+      renderBody({ quick: true });
+
+      await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("conflict-warning")).toBeInTheDocument();
+      });
+    });
+
+    it("does not show conflict warning when local hash matches fingerprint", async () => {
+      mockComputeContentHash.mockResolvedValue("hash-abc");
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": { hash: "hash-abc", syncedAt: "2026-03-14T12:00:00Z" },
+        },
+      });
+
+      renderBody({ quick: true });
+
+      await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+      await waitFor(() => {
+        expect(mockRestoreGame).toHaveBeenCalled();
+      });
+      expect(screen.queryByTestId("conflict-warning")).not.toBeInTheDocument();
+    });
+
+    it("does not show conflict warning when local hash matches cloud hash", async () => {
+      mockComputeContentHash.mockResolvedValue("hash-different");
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-different",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": { hash: "hash-abc", syncedAt: "2026-03-14T12:00:00Z" },
+        },
+      });
+
+      renderBody({ quick: true });
+
+      await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+      await waitFor(() => {
+        expect(mockRestoreGame).toHaveBeenCalled();
+      });
+      expect(screen.queryByTestId("conflict-warning")).not.toBeInTheDocument();
+    });
+
+    it("does not show conflict warning when no fingerprint exists", async () => {
+      mockComputeContentHash.mockResolvedValue("hash-different");
+      useSyncStore.setState({ syncFingerprints: {} });
+
+      renderBody({ quick: true });
+
+      await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+      await waitFor(() => {
+        expect(mockRestoreGame).toHaveBeenCalled();
+      });
+      expect(screen.queryByTestId("conflict-warning")).not.toBeInTheDocument();
+    });
+
+    it("does not show conflict warning for cloud-only games", async () => {
+      mockComputeContentHash.mockResolvedValue("hash-different");
+      useSyncStore.setState({
+        syncFingerprints: {
+          "Cloud Save RPG": {
+            hash: "hash-abc",
+            syncedAt: "2026-03-14T12:00:00Z",
+          },
+        },
+      });
+      mockInvoke.mockResolvedValueOnce("/Users/test/saves");
+      mockGetDeviceGamePaths.mockResolvedValueOnce(["/Users/test/saves"]);
+
+      renderBody({ game: cloudOnlyGame, quick: true });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "restore.restore" }),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+      expect(screen.queryByTestId("conflict-warning")).not.toBeInTheDocument();
+    });
+
+    it("proceeds with restore when 'restore anyway' is clicked", async () => {
+      mockComputeContentHash.mockResolvedValue("hash-different");
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-cloud",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": { hash: "hash-abc", syncedAt: "2026-03-14T12:00:00Z" },
+        },
+      });
+
+      renderBody({ quick: true });
+
+      await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("conflict-warning")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByLabelText("restore-anyway"));
+
+      await waitFor(() => {
+        expect(mockRestoreGame).toHaveBeenCalled();
+      });
     });
   });
 

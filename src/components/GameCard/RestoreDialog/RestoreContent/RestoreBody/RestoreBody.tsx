@@ -6,13 +6,19 @@ import { Button } from "@/components/ui/button";
 import { DialogClose } from "@/components/ui/dialog";
 import type { Game, DriveBackup } from "@/domain/types";
 import { TAURI_COMMANDS } from "@/lib/constants/constants";
+import { computeContentHash } from "@/lib/hash/hash";
 import { getDeviceId } from "@/lib/store/store";
-import { findDeviceGamePaths } from "@/operations/devices/devices";
+import {
+  findDeviceGamePaths,
+  getCloudGameHash,
+} from "@/operations/devices/devices";
+import { useSyncStore } from "@/stores/sync";
 import { useGameBackups } from "@/hooks/queries/useGameBackups/useGameBackups";
 import { useRestoreBackup } from "@/hooks/mutations/useRestoreBackup/useRestoreBackup";
 import { useDeleteBackup } from "@/hooks/mutations/useDeleteBackup/useDeleteBackup";
 import { StatusMessage } from "@/components/ui/status-message";
 import { QuickWarning } from "./QuickWarning/QuickWarning";
+import { ConflictWarning } from "./ConflictWarning/ConflictWarning";
 import { BackupsSkeleton } from "./BackupsSkeleton/BackupsSkeleton";
 import { EmptyBackups } from "./EmptyBackups/EmptyBackups";
 import { BackupList } from "./BackupList/BackupList";
@@ -27,6 +33,9 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<DriveBackup>();
   const [targetPath, setTargetPath] = useState<string>();
+  const [showConflict, setShowConflict] = useState(false);
+  const [conflictConfirmed, setConflictConfirmed] = useState(false);
+  const { syncFingerprints } = useSyncStore();
 
   const backupsQuery = useGameBackups(game.name, open && !quick);
   const restoreMutation = useRestoreBackup(game);
@@ -38,6 +47,8 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
     if (open) return;
     setSelected(undefined);
     setTargetPath(undefined);
+    setShowConflict(false);
+    setConflictConfirmed(false);
     restoreMutation.reset();
     deleteMutation.reset();
   }, [open]);
@@ -46,14 +57,16 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
     if (!open || !game.isCloudOnly) return;
 
     const loadDevicePath = async () => {
-      const deviceId = await getDeviceId();
-      const paths = await findDeviceGamePaths(deviceId, game.name);
-      if (paths?.[0]) setTargetPath(paths[0]);
+      try {
+        const deviceId = await getDeviceId();
+        const paths = await findDeviceGamePaths(deviceId, game.name);
+        if (paths?.[0]) setTargetPath(paths[0]);
+      } catch (error) {
+        console.warn("Failed to load device path:", error);
+      }
     };
 
-    loadDevicePath().catch((error) =>
-      console.warn("Failed to load device path:", error),
-    );
+    loadDevicePath();
   }, [open, game.isCloudOnly, game.name]);
 
   const handlePickFolder = async () => {
@@ -70,7 +83,32 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
     (quick || selected !== undefined) &&
     (!game.isCloudOnly || targetPath !== undefined);
 
-  const handleRestore = () => {
+  const handleRestore = async () => {
+    if (!conflictConfirmed && !game.isCloudOnly) {
+      const fingerprint = syncFingerprints[game.name];
+      if (fingerprint) {
+        try {
+          const filePaths = game.saveFiles.map((file) => file.path);
+          const localHash = await computeContentHash(game.savePaths, filePaths);
+          const cloudHash = await getCloudGameHash(game.name);
+          const localDiverged = localHash !== fingerprint.hash;
+          const cloudDiffers = cloudHash && cloudHash.hash !== localHash;
+          if (localDiverged && cloudDiffers) {
+            setShowConflict(true);
+            return;
+          }
+        } catch {
+          // If hash computation fails, proceed without conflict check
+        }
+      }
+    }
+    const targetPaths = targetPath ? [targetPath] : undefined;
+    restoreMutation.mutate({ backupId: selected?.id, targetPaths });
+  };
+
+  const handleRestoreAnyway = () => {
+    setConflictConfirmed(true);
+    setShowConflict(false);
     const targetPaths = targetPath ? [targetPath] : undefined;
     restoreMutation.mutate({ backupId: selected?.id, targetPaths });
   };
@@ -118,6 +156,14 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
             deleteMutation.error,
             t("restore.deleteError"),
           )}
+        />
+      );
+    if (showConflict)
+      return (
+        <ConflictWarning
+          game={game}
+          onRestoreAnyway={handleRestoreAnyway}
+          onClose={() => setShowConflict(false)}
         />
       );
     if (quick) return <QuickWarning />;

@@ -1,8 +1,12 @@
-import { APP_NAME, STORE_KEYS } from "@/lib/constants/constants";
+import {
+  APP_NAME,
+  STORE_KEYS,
+  SYSTEM_FOLDERS,
+} from "@/lib/constants/constants";
 import { getDriveFolderId, setDriveFolderId } from "@/lib/store/store";
 import { getFolder, postFolder } from "@/services/drive/drive";
 
-const DEVICES_FOLDER_NAME = "devices";
+const [DEVICES_FOLDER_NAME] = SYSTEM_FOLDERS;
 
 const ensureFolder = async (
   name: string,

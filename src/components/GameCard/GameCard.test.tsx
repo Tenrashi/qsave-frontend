@@ -10,7 +10,6 @@ import {
   cloudOnlyGame,
   steamCloudGame,
 } from "@/test/mocks/games";
-import { computeGameHash } from "@/lib/hash/hash";
 import { GameCard, type GameCardProps } from "./GameCard";
 
 vi.mock("./utils/formatSize", () => ({
@@ -64,12 +63,8 @@ describe("GameCard", () => {
     expect(screen.getByText("Elden Ring")).toBeInTheDocument();
   });
 
-  it("shows green checkmark when game is synced", () => {
-    const hash = computeGameHash(sims4Game.saveFiles, sims4Game.savePaths);
+  it("shows green checkmark when game has backup", () => {
     useSyncStore.setState({
-      syncFingerprints: {
-        "The Sims 4": { hash, syncedAt: new Date().toISOString() },
-      },
       backedUpGames: new Set(["The Sims 4"]),
     });
 
@@ -77,14 +72,19 @@ describe("GameCard", () => {
     expect(screen.getByRole("img", { name: "synced" })).toBeInTheDocument();
   });
 
-  it("does not show checkmark when game has unsynced changes", () => {
+  it("shows green checkmark when game sync succeeded", () => {
     useSyncStore.setState({
-      syncFingerprints: {
-        "The Sims 4": {
-          hash: "stale-hash",
-          syncedAt: new Date().toISOString(),
-        },
-      },
+      gameStatuses: { "The Sims 4": SYNC_STATUS.success },
+    });
+
+    renderGameCard();
+    expect(screen.getByRole("img", { name: "synced" })).toBeInTheDocument();
+  });
+
+  it("does not show checkmark when game has no backup and is idle", () => {
+    useSyncStore.setState({
+      backedUpGames: new Set(),
+      gameStatuses: {},
     });
 
     renderGameCard();

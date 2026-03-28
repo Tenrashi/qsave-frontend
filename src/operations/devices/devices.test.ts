@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   buildDevicesMap,
   findDeviceGamePaths,
-  saveDevicePaths,
+  getCloudGameHash,
+  saveDeviceSync,
 } from "./devices";
 
 const {
@@ -32,7 +33,7 @@ vi.mock("@/operations/drive/folders/folders", () => ({
 
 describe("devices", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     mockEnsureDevicesFolder.mockResolvedValue("devices-folder");
   });
 
@@ -118,16 +119,39 @@ describe("devices", () => {
     });
   });
 
-  describe("saveDevicePaths", () => {
+  describe("saveDeviceSync", () => {
     it("creates new device entry when file does not exist", async () => {
       mockGetFile.mockResolvedValueOnce(null);
 
-      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+      await saveDeviceSync("device-1", "Sims 4", ["/saves"]);
 
       expect(mockPutDeviceFile).toHaveBeenCalledWith(
         "devices-folder",
         "device-1",
-        expect.objectContaining({ games: { "Sims 4": ["/saves"] } }),
+        expect.objectContaining({
+          games: { "Sims 4": { paths: ["/saves"] } },
+        }),
+        null,
+      );
+    });
+
+    it("stores hash and timestamp when contentHash is provided", async () => {
+      mockGetFile.mockResolvedValueOnce(null);
+
+      await saveDeviceSync("device-1", "Sims 4", ["/saves"], "abc123");
+
+      expect(mockPutDeviceFile).toHaveBeenCalledWith(
+        "devices-folder",
+        "device-1",
+        expect.objectContaining({
+          games: {
+            "Sims 4": {
+              paths: ["/saves"],
+              lastHash: "abc123",
+              lastSyncedAt: expect.any(String),
+            },
+          },
+        }),
         null,
       );
     });
@@ -140,7 +164,7 @@ describe("devices", () => {
       });
       mockGetFile.mockResolvedValueOnce(null);
 
-      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+      await saveDeviceSync("device-1", "Sims 4", ["/saves"]);
 
       expect(mockPutDeviceFile).toHaveBeenCalledWith(
         "devices-folder",
@@ -162,7 +186,7 @@ describe("devices", () => {
       });
       mockGetFile.mockResolvedValueOnce(null);
 
-      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+      await saveDeviceSync("device-1", "Sims 4", ["/saves"]);
 
       expect(mockPutDeviceFile).toHaveBeenCalledWith(
         "devices-folder",
@@ -184,14 +208,17 @@ describe("devices", () => {
       mockGetFile.mockResolvedValueOnce("existing-file");
       mockGetDeviceFile.mockResolvedValueOnce(existingEntry);
 
-      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+      await saveDeviceSync("device-1", "Sims 4", ["/saves"]);
 
       expect(mockPutDeviceFile).toHaveBeenCalledWith(
         "devices-folder",
         "device-1",
         {
           os: "windows",
-          games: { "Other Game": ["/other"], "Sims 4": ["/saves"] },
+          games: {
+            "Other Game": ["/other"],
+            "Sims 4": { paths: ["/saves"] },
+          },
         },
         "existing-file",
       );
@@ -201,12 +228,14 @@ describe("devices", () => {
       mockGetFile.mockResolvedValueOnce("existing-file");
       mockGetDeviceFile.mockResolvedValueOnce(null);
 
-      await saveDevicePaths("device-1", "Sims 4", ["/saves"]);
+      await saveDeviceSync("device-1", "Sims 4", ["/saves"]);
 
       expect(mockPutDeviceFile).toHaveBeenCalledWith(
         "devices-folder",
         "device-1",
-        expect.objectContaining({ games: { "Sims 4": ["/saves"] } }),
+        expect.objectContaining({
+          games: { "Sims 4": { paths: ["/saves"] } },
+        }),
         "existing-file",
       );
     });
@@ -215,7 +244,7 @@ describe("devices", () => {
       mockEnsureDevicesFolder.mockRejectedValueOnce(new Error("fail"));
 
       await expect(
-        saveDevicePaths("device-1", "Sims 4", ["/saves"]),
+        saveDeviceSync("device-1", "Sims 4", ["/saves"]),
       ).rejects.toThrow("Failed to update device paths");
     });
 
@@ -223,8 +252,126 @@ describe("devices", () => {
       mockEnsureDevicesFolder.mockRejectedValueOnce("string error");
 
       await expect(
-        saveDevicePaths("device-1", "Sims 4", ["/saves"]),
+        saveDeviceSync("device-1", "Sims 4", ["/saves"]),
       ).rejects.toThrow("Failed to update device paths");
+    });
+  });
+
+  describe("getCloudGameHash", () => {
+    it("returns latest hash across multiple devices", async () => {
+      mockGetFilesInFolder.mockResolvedValueOnce([
+        { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
+        { id: "f2", name: "device-2.json", createdTime: "2026-01-01" },
+      ]);
+      mockGetDeviceFile
+        .mockResolvedValueOnce({
+          os: "windows",
+          games: {
+            "Sims 4": {
+              paths: ["/saves"],
+              lastHash: "older-hash",
+              lastSyncedAt: "2026-03-10T12:00:00Z",
+            },
+          },
+        })
+        .mockResolvedValueOnce({
+          os: "macos",
+          games: {
+            "Sims 4": {
+              paths: ["/saves"],
+              lastHash: "newer-hash",
+              lastSyncedAt: "2026-03-14T12:00:00Z",
+            },
+          },
+        });
+
+      const result = await getCloudGameHash("Sims 4");
+
+      expect(result).toEqual({
+        hash: "newer-hash",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+    });
+
+    it("returns null when game has no hash info", async () => {
+      mockGetFilesInFolder.mockResolvedValueOnce([
+        { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
+      ]);
+      mockGetDeviceFile.mockResolvedValueOnce({
+        os: "windows",
+        games: { "Sims 4": { paths: ["/saves"] } },
+      });
+
+      const result = await getCloudGameHash("Sims 4");
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null when game does not exist in any device", async () => {
+      mockGetFilesInFolder.mockResolvedValueOnce([
+        { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
+      ]);
+      mockGetDeviceFile.mockResolvedValueOnce({
+        os: "windows",
+        games: {},
+      });
+
+      const result = await getCloudGameHash("Unknown Game");
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null when buildDevicesMap throws", async () => {
+      mockEnsureDevicesFolder.mockRejectedValueOnce(new Error("fail"));
+
+      const result = await getCloudGameHash("Sims 4");
+
+      expect(result).toBeNull();
+    });
+
+    it("handles legacy string[] game entries gracefully", async () => {
+      mockGetFilesInFolder.mockResolvedValueOnce([
+        { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
+      ]);
+      mockGetDeviceFile.mockResolvedValueOnce({
+        os: "windows",
+        games: { "Sims 4": ["/saves"] },
+      });
+
+      const result = await getCloudGameHash("Sims 4");
+
+      expect(result).toBeNull();
+    });
+
+    it("skips devices without lastSyncedAt", async () => {
+      mockGetFilesInFolder.mockResolvedValueOnce([
+        { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
+        { id: "f2", name: "device-2.json", createdTime: "2026-01-01" },
+      ]);
+      mockGetDeviceFile
+        .mockResolvedValueOnce({
+          os: "windows",
+          games: {
+            "Sims 4": { paths: ["/saves"], lastHash: "hash-no-time" },
+          },
+        })
+        .mockResolvedValueOnce({
+          os: "macos",
+          games: {
+            "Sims 4": {
+              paths: ["/saves"],
+              lastHash: "valid-hash",
+              lastSyncedAt: "2026-03-14T12:00:00Z",
+            },
+          },
+        });
+
+      const result = await getCloudGameHash("Sims 4");
+
+      expect(result).toEqual({
+        hash: "valid-hash",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
     });
   });
 });

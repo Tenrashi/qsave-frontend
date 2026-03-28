@@ -90,7 +90,16 @@
     "delete": "Elimina",
     "deleting": "Eliminazione...",
     "deleteSuccess": "Backup eliminato",
-    "deleteError": "Eliminazione del backup non riuscita"
+    "deleteError": "Eliminazione del backup non riuscita",
+    "conflictWarning": "I tuoi salvataggi locali sono cambiati dall'ultimo backup. Il ripristino sovrascriverà i progressi non salvati.",
+    "uploadFirst": "Carica prima",
+    "restoreAnyway": "Ripristina comunque"
+  },
+  "sync": {
+    "conflictTitle": "Esiste un backup più recente",
+    "conflictDescription": "Un altro dispositivo ha caricato un backup più recente dall'ultima sincronizzazione. Il caricamento lo sovrascriverà.",
+    "uploadAnyway": "Carica comunque",
+    "downloadCloud": "Scarica dal cloud"
   },
   "settings": {
     "language": "Lingua"

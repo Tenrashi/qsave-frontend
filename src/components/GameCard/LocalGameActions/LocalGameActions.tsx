@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -22,15 +23,16 @@ import {
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
-import { syncGame } from "@/operations/sync/sync/sync";
-import { computeGameHash } from "@/lib/hash/hash";
+import { getCloudGameHash } from "@/operations/devices/devices";
 import { removeManualGame } from "@/lib/store/store";
+import { useSyncAndUpdate } from "@/hooks/useSyncAndUpdate/useSyncAndUpdate";
 import { useAuthStore } from "@/stores/auth";
 import { useSyncStore } from "@/stores/sync";
 import { dateFnsLocales } from "@/lib/date-locales/date-locales";
 import { RemoveGameDialog } from "../RemoveGameDialog/RemoveGameDialog";
 import { RestoreDialog } from "../RestoreDialog/RestoreDialog";
 import { formatSize } from "../utils/formatSize";
+import { SyncConflictDialog } from "./SyncConflictDialog/SyncConflictDialog";
 
 export type LocalGameActionsProps = {
   game: Game;
@@ -42,23 +44,23 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
   const { auth } = useAuthStore();
   const {
     gameStatuses,
-    setGameStatus,
     syncFingerprints,
-    updateSyncFingerprint,
-    markGameBackedUp,
     // isGameWatched,
     // toggleGameWatch,
     hasBackup,
   } = useSyncStore();
+  const doSyncAndUpdate = useSyncAndUpdate();
   const locale = dateFnsLocales[i18n.language] ?? enUS;
 
+  const [showConflict, setShowConflict] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+
   const status = gameStatuses[game.name] ?? SYNC_STATUS.idle;
-  const isBusy =
+  const isSyncing =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
+  const isBusy = isChecking || isSyncing;
   // const watched = isGameWatched(game.name);
-  const currentHash = computeGameHash(game.saveFiles, game.savePaths);
-  const isSynced =
-    syncFingerprints[game.name]?.hash === currentHash && hasBackup(game.name);
 
   const totalSize = game.saveFiles.reduce(
     (sum, file) => sum + file.sizeBytes,
@@ -81,23 +83,31 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
     }
   };
 
-  const handleSync = async () => {
-    setGameStatus(game.name, SYNC_STATUS.syncing);
+  const doSync = async () => {
     try {
-      const result = await syncGame(game);
-      const newStatus =
-        result.status === SYNC_STATUS.error
-          ? SYNC_STATUS.error
-          : SYNC_STATUS.success;
-      setGameStatus(game.name, newStatus);
-      if (newStatus === SYNC_STATUS.success) {
-        await updateSyncFingerprint(game.name, currentHash);
-        markGameBackedUp(game.name);
-      }
+      await doSyncAndUpdate(game);
     } catch {
-      setGameStatus(game.name, SYNC_STATUS.error);
+      // Errors already handled by useSyncAndUpdate (sets error status)
     }
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
+  };
+
+  const handleSync = async () => {
+    const fingerprint = syncFingerprints[game.name];
+    if (fingerprint) {
+      setIsChecking(true);
+      try {
+        const cloudHash = await getCloudGameHash(game.name);
+        if (cloudHash && cloudHash.hash !== fingerprint.hash) {
+          setShowConflict(true);
+          return;
+        }
+      } catch (error) {
+        console.warn("Conflict check failed, proceeding with sync:", error);
+      } finally {
+        setIsChecking(false);
+      }
+    }
+    await doSync();
   };
 
   return (
@@ -205,7 +215,7 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
             size="sm"
             variant="secondary"
             onClick={handleSync}
-            disabled={isBusy || isSynced}
+            disabled={isBusy}
           >
             {status === SYNC_STATUS.syncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -214,6 +224,18 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
             )}
             {t("games.sync")}
           </Button>
+          <SyncConflictDialog
+            open={showConflict}
+            onOpenChange={setShowConflict}
+            onUploadAnyway={doSync}
+            onDownloadCloud={() => setRestoreOpen(true)}
+          />
+          <RestoreDialog
+            game={game}
+            quick
+            open={restoreOpen}
+            onOpenChange={setRestoreOpen}
+          />
         </>
       )}
     </>

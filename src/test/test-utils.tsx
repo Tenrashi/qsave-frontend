@@ -40,5 +40,5 @@ export const renderWithProviders = (
 
 export const setupUser = () => userEvent.setup();
 
-export { screen, within, waitFor } from "@testing-library/react";
+export { screen, within, waitFor, renderHook } from "@testing-library/react";
 export { default as userEvent } from "@testing-library/user-event";
