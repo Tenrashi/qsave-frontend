@@ -17,6 +17,11 @@ const {
   mockGetSyncHistory,
   mockGetAuthState,
   mockGetWatchedGames,
+  mockEnableAutostart,
+  mockDisableAutostart,
+  mockIsAutostartEnabled,
+  mockPersistAutostart,
+  mockCheckUpdate,
 } = vi.hoisted(() => ({
   mockScanForGames: vi.fn<() => Promise<Game[]>>(() => Promise.resolve([])),
   mockGetSyncHistory: vi.fn<() => Promise<SyncRecord[]>>(() =>
@@ -28,6 +33,11 @@ const {
   mockGetWatchedGames: vi.fn<() => Promise<string[]>>(() =>
     Promise.resolve([]),
   ),
+  mockEnableAutostart: vi.fn(() => Promise.resolve()),
+  mockDisableAutostart: vi.fn(() => Promise.resolve()),
+  mockIsAutostartEnabled: vi.fn(() => Promise.resolve(false)),
+  mockPersistAutostart: vi.fn(() => Promise.resolve()),
+  mockCheckUpdate: vi.fn(() => Promise.resolve(null as unknown)),
 }));
 
 vi.mock("sonner", () => ({
@@ -52,6 +62,7 @@ vi.mock("@/lib/store/store", () => ({
   setSyncFingerprint: vi.fn(),
   getHideSteamCloud: vi.fn(() => Promise.resolve(false)),
   setHideSteamCloud: vi.fn(),
+  setAutostart: mockPersistAutostart,
 }));
 
 vi.mock("@/hooks/useAutoSync/useAutoSync", () => ({
@@ -71,9 +82,17 @@ vi.mock("@/operations/auth/auth/auth", () => ({
 }));
 
 vi.mock("@tauri-apps/plugin-autostart", () => ({
-  enable: vi.fn(() => Promise.resolve()),
-  disable: vi.fn(() => Promise.resolve()),
-  isEnabled: vi.fn(() => Promise.resolve(false)),
+  enable: mockEnableAutostart,
+  disable: mockDisableAutostart,
+  isEnabled: mockIsAutostartEnabled,
+}));
+
+vi.mock("@tauri-apps/plugin-updater", () => ({
+  check: mockCheckUpdate,
+}));
+
+vi.mock("@tauri-apps/plugin-process", () => ({
+  relaunch: vi.fn(),
 }));
 
 vi.mock("@/components/SavesList/SavesList", () => ({
@@ -372,6 +391,59 @@ describe("App", () => {
         expect(screen.queryByText("The Sims 4")).not.toBeInTheDocument();
       });
       expect(screen.getByText("Cloud RPG")).toBeInTheDocument();
+    });
+  });
+
+  it("enables autostart and persists setting on toggle", async () => {
+    renderWithProviders(<App />);
+    await waitFor(() => expect(mockGetAuthState).toHaveBeenCalled());
+
+    await user.click(screen.getByText("status.autostartInactive"));
+
+    await waitFor(() => {
+      expect(screen.getByText("status.autostartActive")).toBeInTheDocument();
+    });
+    expect(mockEnableAutostart).toHaveBeenCalledOnce();
+    expect(mockPersistAutostart).toHaveBeenCalledWith(true);
+  });
+
+  it("disables autostart and persists setting when toggling off", async () => {
+    mockIsAutostartEnabled.mockResolvedValueOnce(true);
+    renderWithProviders(<App />);
+    await waitFor(() => {
+      expect(screen.getByText("status.autostartActive")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("status.autostartActive"));
+
+    await waitFor(() => {
+      expect(screen.getByText("status.autostartInactive")).toBeInTheDocument();
+    });
+    expect(mockDisableAutostart).toHaveBeenCalledOnce();
+    expect(mockPersistAutostart).toHaveBeenCalledWith(false);
+  });
+
+  it("shows update banner when an update is available", async () => {
+    mockCheckUpdate.mockResolvedValueOnce({
+      version: "2.0.0",
+      downloadAndInstall: vi.fn(),
+    });
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("update.available")).toBeInTheDocument();
+    });
+  });
+
+  it("reverts autostart toggle when enable fails", async () => {
+    mockEnableAutostart.mockRejectedValueOnce(new Error("enable failed"));
+    renderWithProviders(<App />);
+    await waitFor(() => expect(mockGetAuthState).toHaveBeenCalled());
+
+    await user.click(screen.getByText("status.autostartInactive"));
+
+    await waitFor(() => {
+      expect(screen.getByText("status.autostartInactive")).toBeInTheDocument();
     });
   });
 });

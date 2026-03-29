@@ -4,6 +4,8 @@ import {
   getFolder,
   getFile,
   getFilesInFolder,
+  getDeviceFile,
+  putDeviceFile,
   deleteFile,
   getBackupFile,
   postFile,
@@ -133,6 +135,22 @@ describe("drive service", () => {
 
       expect(result).toBeNull();
     });
+
+    it("returns null on error response", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(500));
+
+      const result = await getFile("devices.json", "folder-id");
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null on network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      const result = await getFile("devices.json", "folder-id");
+
+      expect(result).toBeNull();
+    });
   });
 
   describe("getFilesInFolder", () => {
@@ -154,6 +172,81 @@ describe("drive service", () => {
       await expect(getFilesInFolder("folder-id")).rejects.toThrow(
         "Failed to list files",
       );
+    });
+  });
+
+  describe("getDeviceFile", () => {
+    it("returns parsed device entry", async () => {
+      const entry = { os: "windows", games: {} };
+      mockFetch.mockResolvedValueOnce(okResponse(entry));
+
+      const result = await getDeviceFile("file-id");
+
+      expect(result).toEqual(entry);
+    });
+
+    it("returns null on error response", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(404));
+
+      const result = await getDeviceFile("file-id");
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null on network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      const result = await getDeviceFile("file-id");
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("putDeviceFile", () => {
+    const entry = { os: "windows", games: {} };
+
+    it("updates existing file with PATCH", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(""),
+      });
+
+      await putDeviceFile("folder-id", "device-1", entry, "existing-id");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/files/existing-id"),
+        expect.objectContaining({ method: "PATCH" }),
+      );
+    });
+
+    it("creates new file with multipart POST when no existing ID", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(""),
+      });
+
+      await putDeviceFile("folder-id", "device-1", entry, null);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("uploadType=multipart"),
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    it("throws on update failure", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(500));
+
+      await expect(
+        putDeviceFile("folder-id", "device-1", entry, "existing-id"),
+      ).rejects.toThrow("Failed to update device file");
+    });
+
+    it("throws on create failure", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(500));
+
+      await expect(
+        putDeviceFile("folder-id", "device-1", entry, null),
+      ).rejects.toThrow("Failed to create device file");
     });
   });
 
@@ -194,6 +287,14 @@ describe("drive service", () => {
         'Failed to download backup "file-123"',
       );
     });
+
+    it("handles non-Error throw in backup wrapping", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(getBackupFile("file-123")).rejects.toThrow(
+        'Failed to download backup "file-123": string error',
+      );
+    });
   });
 
   describe("postFile", () => {
@@ -216,6 +317,14 @@ describe("drive service", () => {
         postFile("folder-id", "save.zip", new Uint8Array([1])),
       ).rejects.toThrow('Failed to upload file "save.zip"');
     });
+
+    it("handles non-Error throw in upload wrapping", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(
+        postFile("folder-id", "save.zip", new Uint8Array([1])),
+      ).rejects.toThrow('Failed to upload file "save.zip": string error');
+    });
   });
 
   describe("getFolderNames", () => {
@@ -231,6 +340,14 @@ describe("drive service", () => {
 
     it("returns empty array on error", async () => {
       mockFetch.mockResolvedValueOnce(errorResponse(500));
+
+      const result = await getFolderNames("parent-id");
+
+      expect(result).toEqual([]);
+    });
+
+    it("returns empty array on network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
       const result = await getFolderNames("parent-id");
 

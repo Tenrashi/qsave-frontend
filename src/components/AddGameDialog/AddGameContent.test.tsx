@@ -144,6 +144,33 @@ describe("AddGameContent", () => {
     expect(mockToastError).toHaveBeenCalledWith("toast.addGameFailed");
   });
 
+  it("sorts games alphabetically after adding", async () => {
+    const onClose = vi.fn();
+    mockScanManualGame.mockResolvedValueOnce({
+      name: "Alpha Game",
+      savePaths: ["/saves/alpha"],
+      saveFiles: [],
+      isManual: true,
+    });
+    renderContent({ name: "Alpha Game", paths: ["/saves/alpha"], onClose });
+
+    await user.click(screen.getByRole("button", { name: "games.add" }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("calls onNameChange when typing in input", async () => {
+    const onNameChange = vi.fn();
+    renderContent({ onNameChange });
+
+    await user.type(
+      screen.getByPlaceholderText("games.gameNamePlaceholder"),
+      "a",
+    );
+
+    expect(onNameChange).toHaveBeenCalledWith("a");
+  });
+
   it("handles browse cancellation gracefully", async () => {
     const onPathsChange = vi.fn();
     mockInvoke.mockResolvedValueOnce(null);

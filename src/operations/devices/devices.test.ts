@@ -117,6 +117,15 @@ describe("devices", () => {
 
       expect(result).toBeUndefined();
     });
+
+    it("returns undefined when device file content is null", async () => {
+      mockGetFile.mockResolvedValueOnce("device-file");
+      mockGetDeviceFile.mockResolvedValueOnce(null);
+
+      const result = await findDeviceGamePaths("device-1", "Sims 4");
+
+      expect(result).toBeUndefined();
+    });
   });
 
   describe("saveDeviceSync", () => {
@@ -293,6 +302,41 @@ describe("devices", () => {
       });
     });
 
+    it("keeps newer hash when older entry is processed second", async () => {
+      mockGetFilesInFolder.mockResolvedValueOnce([
+        { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
+        { id: "f2", name: "device-2.json", createdTime: "2026-01-01" },
+      ]);
+      mockGetDeviceFile
+        .mockResolvedValueOnce({
+          os: "windows",
+          games: {
+            "Sims 4": {
+              paths: ["/saves"],
+              lastHash: "newer-hash",
+              lastSyncedAt: "2026-03-14T12:00:00Z",
+            },
+          },
+        })
+        .mockResolvedValueOnce({
+          os: "macos",
+          games: {
+            "Sims 4": {
+              paths: ["/saves"],
+              lastHash: "older-hash",
+              lastSyncedAt: "2026-03-10T12:00:00Z",
+            },
+          },
+        });
+
+      const result = await getCloudGameHash("Sims 4");
+
+      expect(result).toEqual({
+        hash: "newer-hash",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+    });
+
     it("returns null when game has no hash info", async () => {
       mockGetFilesInFolder.mockResolvedValueOnce([
         { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
@@ -321,8 +365,14 @@ describe("devices", () => {
       expect(result).toBeNull();
     });
 
-    it("returns null when buildDevicesMap throws", async () => {
-      mockEnsureDevicesFolder.mockRejectedValueOnce(new Error("fail"));
+    it("returns null when device entry has corrupt data", async () => {
+      mockGetFilesInFolder.mockResolvedValueOnce([
+        { id: "f1", name: "device-1.json", createdTime: "2026-01-01" },
+      ]);
+      mockGetDeviceFile.mockResolvedValueOnce({
+        os: "windows",
+        games: null,
+      });
 
       const result = await getCloudGameHash("Sims 4");
 

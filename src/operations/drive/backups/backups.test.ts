@@ -100,6 +100,14 @@ describe("backups", () => {
         'Failed to list backups for "Sims 4"',
       );
     });
+
+    it("handles non-Error throw in list wrapping", async () => {
+      mockEnsureGameFolder.mockRejectedValueOnce("string error");
+
+      await expect(listGameBackups("Sims 4")).rejects.toThrow(
+        'Failed to list backups for "Sims 4": string error',
+      );
+    });
   });
 
   describe("deleteGameBackup", () => {
@@ -116,6 +124,14 @@ describe("backups", () => {
 
       await expect(deleteGameBackup("file-123")).rejects.toThrow(
         'Failed to delete backup "file-123"',
+      );
+    });
+
+    it("handles non-Error throw in delete wrapping", async () => {
+      mockDeleteFile.mockRejectedValueOnce("string error");
+
+      await expect(deleteGameBackup("file-123")).rejects.toThrow(
+        'Failed to delete backup "file-123": string error',
       );
     });
   });

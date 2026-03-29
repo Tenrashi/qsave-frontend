@@ -324,6 +324,71 @@ describe("useAutoSync", () => {
     );
   });
 
+  it("rescans only the affected game when multiple games are watched", async () => {
+    useAuthStore.setState({ auth: { isAuthenticated: true } });
+    useSyncStore.setState({
+      watchedGames: { "The Sims 4": true, "Cyberpunk 2077": true },
+    });
+    mockRescanGame.mockResolvedValueOnce(sims4Game);
+    mockComputeContentHash.mockResolvedValueOnce("new-hash");
+
+    renderHook(() => useAutoSync([sims4Game, cyberpunkGame]), {
+      wrapper: createWrapper(),
+    });
+
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockScheduleAutoSync).toHaveBeenCalledWith(
+        "The Sims 4",
+        expect.any(Function),
+      );
+    });
+
+    expect(mockRescanGame).toHaveBeenCalledWith(sims4Game);
+    expect(mockRescanGame).not.toHaveBeenCalledWith(cyberpunkGame);
+  });
+
+  it("skips rescan when game is no longer in gamesRef", async () => {
+    useSyncStore.setState({ watchedGames: { "The Sims 4": true } });
+
+    const { rerender } = renderHook(({ games }) => useAutoSync(games), {
+      wrapper: createWrapper(),
+      initialProps: { games: [sims4Game] },
+    });
+
+    // Remove the game from gamesRef before triggering watcher
+    rerender({ games: [] });
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    expect(mockRescanGame).not.toHaveBeenCalled();
+  });
+
+  it("skips sync when game is removed before auto-sync callback runs", async () => {
+    useAuthStore.setState({ auth: { isAuthenticated: true } });
+    useSyncStore.setState({ watchedGames: { "The Sims 4": true } });
+    mockRescanGame.mockResolvedValueOnce(sims4Game);
+
+    const { rerender } = renderHook(({ games }) => useAutoSync(games), {
+      wrapper: createWrapper(),
+      initialProps: { games: [sims4Game] },
+    });
+
+    triggerWatcherCallback(["/saves/sims4/save.dat"]);
+
+    await waitFor(() => {
+      expect(mockScheduleAutoSync).toHaveBeenCalled();
+    });
+
+    // Remove the game before the auto-sync callback runs
+    rerender({ games: [] });
+
+    const syncCallback = mockScheduleAutoSync.mock.calls[0][1];
+    await syncCallback();
+
+    expect(mockComputeContentHash).not.toHaveBeenCalled();
+  });
+
   it("cleans up on unmount", () => {
     useSyncStore.setState({ watchedGames: { "The Sims 4": true } });
 

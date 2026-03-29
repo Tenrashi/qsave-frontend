@@ -237,6 +237,71 @@ describe("useRestoreBackup", () => {
     expect(mockAddManualGame).not.toHaveBeenCalled();
   });
 
+  it("sets error status when post-restore steps fail", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockScanManualGame.mockRejectedValueOnce(new Error("scan failed"));
+    mockAddManualGame.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useRestoreBackup(cloudOnlyGame), {
+      wrapper: createWrapper().wrapper,
+    });
+
+    result.current.mutate({
+      backupId: "b1",
+      targetPaths: ["/saves/custom"],
+    });
+
+    await waitFor(() =>
+      expect(useSyncStore.getState().gameStatuses["Cloud Save RPG"]).toBe(
+        SYNC_STATUS.error,
+      ),
+    );
+    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Post-restore update failed:",
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("throws when no backups exist and no backupId provided", async () => {
+    mockListGameBackups.mockResolvedValueOnce([]);
+
+    const { result } = renderHook(() => useRestoreBackup(sims4Game), {
+      wrapper: createWrapper().wrapper,
+    });
+
+    result.current.mutate(undefined);
+
+    await waitFor(() =>
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.error,
+      ),
+    );
+    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed");
+  });
+
+  it("uses fallback error message when result has no error string", async () => {
+    mockRestoreGame.mockResolvedValueOnce({
+      ...defaultRecord,
+      status: RECORD_STATUS.error,
+      error: undefined,
+    });
+
+    const { result } = renderHook(() => useRestoreBackup(sims4Game), {
+      wrapper: createWrapper().wrapper,
+    });
+
+    result.current.mutate({ backupId: "b1" });
+
+    await waitFor(() =>
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.error,
+      ),
+    );
+    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed");
+  });
+
   it("sets game status to error and shows error toast when restore fails", async () => {
     mockRestoreGame.mockRejectedValueOnce(new Error("Network error"));
 

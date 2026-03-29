@@ -17,4 +17,19 @@ describe("LanguageSelector", () => {
     expect(screen.getByText("Français")).toBeInTheDocument();
     expect(screen.getByText("Español")).toBeInTheDocument();
   });
+
+  it("changes language and closes dropdown on option click", async () => {
+    const user = setupUser();
+    renderWithProviders(<LanguageSelector />);
+
+    await user.click(screen.getByRole("button"));
+    await user.click(screen.getByText("Français"));
+
+    expect(screen.queryByText("English")).not.toBeInTheDocument();
+
+    // Reopen to verify the selected language has the active style
+    await user.click(screen.getByRole("button"));
+    const frOption = screen.getByText("Français");
+    expect(frOption.className).toContain("bg-accent");
+  });
 });
