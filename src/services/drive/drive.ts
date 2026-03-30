@@ -152,7 +152,7 @@ export const putDeviceFile = async (
     name: fileName,
     parents: [folderId],
   });
-  const boundary = "qsave_device_" + Date.now();
+  const boundary = "qsave_device_" + crypto.randomUUID();
   const body = buildMultipartBody(
     boundary,
     metadata,
@@ -211,7 +211,7 @@ export const postFile = async (
       parents: [folderId],
     });
 
-    const boundary = "qsave_boundary_" + Date.now();
+    const boundary = "qsave_boundary_" + crypto.randomUUID();
     const body = buildMultipartBody(boundary, metadata, fileData);
 
     const res = await fetch(
