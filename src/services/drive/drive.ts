@@ -20,8 +20,11 @@ const assertOk = async (res: Response, context: string) => {
   throw new Error(`${context}: ${res.status} ${res.statusText} ${body}`);
 };
 
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\x00-\x1f\x7f]/g;
+
 const escapeQueryValue = (value: string): string =>
-  value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  value.replace(CONTROL_CHARS, "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
 export const postFolder = async (
   name: string,
@@ -52,7 +55,7 @@ export const getFolder = async (
 ): Promise<string | null> => {
   try {
     const headers = await authHeaders();
-    const query = `name='${escapeQueryValue(name)}' and '${parentId}' in parents and mimeType='${MIME_TYPES.googleFolder}' and trashed=false`;
+    const query = `name='${escapeQueryValue(name)}' and '${escapeQueryValue(parentId)}' in parents and mimeType='${MIME_TYPES.googleFolder}' and trashed=false`;
     const res = await fetch(
       `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id)`,
       { headers },
@@ -72,7 +75,7 @@ export const getFile = async (
 ): Promise<string | null> => {
   try {
     const headers = await authHeaders();
-    const query = `name='${escapeQueryValue(name)}' and '${parentId}' in parents and trashed=false`;
+    const query = `name='${escapeQueryValue(name)}' and '${escapeQueryValue(parentId)}' in parents and trashed=false`;
     const res = await fetch(
       `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id)`,
       { headers },
@@ -90,7 +93,7 @@ export const getFilesInFolder = async (
   folderId: string,
 ): Promise<{ id: string; name: string; createdTime: string }[]> => {
   const headers = await authHeaders();
-  const query = `'${folderId}' in parents and trashed=false`;
+  const query = `'${escapeQueryValue(folderId)}' in parents and trashed=false`;
   const res = await fetch(
     `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id,name,createdTime)&orderBy=createdTime`,
     { headers },
@@ -237,7 +240,7 @@ export const postFile = async (
 export const getFolderNames = async (parentId: string): Promise<string[]> => {
   try {
     const headers = await authHeaders();
-    const query = `'${parentId}' in parents and mimeType='${MIME_TYPES.googleFolder}' and trashed=false`;
+    const query = `'${escapeQueryValue(parentId)}' in parents and mimeType='${MIME_TYPES.googleFolder}' and trashed=false`;
     const res = await fetch(
       `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(name)&pageSize=1000`,
       { headers },
