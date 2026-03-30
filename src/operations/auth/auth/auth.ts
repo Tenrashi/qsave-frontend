@@ -22,11 +22,14 @@ import i18n from "@/i18n";
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPES = "https://www.googleapis.com/auth/drive.file email";
 
+type OAuthResult = {
+  code: string;
+  redirect_uri: string;
+};
+
 let pendingCodeVerifier: string | null = null;
 
 export const startOAuthFlow = async (): Promise<AuthState> => {
-  const redirectUri: string = await invoke(TAURI_COMMANDS.getOAuthRedirectUri);
-
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   pendingCodeVerifier = codeVerifier;
@@ -35,7 +38,6 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
 
   const authUrl = new URL(OAUTH_ENDPOINTS.auth);
   authUrl.searchParams.set("client_id", CLIENT_ID);
-  authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", SCOPES);
   authUrl.searchParams.set("access_type", OAUTH_PARAMS.accessTypeOffline);
@@ -44,24 +46,26 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
   authUrl.searchParams.set("code_challenge_method", "S256");
   authUrl.searchParams.set("state", oauthState);
 
-  const code: string = await invoke(TAURI_COMMANDS.startOAuth, {
-    authUrl: authUrl.toString(),
+  const result: OAuthResult = await invoke(TAURI_COMMANDS.startOAuth, {
+    authUrlBase: authUrl.toString(),
     expectedState: oauthState,
   });
-  return exchangeCodeForTokens(code, redirectUri);
+
+  return exchangeCodeForTokens(result.code, result.redirect_uri);
 };
 
 export const exchangeCodeForTokens = async (
   code: string,
-  redirectUri?: string,
+  redirectUri: string,
 ): Promise<AuthState> => {
-  const uri =
-    redirectUri ?? (await invoke<string>(TAURI_COMMANDS.getOAuthRedirectUri));
-
   const codeVerifier = pendingCodeVerifier;
   pendingCodeVerifier = null;
 
-  const data = await postTokenExchange(code, uri, codeVerifier ?? undefined);
+  const data = await postTokenExchange(
+    code,
+    redirectUri,
+    codeVerifier ?? undefined,
+  );
   const user = await getUserInfo(data.access_token);
 
   const auth: AuthState = {

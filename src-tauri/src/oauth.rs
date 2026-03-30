@@ -1,12 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 
-const LISTEN_PORT: u16 = 19842;
-
-pub fn get_redirect_uri() -> String {
-    format!("http://localhost:{}/callback", LISTEN_PORT)
-}
-
 fn url_decode(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.bytes();
@@ -73,14 +67,34 @@ fn send_html_response(stream: &mut std::net::TcpStream, html: &str) {
     let _ = stream.flush();
 }
 
-/// Starts a one-shot HTTP server, opens the OAuth URL in the browser,
-/// waits for Google to redirect back with a `code`, and returns it.
+#[derive(Debug, serde::Serialize)]
+pub struct OAuthResult {
+    pub code: String,
+    pub redirect_uri: String,
+}
+
+/// Starts a one-shot HTTP server on an ephemeral port, opens the OAuth URL
+/// in the browser, waits for Google to redirect back with a `code`, and
+/// returns both the code and the redirect URI that was used.
 /// If `expected_state` is provided, validates the `state` parameter in the callback.
-pub fn wait_for_oauth_code(auth_url: &str, expected_state: Option<&str>) -> Result<String, String> {
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", LISTEN_PORT))
+pub fn wait_for_oauth_code(auth_url_base: &str, expected_state: Option<&str>) -> Result<OAuthResult, String> {
+    let listener = TcpListener::bind("127.0.0.1:0")
         .map_err(|e| format!("Failed to bind OAuth listener: {}", e))?;
 
-    open::that(auth_url).map_err(|e| format!("Failed to open browser: {}", e))?;
+    let port = listener
+        .local_addr()
+        .map_err(|e| format!("Failed to get listener address: {}", e))?
+        .port();
+
+    let redirect_uri = format!("http://localhost:{}/callback", port);
+
+    let auth_url = format!(
+        "{}&redirect_uri={}",
+        auth_url_base,
+        urlencoding::encode(&redirect_uri)
+    );
+
+    open::that(&auth_url).map_err(|e| format!("Failed to open browser: {}", e))?;
 
     let (mut stream, _) = listener
         .accept()
@@ -111,7 +125,7 @@ pub fn wait_for_oauth_code(auth_url: &str, expected_state: Option<&str>) -> Resu
     </body></html>"#;
     send_html_response(&mut stream, html);
 
-    Ok(params.code)
+    Ok(OAuthResult { code: params.code, redirect_uri })
 }
 
 #[cfg(test)]
@@ -158,11 +172,5 @@ mod tests {
     #[test]
     fn returns_error_for_malformed_request() {
         assert!(extract_callback_params("").is_err());
-    }
-
-    #[test]
-    fn redirect_uri_includes_port() {
-        let uri = get_redirect_uri();
-        assert_eq!(uri, format!("http://localhost:{}/callback", LISTEN_PORT));
     }
 }

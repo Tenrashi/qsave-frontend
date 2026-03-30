@@ -19,7 +19,6 @@ export const STORE_KEYS = {
 } as const;
 
 export const TAURI_COMMANDS = {
-  getOAuthRedirectUri: "get_oauth_redirect_uri",
   startOAuth: "start_oauth",
   createZip: "create_zip",
   computeSaveHash: "compute_save_hash",

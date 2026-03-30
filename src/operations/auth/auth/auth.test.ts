@@ -189,10 +189,11 @@ describe("auth", () => {
   });
 
   describe("startOAuthFlow", () => {
-    it("gets redirect URI, builds auth URL with PKCE and state, and exchanges code", async () => {
-      mockInvoke
-        .mockResolvedValueOnce("http://localhost:8080/callback")
-        .mockResolvedValueOnce("auth-code-123");
+    it("builds auth URL with PKCE and state, and exchanges code with returned redirect URI", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        code: "auth-code-123",
+        redirect_uri: "http://localhost:54321/callback",
+      });
 
       mockPostTokenExchange.mockResolvedValueOnce({
         access_token: "token-abc",
@@ -208,16 +209,17 @@ describe("auth", () => {
       expect(result.accessToken).toBe("token-abc");
       expect(mockSetAuthState).toHaveBeenCalled();
 
-      const startOAuthCall = mockInvoke.mock.calls[1][1];
-      const authUrl = startOAuthCall.authUrl;
-      expect(authUrl).toContain("code_challenge=test-challenge");
-      expect(authUrl).toContain("code_challenge_method=S256");
-      expect(authUrl).toContain("state=");
+      const startOAuthCall = mockInvoke.mock.calls[0][1];
+      const authUrlBase = startOAuthCall.authUrlBase;
+      expect(authUrlBase).toContain("code_challenge=test-challenge");
+      expect(authUrlBase).toContain("code_challenge_method=S256");
+      expect(authUrlBase).toContain("state=");
       expect(startOAuthCall.expectedState).toBeDefined();
-      expect(authUrl).toContain(`state=${startOAuthCall.expectedState}`);
+      expect(authUrlBase).toContain(`state=${startOAuthCall.expectedState}`);
+      expect(authUrlBase).not.toContain("redirect_uri");
       expect(mockPostTokenExchange).toHaveBeenCalledWith(
         "auth-code-123",
-        "http://localhost:8080/callback",
+        "http://localhost:54321/callback",
         "test-verifier",
       );
     });
@@ -239,19 +241,6 @@ describe("auth", () => {
       expect(result.accessToken).toBe("at");
       expect(result.refreshToken).toBe("rt");
       expect(mockSetAuthState).toHaveBeenCalledWith(result);
-    });
-
-    it("gets redirect URI from invoke when not provided", async () => {
-      mockInvoke.mockResolvedValueOnce("http://localhost/cb");
-      mockPostTokenExchange.mockResolvedValueOnce({
-        access_token: "at",
-        expires_in: 3600,
-      });
-      mockGetUserInfo.mockResolvedValueOnce({ email: "a@b.com" });
-
-      await exchangeCodeForTokens("code");
-
-      expect(mockInvoke).toHaveBeenCalledWith("get_oauth_redirect_uri");
     });
   });
 
