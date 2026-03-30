@@ -146,7 +146,7 @@ describe("auth", () => {
   });
 
   describe("startOAuthFlow", () => {
-    it("gets redirect URI, builds auth URL with PKCE, and exchanges code", async () => {
+    it("gets redirect URI, builds auth URL with PKCE and state, and exchanges code", async () => {
       mockInvoke
         .mockResolvedValueOnce("http://localhost:8080/callback")
         .mockResolvedValueOnce("auth-code-123");
@@ -165,9 +165,13 @@ describe("auth", () => {
       expect(result.accessToken).toBe("token-abc");
       expect(mockSetAuthState).toHaveBeenCalled();
 
-      const authUrl = mockInvoke.mock.calls[1][1].authUrl;
+      const startOAuthCall = mockInvoke.mock.calls[1][1];
+      const authUrl = startOAuthCall.authUrl;
       expect(authUrl).toContain("code_challenge=test-challenge");
       expect(authUrl).toContain("code_challenge_method=S256");
+      expect(authUrl).toContain("state=");
+      expect(startOAuthCall.expectedState).toBeDefined();
+      expect(authUrl).toContain(`state=${startOAuthCall.expectedState}`);
       expect(mockPostTokenExchange).toHaveBeenCalledWith(
         "auth-code-123",
         "http://localhost:8080/callback",

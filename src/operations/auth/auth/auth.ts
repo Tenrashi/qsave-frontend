@@ -30,6 +30,8 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   pendingCodeVerifier = codeVerifier;
 
+  const oauthState = crypto.randomUUID();
+
   const authUrl = new URL(OAUTH_ENDPOINTS.auth);
   authUrl.searchParams.set("client_id", CLIENT_ID);
   authUrl.searchParams.set("redirect_uri", redirectUri);
@@ -39,9 +41,11 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
   authUrl.searchParams.set("prompt", OAUTH_PARAMS.promptConsent);
   authUrl.searchParams.set("code_challenge", codeChallenge);
   authUrl.searchParams.set("code_challenge_method", "S256");
+  authUrl.searchParams.set("state", oauthState);
 
   const code: string = await invoke(TAURI_COMMANDS.startOAuth, {
     authUrl: authUrl.toString(),
+    expectedState: oauthState,
   });
   return exchangeCodeForTokens(code, redirectUri);
 };

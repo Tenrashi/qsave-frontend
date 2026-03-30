@@ -101,8 +101,8 @@ fn get_oauth_redirect_uri() -> String {
 }
 
 #[tauri::command]
-async fn start_oauth(auth_url: String) -> Result<String, String> {
-    tokio::task::spawn_blocking(move || oauth::wait_for_oauth_code(&auth_url))
+async fn start_oauth(auth_url: String, expected_state: Option<String>) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || oauth::wait_for_oauth_code(&auth_url, expected_state.as_deref()))
         .await
         .map_err(|e| format!("OAuth task failed: {}", e))?
 }
