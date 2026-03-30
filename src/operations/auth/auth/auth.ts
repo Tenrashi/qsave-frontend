@@ -27,12 +27,9 @@ type OAuthResult = {
   redirect_uri: string;
 };
 
-let pendingCodeVerifier: string | null = null;
-
 export const startOAuthFlow = async (): Promise<AuthState> => {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
-  pendingCodeVerifier = codeVerifier;
 
   const oauthState = crypto.randomUUID();
 
@@ -51,21 +48,15 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
     expectedState: oauthState,
   });
 
-  return exchangeCodeForTokens(result.code, result.redirect_uri);
+  return exchangeCodeForTokens(result.code, result.redirect_uri, codeVerifier);
 };
 
 export const exchangeCodeForTokens = async (
   code: string,
   redirectUri: string,
+  codeVerifier?: string,
 ): Promise<AuthState> => {
-  const codeVerifier = pendingCodeVerifier;
-  pendingCodeVerifier = null;
-
-  const data = await postTokenExchange(
-    code,
-    redirectUri,
-    codeVerifier ?? undefined,
-  );
+  const data = await postTokenExchange(code, redirectUri, codeVerifier);
   const user = await getUserInfo(data.access_token);
 
   const auth: AuthState = {

@@ -217,6 +217,7 @@ describe("auth", () => {
       expect(startOAuthCall.expectedState).toBeDefined();
       expect(authUrlBase).toContain(`state=${startOAuthCall.expectedState}`);
       expect(authUrlBase).not.toContain("redirect_uri");
+      expect(mockGenerateCodeVerifier).toHaveBeenCalledOnce();
       expect(mockPostTokenExchange).toHaveBeenCalledWith(
         "auth-code-123",
         "http://localhost:54321/callback",

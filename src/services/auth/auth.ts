@@ -57,11 +57,13 @@ export const postTokenRefresh = async (
 };
 
 export const postTokenRevoke = async (token: string): Promise<void> => {
-  await fetch(OAUTH_ENDPOINTS.revoke, {
+  const res = await fetch(OAUTH_ENDPOINTS.revoke, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ token }).toString(),
   });
+
+  if (!res.ok) throw new Error(`Token revocation failed: ${res.status}`);
 };
 
 export const getUserInfo = async (
