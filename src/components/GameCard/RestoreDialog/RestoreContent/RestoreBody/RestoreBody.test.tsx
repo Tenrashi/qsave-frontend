@@ -506,6 +506,62 @@ describe("RestoreBody", () => {
     });
   });
 
+  it("resets state when dialog closes", async () => {
+    const { rerender } = renderWithProviders(
+      <Dialog open={true}>
+        <RestoreBody game={sims4Game} open={true} quick />
+      </Dialog>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status-success")).toBeInTheDocument();
+    });
+
+    rerender(
+      <Dialog open={true}>
+        <RestoreBody game={sims4Game} open={false} quick />
+      </Dialog>,
+    );
+
+    rerender(
+      <Dialog open={true}>
+        <RestoreBody game={sims4Game} open={true} quick />
+      </Dialog>,
+    );
+
+    expect(screen.getByTestId("quick-warning")).toBeInTheDocument();
+  });
+
+  it("dismisses conflict warning when close is clicked", async () => {
+    mockComputeContentHash.mockResolvedValue("hash-different");
+    mockGetCloudGameHash.mockResolvedValue({
+      hash: "hash-cloud",
+      syncedAt: "2026-03-14T12:00:00Z",
+    });
+    useSyncStore.setState({
+      syncFingerprints: {
+        "The Sims 4": { hash: "hash-abc", syncedAt: "2026-03-14T12:00:00Z" },
+      },
+    });
+
+    renderBody({ quick: true });
+
+    await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("conflict-warning")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("close-conflict"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("conflict-warning")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("quick-warning")).toBeInTheDocument();
+  });
+
   describe("cloud-only games", () => {
     it("shows folder picker for cloud-only games", async () => {
       renderBody({ game: cloudOnlyGame });
@@ -542,6 +598,49 @@ describe("RestoreBody", () => {
       expect(
         screen.queryByRole("button", { name: "restore.restore" }),
       ).not.toBeInTheDocument();
+    });
+
+    it("handles device path loading failure gracefully", async () => {
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      mockGetDeviceId.mockRejectedValueOnce(new Error("no device"));
+
+      renderBody({ game: cloudOnlyGame });
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          "Failed to load device path:",
+          expect.any(Error),
+        );
+      });
+      expect(screen.getByText("restore.pickFolder")).toBeInTheDocument();
+      consoleSpy.mockRestore();
+    });
+
+    it("handles folder picker failure gracefully", async () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      mockGetDeviceGamePaths.mockReset().mockResolvedValue(undefined);
+      mockInvoke
+        .mockReset()
+        .mockRejectedValueOnce(new Error("picker cancelled"));
+
+      renderBody({ game: cloudOnlyGame });
+
+      await waitFor(() => {
+        expect(screen.getByText("restore.pickFolder")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("restore.pickFolder"));
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          "Folder picker failed:",
+          expect.any(Error),
+        );
+      });
+      expect(screen.getByText("restore.pickFolder")).toBeInTheDocument();
+      consoleSpy.mockRestore();
     });
   });
 });

@@ -68,6 +68,17 @@ describe("useAppUpdate", () => {
     expect(result.current.error).toBe("network timeout");
   });
 
+  it("handles non-Error throw in check", async () => {
+    mockCheck.mockRejectedValue("string error");
+
+    const { result } = renderHook(() => useAppUpdate());
+
+    await waitFor(() => {
+      expect(result.current.status).toBe("error");
+    });
+    expect(result.current.error).toBe("string error");
+  });
+
   it("does nothing when install is called without an update", async () => {
     mockCheck.mockResolvedValue(null);
 
@@ -83,7 +94,13 @@ describe("useAppUpdate", () => {
   });
 
   it("downloads, installs, and relaunches on install", async () => {
-    const mockDownloadAndInstall = vi.fn().mockResolvedValue(undefined);
+    const mockDownloadAndInstall = vi.fn(
+      (callback: (event: { event: string }) => void) => {
+        callback({ event: "Started" });
+        callback({ event: "Finished" });
+        return Promise.resolve();
+      },
+    );
     mockCheck.mockResolvedValue({
       version: "2.0.0",
       downloadAndInstall: mockDownloadAndInstall,
@@ -103,6 +120,28 @@ describe("useAppUpdate", () => {
       expect(mockRelaunch).toHaveBeenCalledOnce();
     });
     expect(mockDownloadAndInstall).toHaveBeenCalledOnce();
+  });
+
+  it("handles non-Error throw in install", async () => {
+    const mockDownloadAndInstall = vi.fn().mockRejectedValue("install boom");
+    mockCheck.mockResolvedValue({
+      version: "2.0.0",
+      downloadAndInstall: mockDownloadAndInstall,
+    });
+    const user = setupUser();
+
+    render(<InstallHarness />);
+
+    await waitFor(() => {
+      expect(screen.getByText("available")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "install" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("error")).toBeInTheDocument();
+    });
+    expect(screen.getByText("install boom")).toBeInTheDocument();
   });
 
   it("sets error status when install fails", async () => {

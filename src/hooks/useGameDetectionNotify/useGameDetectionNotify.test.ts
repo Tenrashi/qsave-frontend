@@ -23,6 +23,11 @@ beforeEach(() => {
 });
 
 describe("useGameDetectionNotify", () => {
+  it("does not notify when games is undefined", () => {
+    renderHook(() => useGameDetectionNotify(undefined));
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
   it("does not notify on initial load", () => {
     renderHook(() => useGameDetectionNotify([sims4Game, cyberpunkGame]));
     expect(mockNotify).not.toHaveBeenCalled();
@@ -37,7 +42,9 @@ describe("useGameDetectionNotify", () => {
     rerender({ games: [sims4Game, cyberpunkGame] });
 
     expect(mockNotify).toHaveBeenCalledOnce();
-    expect(mockNotify.mock.calls[0][1]).toContain("notifications.gameDetectedOne");
+    expect(mockNotify.mock.calls[0][1]).toContain(
+      "notifications.gameDetectedOne",
+    );
     expect(mockNotify.mock.calls[0][1]).toContain("Cyberpunk 2077");
   });
 
@@ -50,7 +57,9 @@ describe("useGameDetectionNotify", () => {
     rerender({ games: [sims4Game, cyberpunkGame, eldenRingGame] });
 
     expect(mockNotify).toHaveBeenCalledOnce();
-    expect(mockNotify.mock.calls[0][1]).toContain("notifications.gameDetectedOther");
+    expect(mockNotify.mock.calls[0][1]).toContain(
+      "notifications.gameDetectedOther",
+    );
     expect(mockNotify.mock.calls[0][1]).toContain('"count":2');
   });
 

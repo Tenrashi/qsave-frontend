@@ -156,6 +156,29 @@ describe("LocalGameActions", () => {
     ).toBeInTheDocument();
   });
 
+  it("removes game and shows success toast on confirm", async () => {
+    mockRemoveManualGame.mockResolvedValueOnce(undefined);
+    renderActions(manualGame);
+    await user.click(screen.getByRole("button", { name: "games.removeGame" }));
+    await user.click(screen.getByText("games.remove"));
+
+    await waitFor(() => {
+      expect(mockRemoveManualGame).toHaveBeenCalledWith(manualGame.name);
+    });
+    expect(mockToastSuccess).toHaveBeenCalledWith("toast.removeGameSuccess");
+  });
+
+  it("shows error toast when remove fails", async () => {
+    mockRemoveManualGame.mockRejectedValueOnce(new Error("fail"));
+    renderActions(manualGame);
+    await user.click(screen.getByRole("button", { name: "games.removeGame" }));
+    await user.click(screen.getByText("games.remove"));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("toast.removeGameFailed");
+    });
+  });
+
   it("shows restore buttons when game has backup", () => {
     authenticateUser();
     useSyncStore.setState({
@@ -317,6 +340,66 @@ describe("LocalGameActions", () => {
       await waitFor(() => {
         expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
       });
+    });
+
+    it("proceeds with sync when conflict check fails", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      authenticateUser();
+      mockGetCloudGameHash.mockRejectedValueOnce(new Error("network error"));
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": {
+            hash: "hash-old",
+            syncedAt: "2026-03-13T12:00:00Z",
+          },
+        },
+      });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+      });
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Conflict check failed, proceeding with sync:",
+        expect.any(Error),
+      );
+      warnSpy.mockRestore();
+    });
+
+    it("closes conflict dialog and does not sync when download cloud is clicked", async () => {
+      authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-cloud",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": {
+            hash: "hash-old",
+            syncedAt: "2026-03-13T12:00:00Z",
+          },
+        },
+        backedUpGames: new Set(["The Sims 4"]),
+        backedUpGamesLoaded: true,
+      });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(screen.getByText("sync.conflictTitle")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("sync.downloadCloud"));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("sync.conflictTitle"),
+        ).not.toBeInTheDocument();
+      });
+      expect(mockSyncGame).not.toHaveBeenCalled();
     });
 
     it("syncs when upload anyway is clicked after conflict", async () => {

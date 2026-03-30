@@ -4,16 +4,22 @@ import { DeleteBackupDialog } from "./DeleteBackupDialog";
 import { Button } from "@/components/ui/button";
 
 vi.mock("./DeleteBackupContent/DeleteBackupContent", () => ({
-  DeleteBackupContent: () => <div data-testid="delete-backup-content" />,
+  DeleteBackupContent: ({ onConfirm }: { onConfirm: () => void }) => (
+    <div data-testid="delete-backup-content">
+      <button onClick={onConfirm}>Confirm</button>
+    </div>
+  ),
 }));
 
-const renderDialog = () =>
+const renderDialog = (onConfirm = vi.fn()) => {
   renderWithProviders(
     <DeleteBackupDialog
-      onConfirm={vi.fn()}
+      onConfirm={onConfirm}
       trigger={<Button>Delete</Button>}
     />,
   );
+  return { onConfirm };
+};
 
 describe("DeleteBackupDialog", () => {
   const user = setupUser();
@@ -29,5 +35,16 @@ describe("DeleteBackupDialog", () => {
     renderDialog();
     await user.click(screen.getByRole("button", { name: "Delete" }));
     expect(screen.getByTestId("delete-backup-content")).toBeInTheDocument();
+  });
+
+  it("calls onConfirm and closes dialog on confirm", async () => {
+    const { onConfirm } = renderDialog();
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    expect(onConfirm).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByTestId("delete-backup-content"),
+    ).not.toBeInTheDocument();
   });
 });
