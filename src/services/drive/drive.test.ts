@@ -78,6 +78,14 @@ describe("drive service", () => {
         'Failed to create folder "F": Network error',
       );
     });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(postFolder("F", "root")).rejects.toThrow(
+        'Failed to create folder "F": string error',
+      );
+    });
   });
 
   describe("getFolder", () => {
@@ -198,6 +206,14 @@ describe("drive service", () => {
         'Failed to list files in folder "folder-id": Network error',
       );
     });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(getFilesInFolder("folder-id")).rejects.toThrow(
+        'Failed to list files in folder "folder-id": string error',
+      );
+    });
   });
 
   describe("getDeviceFile", () => {
@@ -281,6 +297,14 @@ describe("drive service", () => {
         putDeviceFile("folder-id", "device-1", entry, "existing-id"),
       ).rejects.toThrow('Failed to save device file "device-1": Network error');
     });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(
+        putDeviceFile("folder-id", "device-1", entry, "existing-id"),
+      ).rejects.toThrow('Failed to save device file "device-1": string error');
+    });
   });
 
   describe("deleteFile", () => {
@@ -303,6 +327,14 @@ describe("drive service", () => {
 
       await expect(deleteFile("file-123")).rejects.toThrow(
         'Failed to delete file "file-123": Network error',
+      );
+    });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(deleteFile("file-123")).rejects.toThrow(
+        'Failed to delete file "file-123": string error',
       );
     });
   });
