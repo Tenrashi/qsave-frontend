@@ -29,6 +29,9 @@ export const TAURI_COMMANDS = {
   scanGames: "scan_games",
   scanManualGame: "scan_manual_game",
   pickFolder: "pick_folder",
+  keychainSet: "keychain_set",
+  keychainGet: "keychain_get",
+  keychainDelete: "keychain_delete",
 } as const;
 
 export const OAUTH_ENDPOINTS = {

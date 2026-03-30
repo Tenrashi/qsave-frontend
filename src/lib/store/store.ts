@@ -8,6 +8,7 @@ import {
   STORE_KEYS,
   MAX_SYNC_HISTORY_RECORDS,
 } from "@/lib/constants/constants";
+import { setTokens, getTokens, deleteTokens } from "@/lib/keychain/keychain";
 import type { ManualGameEntry } from "./store.types";
 
 let store: Store | null = null;
@@ -19,12 +20,21 @@ const getStore = async (): Promise<Store> => {
   return store;
 };
 
-// Auth
+// Auth — tokens go to OS keychain, non-sensitive metadata to JSON store
+type StoredAuthMeta = {
+  isAuthenticated: boolean;
+  email?: string;
+  expiresAt?: number;
+};
+
 export const getAuthState = async (): Promise<AuthState> => {
   try {
     const s = await getStore();
-    const state = await s.get<AuthState>(STORE_KEYS.auth);
-    return state ?? { isAuthenticated: false };
+    const meta = await s.get<StoredAuthMeta>(STORE_KEYS.auth);
+    if (!meta?.isAuthenticated) return { isAuthenticated: false };
+
+    const tokens = await getTokens();
+    return { ...meta, ...tokens };
   } catch {
     return { isAuthenticated: false };
   }
@@ -32,8 +42,15 @@ export const getAuthState = async (): Promise<AuthState> => {
 
 export const setAuthState = async (auth: AuthState): Promise<void> => {
   try {
+    await setTokens(auth.accessToken, auth.refreshToken);
+
     const s = await getStore();
-    await s.set(STORE_KEYS.auth, auth);
+    const meta: StoredAuthMeta = {
+      isAuthenticated: auth.isAuthenticated,
+      email: auth.email,
+      expiresAt: auth.expiresAt,
+    };
+    await s.set(STORE_KEYS.auth, meta);
   } catch {
     // store write failed — caller should handle auth state separately
   }
@@ -41,6 +58,7 @@ export const setAuthState = async (auth: AuthState): Promise<void> => {
 
 export const clearAuth = async (): Promise<void> => {
   try {
+    await deleteTokens();
     const s = await getStore();
     await s.delete(STORE_KEYS.auth);
   } catch {

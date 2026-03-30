@@ -1,4 +1,5 @@
 mod archive;
+mod keychain;
 mod oauth;
 mod scanner;
 
@@ -96,6 +97,21 @@ async fn pick_folder(app: tauri::AppHandle) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+fn keychain_set(key: String, value: String) -> Result<(), String> {
+    keychain::set(&key, &value)
+}
+
+#[tauri::command]
+fn keychain_get(key: String) -> Result<Option<String>, String> {
+    keychain::get(&key)
+}
+
+#[tauri::command]
+fn keychain_delete(key: String) -> Result<(), String> {
+    keychain::delete(&key)
+}
+
+#[tauri::command]
 fn get_oauth_redirect_uri() -> String {
     oauth::get_redirect_uri()
 }
@@ -122,7 +138,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .invoke_handler(tauri::generate_handler![scan_games, create_zip, compute_save_hash, extract_zip, read_zip_meta, get_oauth_redirect_uri, start_oauth, send_native_notification, scan_manual_game, pick_folder])
+        .invoke_handler(tauri::generate_handler![scan_games, create_zip, compute_save_hash, extract_zip, read_zip_meta, get_oauth_redirect_uri, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set, keychain_get, keychain_delete])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

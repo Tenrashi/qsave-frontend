@@ -22,10 +22,20 @@ import {
 } from "./store";
 import type { SyncRecord, GameSyncFingerprint } from "@/domain/types";
 
-const { mockGet, mockSet, mockDelete } = vi.hoisted(() => ({
+const {
+  mockGet,
+  mockSet,
+  mockDelete,
+  mockSetTokens,
+  mockGetTokens,
+  mockDeleteTokens,
+} = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockSet: vi.fn(),
   mockDelete: vi.fn(),
+  mockSetTokens: vi.fn(() => Promise.resolve()),
+  mockGetTokens: vi.fn(() => Promise.resolve({})),
+  mockDeleteTokens: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("@tauri-apps/plugin-store", () => ({
@@ -38,23 +48,38 @@ vi.mock("@tauri-apps/plugin-store", () => ({
   ),
 }));
 
+vi.mock("@/lib/keychain/keychain", () => ({
+  setTokens: mockSetTokens,
+  getTokens: mockGetTokens,
+  deleteTokens: mockDeleteTokens,
+}));
+
 describe("store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("auth", () => {
-    it("returns persisted auth state", async () => {
-      const auth = { isAuthenticated: true, email: "a@b.com" };
-      mockGet.mockResolvedValueOnce(auth);
+    it("returns persisted auth state with tokens from keychain", async () => {
+      const meta = { isAuthenticated: true, email: "a@b.com", expiresAt: 123 };
+      mockGet.mockResolvedValueOnce(meta);
+      mockGetTokens.mockResolvedValueOnce({
+        accessToken: "at",
+        refreshToken: "rt",
+      });
 
-      expect(await getAuthState()).toEqual(auth);
+      expect(await getAuthState()).toEqual({
+        ...meta,
+        accessToken: "at",
+        refreshToken: "rt",
+      });
     });
 
     it("returns default when no auth stored", async () => {
       mockGet.mockResolvedValueOnce(null);
 
       expect(await getAuthState()).toEqual({ isAuthenticated: false });
+      expect(mockGetTokens).not.toHaveBeenCalled();
     });
 
     it("returns default on error", async () => {
@@ -63,11 +88,22 @@ describe("store", () => {
       expect(await getAuthState()).toEqual({ isAuthenticated: false });
     });
 
-    it("sets auth state", async () => {
-      const auth = { isAuthenticated: true, email: "a@b.com" };
+    it("stores tokens in keychain and metadata in store", async () => {
+      const auth = {
+        isAuthenticated: true,
+        email: "a@b.com",
+        accessToken: "at",
+        refreshToken: "rt",
+        expiresAt: 123,
+      };
       await setAuthState(auth);
 
-      expect(mockSet).toHaveBeenCalledWith("auth", auth);
+      expect(mockSetTokens).toHaveBeenCalledWith("at", "rt");
+      expect(mockSet).toHaveBeenCalledWith("auth", {
+        isAuthenticated: true,
+        email: "a@b.com",
+        expiresAt: 123,
+      });
     });
 
     it("does not throw on set error", async () => {
@@ -78,14 +114,15 @@ describe("store", () => {
       ).resolves.toBeUndefined();
     });
 
-    it("clears auth state", async () => {
+    it("clears tokens from keychain and metadata from store", async () => {
       await clearAuth();
 
+      expect(mockDeleteTokens).toHaveBeenCalledOnce();
       expect(mockDelete).toHaveBeenCalledWith("auth");
     });
 
     it("does not throw on clear error", async () => {
-      mockDelete.mockRejectedValueOnce(new Error("fail"));
+      mockDeleteTokens.mockRejectedValueOnce(new Error("fail"));
 
       await expect(clearAuth()).resolves.toBeUndefined();
     });
