@@ -34,6 +34,7 @@ export const TAURI_COMMANDS = {
 export const OAUTH_ENDPOINTS = {
   auth: "https://accounts.google.com/o/oauth2/v2/auth",
   token: "https://oauth2.googleapis.com/token",
+  revoke: "https://oauth2.googleapis.com/revoke",
   userInfo: "https://www.googleapis.com/oauth2/v2/userinfo",
 } as const;
 

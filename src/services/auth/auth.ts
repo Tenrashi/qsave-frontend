@@ -56,6 +56,14 @@ export const postTokenRefresh = async (
   return (await res.json()) as Omit<TokenResponse, "refresh_token">;
 };
 
+export const postTokenRevoke = async (token: string): Promise<void> => {
+  await fetch(OAUTH_ENDPOINTS.revoke, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token }).toString(),
+  });
+};
+
 export const getUserInfo = async (
   accessToken: string,
 ): Promise<UserInfoResponse> => {

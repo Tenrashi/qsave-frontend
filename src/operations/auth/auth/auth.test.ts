@@ -14,6 +14,7 @@ const {
   mockClearAuth,
   mockPostTokenExchange,
   mockPostTokenRefresh,
+  mockPostTokenRevoke,
   mockGetUserInfo,
   mockNotify,
   mockLogout,
@@ -26,6 +27,7 @@ const {
   mockClearAuth: vi.fn(),
   mockPostTokenExchange: vi.fn(),
   mockPostTokenRefresh: vi.fn(),
+  mockPostTokenRevoke: vi.fn(() => Promise.resolve()),
   mockGetUserInfo: vi.fn(),
   mockNotify: vi.fn(),
   mockLogout: vi.fn(() => Promise.resolve()),
@@ -46,6 +48,7 @@ vi.mock("@/lib/store/store", () => ({
 vi.mock("@/services/auth/auth", () => ({
   postTokenExchange: mockPostTokenExchange,
   postTokenRefresh: mockPostTokenRefresh,
+  postTokenRevoke: mockPostTokenRevoke,
   getUserInfo: mockGetUserInfo,
 }));
 
@@ -138,9 +141,49 @@ describe("auth", () => {
   });
 
   describe("logout", () => {
-    it("clears auth state from store", async () => {
+    it("revokes refresh token and clears auth state", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        accessToken: "at",
+        refreshToken: "rt",
+      });
+
       await logout();
 
+      expect(mockPostTokenRevoke).toHaveBeenCalledWith("rt");
+      expect(mockClearAuth).toHaveBeenCalledOnce();
+    });
+
+    it("falls back to access token when no refresh token", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        accessToken: "at",
+      });
+
+      await logout();
+
+      expect(mockPostTokenRevoke).toHaveBeenCalledWith("at");
+      expect(mockClearAuth).toHaveBeenCalledOnce();
+    });
+
+    it("clears auth even if revocation fails", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        refreshToken: "rt",
+      });
+      mockPostTokenRevoke.mockRejectedValueOnce(new Error("network error"));
+
+      await logout();
+
+      expect(mockClearAuth).toHaveBeenCalledOnce();
+    });
+
+    it("skips revocation when no tokens exist", async () => {
+      mockGetAuthState.mockResolvedValueOnce({ isAuthenticated: false });
+
+      await logout();
+
+      expect(mockPostTokenRevoke).not.toHaveBeenCalled();
       expect(mockClearAuth).toHaveBeenCalledOnce();
     });
   });

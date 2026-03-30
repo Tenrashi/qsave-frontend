@@ -11,6 +11,7 @@ import {
 import {
   postTokenExchange,
   postTokenRefresh,
+  postTokenRevoke,
   getUserInfo,
 } from "@/services/auth/auth";
 import { generateCodeVerifier, generateCodeChallenge } from "@/lib/pkce/pkce";
@@ -112,5 +113,10 @@ export const getValidToken = async (): Promise<string> => {
 };
 
 export const logout = async (): Promise<void> => {
+  const auth = await getAuthState();
+  const token = auth.refreshToken ?? auth.accessToken;
+  if (token) {
+    await postTokenRevoke(token).catch(() => {});
+  }
   await clearAuth();
 };
