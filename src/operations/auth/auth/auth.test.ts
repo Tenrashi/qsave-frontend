@@ -17,6 +17,8 @@ const {
   mockGetUserInfo,
   mockNotify,
   mockLogout,
+  mockGenerateCodeVerifier,
+  mockGenerateCodeChallenge,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn(),
   mockGetAuthState: vi.fn(),
@@ -27,6 +29,8 @@ const {
   mockGetUserInfo: vi.fn(),
   mockNotify: vi.fn(),
   mockLogout: vi.fn(() => Promise.resolve()),
+  mockGenerateCodeVerifier: vi.fn(() => "test-verifier"),
+  mockGenerateCodeChallenge: vi.fn(() => Promise.resolve("test-challenge")),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -43,6 +47,11 @@ vi.mock("@/services/auth/auth", () => ({
   postTokenExchange: mockPostTokenExchange,
   postTokenRefresh: mockPostTokenRefresh,
   getUserInfo: mockGetUserInfo,
+}));
+
+vi.mock("@/lib/pkce/pkce", () => ({
+  generateCodeVerifier: mockGenerateCodeVerifier,
+  generateCodeChallenge: mockGenerateCodeChallenge,
 }));
 
 vi.mock("@/lib/notify/notify", () => ({
@@ -137,7 +146,7 @@ describe("auth", () => {
   });
 
   describe("startOAuthFlow", () => {
-    it("gets redirect URI, builds auth URL, and exchanges code", async () => {
+    it("gets redirect URI, builds auth URL with PKCE, and exchanges code", async () => {
       mockInvoke
         .mockResolvedValueOnce("http://localhost:8080/callback")
         .mockResolvedValueOnce("auth-code-123");
@@ -155,6 +164,15 @@ describe("auth", () => {
       expect(result.email).toBe("user@test.com");
       expect(result.accessToken).toBe("token-abc");
       expect(mockSetAuthState).toHaveBeenCalled();
+
+      const authUrl = mockInvoke.mock.calls[1][1].authUrl;
+      expect(authUrl).toContain("code_challenge=test-challenge");
+      expect(authUrl).toContain("code_challenge_method=S256");
+      expect(mockPostTokenExchange).toHaveBeenCalledWith(
+        "auth-code-123",
+        "http://localhost:8080/callback",
+        "test-verifier",
+      );
     });
   });
 

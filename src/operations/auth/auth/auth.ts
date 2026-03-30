@@ -13,6 +13,7 @@ import {
   postTokenRefresh,
   getUserInfo,
 } from "@/services/auth/auth";
+import { generateCodeVerifier, generateCodeChallenge } from "@/lib/pkce/pkce";
 import { useAuthStore } from "@/stores/auth";
 import { notify } from "@/lib/notify/notify";
 import i18n from "@/i18n";
@@ -20,8 +21,14 @@ import i18n from "@/i18n";
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPES = "https://www.googleapis.com/auth/drive.file email";
 
+let pendingCodeVerifier: string | null = null;
+
 export const startOAuthFlow = async (): Promise<AuthState> => {
   const redirectUri: string = await invoke(TAURI_COMMANDS.getOAuthRedirectUri);
+
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  pendingCodeVerifier = codeVerifier;
 
   const authUrl = new URL(OAUTH_ENDPOINTS.auth);
   authUrl.searchParams.set("client_id", CLIENT_ID);
@@ -30,6 +37,8 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
   authUrl.searchParams.set("scope", SCOPES);
   authUrl.searchParams.set("access_type", OAUTH_PARAMS.accessTypeOffline);
   authUrl.searchParams.set("prompt", OAUTH_PARAMS.promptConsent);
+  authUrl.searchParams.set("code_challenge", codeChallenge);
+  authUrl.searchParams.set("code_challenge_method", "S256");
 
   const code: string = await invoke(TAURI_COMMANDS.startOAuth, {
     authUrl: authUrl.toString(),
@@ -44,7 +53,10 @@ export const exchangeCodeForTokens = async (
   const uri =
     redirectUri ?? (await invoke<string>(TAURI_COMMANDS.getOAuthRedirectUri));
 
-  const data = await postTokenExchange(code, uri);
+  const codeVerifier = pendingCodeVerifier;
+  pendingCodeVerifier = null;
+
+  const data = await postTokenExchange(code, uri, codeVerifier ?? undefined);
   const user = await getUserInfo(data.access_token);
 
   const auth: AuthState = {
