@@ -27,10 +27,6 @@
         { "url": "https://www.googleapis.com/**" }
       ]
     },
-    {
-      "identifier": "fs:allow-read-file",
-      "allow": [{ "path": "$HOME/**" }]
-    },
     "updater:default",
     "process:allow-restart"
   ]

@@ -115,6 +115,15 @@ describe("drive service", () => {
       const url = mockFetch.mock.calls[0][0] as string;
       expect(url).toContain(encodeURIComponent("Tom Clancy\\'s"));
     });
+
+    it("strips control characters from folder name", async () => {
+      mockFetch.mockResolvedValueOnce(okResponse({ files: [] }));
+
+      await getFolder("game\x00\nname", "root");
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain(encodeURIComponent("gamename"));
+    });
   });
 
   describe("getFile", () => {

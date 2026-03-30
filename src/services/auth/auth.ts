@@ -17,17 +17,21 @@ export type UserInfoResponse = {
 export const postTokenExchange = async (
   code: string,
   redirectUri: string,
+  codeVerifier?: string,
 ): Promise<TokenResponse> => {
+  const params: Record<string, string> = {
+    code,
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    redirect_uri: redirectUri,
+    grant_type: OAUTH_PARAMS.grantTypeAuthCode,
+  };
+  if (codeVerifier) params.code_verifier = codeVerifier;
+
   const res = await fetch(OAUTH_ENDPOINTS.token, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      code,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      redirect_uri: redirectUri,
-      grant_type: OAUTH_PARAMS.grantTypeAuthCode,
-    }).toString(),
+    body: new URLSearchParams(params).toString(),
   });
 
   if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`);
@@ -50,6 +54,16 @@ export const postTokenRefresh = async (
 
   if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
   return (await res.json()) as Omit<TokenResponse, "refresh_token">;
+};
+
+export const postTokenRevoke = async (token: string): Promise<void> => {
+  const res = await fetch(OAUTH_ENDPOINTS.revoke, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token }).toString(),
+  });
+
+  if (!res.ok) throw new Error(`Token revocation failed: ${res.status}`);
 };
 
 export const getUserInfo = async (

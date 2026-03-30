@@ -14,9 +14,12 @@ const {
   mockClearAuth,
   mockPostTokenExchange,
   mockPostTokenRefresh,
+  mockPostTokenRevoke,
   mockGetUserInfo,
   mockNotify,
   mockLogout,
+  mockGenerateCodeVerifier,
+  mockGenerateCodeChallenge,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn(),
   mockGetAuthState: vi.fn(),
@@ -24,9 +27,12 @@ const {
   mockClearAuth: vi.fn(),
   mockPostTokenExchange: vi.fn(),
   mockPostTokenRefresh: vi.fn(),
+  mockPostTokenRevoke: vi.fn(() => Promise.resolve()),
   mockGetUserInfo: vi.fn(),
   mockNotify: vi.fn(),
   mockLogout: vi.fn(() => Promise.resolve()),
+  mockGenerateCodeVerifier: vi.fn(() => "test-verifier"),
+  mockGenerateCodeChallenge: vi.fn(() => Promise.resolve("test-challenge")),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -42,7 +48,13 @@ vi.mock("@/lib/store/store", () => ({
 vi.mock("@/services/auth/auth", () => ({
   postTokenExchange: mockPostTokenExchange,
   postTokenRefresh: mockPostTokenRefresh,
+  postTokenRevoke: mockPostTokenRevoke,
   getUserInfo: mockGetUserInfo,
+}));
+
+vi.mock("@/lib/pkce/pkce", () => ({
+  generateCodeVerifier: mockGenerateCodeVerifier,
+  generateCodeChallenge: mockGenerateCodeChallenge,
 }));
 
 vi.mock("@/lib/notify/notify", () => ({
@@ -129,18 +141,59 @@ describe("auth", () => {
   });
 
   describe("logout", () => {
-    it("clears auth state from store", async () => {
+    it("revokes refresh token and clears auth state", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        accessToken: "at",
+        refreshToken: "rt",
+      });
+
       await logout();
 
+      expect(mockPostTokenRevoke).toHaveBeenCalledWith("rt");
+      expect(mockClearAuth).toHaveBeenCalledOnce();
+    });
+
+    it("falls back to access token when no refresh token", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        accessToken: "at",
+      });
+
+      await logout();
+
+      expect(mockPostTokenRevoke).toHaveBeenCalledWith("at");
+      expect(mockClearAuth).toHaveBeenCalledOnce();
+    });
+
+    it("clears auth even if revocation fails", async () => {
+      mockGetAuthState.mockResolvedValueOnce({
+        isAuthenticated: true,
+        refreshToken: "rt",
+      });
+      mockPostTokenRevoke.mockRejectedValueOnce(new Error("network error"));
+
+      await logout();
+
+      expect(mockClearAuth).toHaveBeenCalledOnce();
+    });
+
+    it("skips revocation when no tokens exist", async () => {
+      mockGetAuthState.mockResolvedValueOnce({ isAuthenticated: false });
+
+      await logout();
+
+      expect(mockPostTokenRevoke).not.toHaveBeenCalled();
       expect(mockClearAuth).toHaveBeenCalledOnce();
     });
   });
 
   describe("startOAuthFlow", () => {
-    it("gets redirect URI, builds auth URL, and exchanges code", async () => {
-      mockInvoke
-        .mockResolvedValueOnce("http://localhost:8080/callback")
-        .mockResolvedValueOnce("auth-code-123");
+    it("builds auth URL with PKCE and state, and exchanges code with returned redirect URI", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        code: "auth-code-123",
+        redirect_uri: "http://localhost:54321/callback",
+      });
 
       mockPostTokenExchange.mockResolvedValueOnce({
         access_token: "token-abc",
@@ -155,6 +208,21 @@ describe("auth", () => {
       expect(result.email).toBe("user@test.com");
       expect(result.accessToken).toBe("token-abc");
       expect(mockSetAuthState).toHaveBeenCalled();
+
+      const startOAuthCall = mockInvoke.mock.calls[0][1];
+      const authUrlBase = startOAuthCall.authUrlBase;
+      expect(authUrlBase).toContain("code_challenge=test-challenge");
+      expect(authUrlBase).toContain("code_challenge_method=S256");
+      expect(authUrlBase).toContain("state=");
+      expect(startOAuthCall.expectedState).toBeDefined();
+      expect(authUrlBase).toContain(`state=${startOAuthCall.expectedState}`);
+      expect(authUrlBase).not.toContain("redirect_uri");
+      expect(mockGenerateCodeVerifier).toHaveBeenCalledOnce();
+      expect(mockPostTokenExchange).toHaveBeenCalledWith(
+        "auth-code-123",
+        "http://localhost:54321/callback",
+        "test-verifier",
+      );
     });
   });
 
@@ -174,19 +242,6 @@ describe("auth", () => {
       expect(result.accessToken).toBe("at");
       expect(result.refreshToken).toBe("rt");
       expect(mockSetAuthState).toHaveBeenCalledWith(result);
-    });
-
-    it("gets redirect URI from invoke when not provided", async () => {
-      mockInvoke.mockResolvedValueOnce("http://localhost/cb");
-      mockPostTokenExchange.mockResolvedValueOnce({
-        access_token: "at",
-        expires_in: 3600,
-      });
-      mockGetUserInfo.mockResolvedValueOnce({ email: "a@b.com" });
-
-      await exchangeCodeForTokens("code");
-
-      expect(mockInvoke).toHaveBeenCalledWith("get_oauth_redirect_uri");
     });
   });
 

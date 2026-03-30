@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { postTokenExchange, postTokenRefresh, getUserInfo } from "./auth";
+import {
+  postTokenExchange,
+  postTokenRefresh,
+  postTokenRevoke,
+  getUserInfo,
+} from "./auth";
 
 const { mockFetch } = vi.hoisted(() => ({
   mockFetch: vi.fn(),
@@ -71,6 +76,19 @@ describe("auth service", () => {
 
       await expect(postTokenRefresh("rt")).rejects.toThrow(
         "Token refresh failed: 401",
+      );
+    });
+  });
+
+  describe("postTokenRevoke", () => {
+    it("sends token to revocation endpoint", async () => {
+      mockFetch.mockResolvedValueOnce(okResponse({}));
+
+      await postTokenRevoke("my-token");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("revoke"),
+        expect.objectContaining({ method: "POST" }),
       );
     });
   });

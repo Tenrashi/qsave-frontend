@@ -19,7 +19,6 @@ export const STORE_KEYS = {
 } as const;
 
 export const TAURI_COMMANDS = {
-  getOAuthRedirectUri: "get_oauth_redirect_uri",
   startOAuth: "start_oauth",
   createZip: "create_zip",
   computeSaveHash: "compute_save_hash",
@@ -29,11 +28,15 @@ export const TAURI_COMMANDS = {
   scanGames: "scan_games",
   scanManualGame: "scan_manual_game",
   pickFolder: "pick_folder",
+  keychainSet: "keychain_set",
+  keychainGet: "keychain_get",
+  keychainDelete: "keychain_delete",
 } as const;
 
 export const OAUTH_ENDPOINTS = {
   auth: "https://accounts.google.com/o/oauth2/v2/auth",
   token: "https://oauth2.googleapis.com/token",
+  revoke: "https://oauth2.googleapis.com/revoke",
   userInfo: "https://www.googleapis.com/oauth2/v2/userinfo",
 } as const;
 
