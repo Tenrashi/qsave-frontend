@@ -19,60 +19,88 @@ export const postTokenExchange = async (
   redirectUri: string,
   codeVerifier?: string,
 ): Promise<TokenResponse> => {
-  const params: Record<string, string> = {
-    code,
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    redirect_uri: redirectUri,
-    grant_type: OAUTH_PARAMS.grantTypeAuthCode,
-  };
-  if (codeVerifier) params.code_verifier = codeVerifier;
+  try {
+    const params: Record<string, string> = {
+      code,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: OAUTH_PARAMS.grantTypeAuthCode,
+    };
+    if (codeVerifier) params.code_verifier = codeVerifier;
 
-  const res = await fetch(OAUTH_ENDPOINTS.token, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(params).toString(),
-  });
+    const res = await fetch(OAUTH_ENDPOINTS.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(params).toString(),
+    });
 
-  if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`);
-  return (await res.json()) as TokenResponse;
+    if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`);
+    return (await res.json()) as TokenResponse;
+  } catch (error) {
+    throw new Error(
+      `Token exchange failed: ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
 };
 
 export const postTokenRefresh = async (
   refreshToken: string,
 ): Promise<Omit<TokenResponse, "refresh_token">> => {
-  const res = await fetch(OAUTH_ENDPOINTS.token, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      refresh_token: refreshToken,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      grant_type: OAUTH_PARAMS.grantTypeRefresh,
-    }).toString(),
-  });
+  try {
+    const res = await fetch(OAUTH_ENDPOINTS.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        refresh_token: refreshToken,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: OAUTH_PARAMS.grantTypeRefresh,
+      }).toString(),
+    });
 
-  if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
-  return (await res.json()) as Omit<TokenResponse, "refresh_token">;
+    if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
+    return (await res.json()) as Omit<TokenResponse, "refresh_token">;
+  } catch (error) {
+    throw new Error(
+      `Token refresh failed: ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
 };
 
 export const postTokenRevoke = async (token: string): Promise<void> => {
-  const res = await fetch(OAUTH_ENDPOINTS.revoke, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ token }).toString(),
-  });
+  try {
+    const res = await fetch(OAUTH_ENDPOINTS.revoke, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }).toString(),
+    });
 
-  if (!res.ok) throw new Error(`Token revocation failed: ${res.status}`);
+    if (!res.ok) throw new Error(`Token revocation failed: ${res.status}`);
+  } catch (error) {
+    throw new Error(
+      `Token revocation failed: ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
 };
 
 export const getUserInfo = async (
   accessToken: string,
 ): Promise<UserInfoResponse> => {
-  const res = await fetch(OAUTH_ENDPOINTS.userInfo, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  try {
+    const res = await fetch(OAUTH_ENDPOINTS.userInfo, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-  if (!res.ok) throw new Error(`Failed to fetch user info: ${res.status}`);
-  return (await res.json()) as UserInfoResponse;
+    if (!res.ok) throw new Error(`Failed to fetch user info: ${res.status}`);
+    return (await res.json()) as UserInfoResponse;
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch user info: ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
 };
