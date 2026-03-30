@@ -30,23 +30,30 @@ export const postFolder = async (
   name: string,
   parentId: string,
 ): Promise<string> => {
-  const headers = await authHeaders();
-  const res = await fetch(`${DRIVE_ENDPOINTS.api}/files`, {
-    method: "POST",
-    headers: {
-      ...headers,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name,
-      mimeType: MIME_TYPES.googleFolder,
-      parents: [parentId],
-    }),
-  });
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${DRIVE_ENDPOINTS.api}/files`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        mimeType: MIME_TYPES.googleFolder,
+        parents: [parentId],
+      }),
+    });
 
-  await assertOk(res, "Failed to create folder");
-  const data = (await res.json()) as { id: string };
-  return data.id;
+    await assertOk(res, "Failed to create folder");
+    const data = (await res.json()) as { id: string };
+    return data.id;
+  } catch (error) {
+    throw new Error(
+      `Failed to create folder "${name}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
 };
 
 export const getFolder = async (
@@ -92,18 +99,25 @@ export const getFile = async (
 export const getFilesInFolder = async (
   folderId: string,
 ): Promise<{ id: string; name: string; createdTime: string }[]> => {
-  const headers = await authHeaders();
-  const query = `'${escapeQueryValue(folderId)}' in parents and trashed=false`;
-  const res = await fetch(
-    `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id,name,createdTime)&orderBy=createdTime`,
-    { headers },
-  );
+  try {
+    const headers = await authHeaders();
+    const query = `'${escapeQueryValue(folderId)}' in parents and trashed=false`;
+    const res = await fetch(
+      `${DRIVE_ENDPOINTS.api}/files?q=${encodeURIComponent(query)}&fields=files(id,name,createdTime)&orderBy=createdTime`,
+      { headers },
+    );
 
-  await assertOk(res, "Failed to list files");
-  const data = (await res.json()) as {
-    files: { id: string; name: string; createdTime: string }[];
-  };
-  return data.files;
+    await assertOk(res, "Failed to list files");
+    const data = (await res.json()) as {
+      files: { id: string; name: string; createdTime: string }[];
+    };
+    return data.files;
+  } catch (error) {
+    throw new Error(
+      `Failed to list files in folder "${folderId}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
 };
 
 export const getDeviceFile = async (
@@ -128,57 +142,71 @@ export const putDeviceFile = async (
   entry: DeviceEntry,
   existingFileId: string | null,
 ): Promise<void> => {
-  const content = JSON.stringify(entry, null, 2);
-  const headers = await authHeaders();
-  const fileName = `${deviceId}.json`;
+  try {
+    const content = JSON.stringify(entry, null, 2);
+    const headers = await authHeaders();
+    const fileName = `${deviceId}.json`;
 
-  if (existingFileId) {
+    if (existingFileId) {
+      const res = await fetch(
+        `${DRIVE_ENDPOINTS.upload}/files/${existingFileId}?uploadType=media`,
+        {
+          method: "PATCH",
+          headers: {
+            ...headers,
+            "Content-Type": MIME_TYPES.jsonUtf8,
+          },
+          body: content,
+        },
+      );
+      await assertOk(res, "Failed to update device file");
+      return;
+    }
+
+    const metadata = JSON.stringify({
+      name: fileName,
+      parents: [folderId],
+    });
+    const boundary = "qsave_device_" + crypto.randomUUID();
+    const body = buildMultipartBody(
+      boundary,
+      metadata,
+      new TextEncoder().encode(content),
+    );
     const res = await fetch(
-      `${DRIVE_ENDPOINTS.upload}/files/${existingFileId}?uploadType=media`,
+      `${DRIVE_ENDPOINTS.upload}/files?uploadType=multipart`,
       {
-        method: "PATCH",
+        method: "POST",
         headers: {
           ...headers,
-          "Content-Type": MIME_TYPES.jsonUtf8,
+          "Content-Type": `multipart/related; boundary=${boundary}`,
         },
-        body: content,
+        body: body.buffer as ArrayBuffer,
       },
     );
-    await assertOk(res, "Failed to update device file");
-    return;
+    await assertOk(res, "Failed to create device file");
+  } catch (error) {
+    throw new Error(
+      `Failed to save device file "${deviceId}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
   }
-
-  const metadata = JSON.stringify({
-    name: fileName,
-    parents: [folderId],
-  });
-  const boundary = "qsave_device_" + crypto.randomUUID();
-  const body = buildMultipartBody(
-    boundary,
-    metadata,
-    new TextEncoder().encode(content),
-  );
-  const res = await fetch(
-    `${DRIVE_ENDPOINTS.upload}/files?uploadType=multipart`,
-    {
-      method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-      },
-      body: body.buffer as ArrayBuffer,
-    },
-  );
-  await assertOk(res, "Failed to create device file");
 };
 
 export const deleteFile = async (fileId: string): Promise<void> => {
-  const headers = await authHeaders();
-  const res = await fetch(`${DRIVE_ENDPOINTS.api}/files/${fileId}`, {
-    method: "DELETE",
-    headers,
-  });
-  await assertOk(res, "Failed to delete file");
+  try {
+    const headers = await authHeaders();
+    const res = await fetch(`${DRIVE_ENDPOINTS.api}/files/${fileId}`, {
+      method: "DELETE",
+      headers,
+    });
+    await assertOk(res, "Failed to delete file");
+  } catch (error) {
+    throw new Error(
+      `Failed to delete file "${fileId}": ${error instanceof Error ? error.message : error}`,
+      { cause: error },
+    );
+  }
 };
 
 export const getBackupFile = async (fileId: string): Promise<Uint8Array> => {

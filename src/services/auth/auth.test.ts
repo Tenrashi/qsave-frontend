@@ -58,6 +58,37 @@ describe("auth service", () => {
         "Token exchange failed: 400",
       );
     });
+
+    it("includes code verifier when provided", async () => {
+      mockFetch.mockResolvedValueOnce(
+        okResponse({
+          access_token: "at",
+          refresh_token: "rt",
+          expires_in: 3600,
+        }),
+      );
+
+      await postTokenExchange("code", "http://redirect", "verifier-123");
+
+      const body = mockFetch.mock.calls[0][1].body as string;
+      expect(body).toContain("code_verifier=verifier-123");
+    });
+
+    it("wraps network errors with context", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      await expect(postTokenExchange("code", "http://r")).rejects.toThrow(
+        "Token exchange failed: Network error",
+      );
+    });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(postTokenExchange("code", "http://r")).rejects.toThrow(
+        "Token exchange failed: string error",
+      );
+    });
   });
 
   describe("postTokenRefresh", () => {
@@ -78,6 +109,22 @@ describe("auth service", () => {
         "Token refresh failed: 401",
       );
     });
+
+    it("wraps network errors with context", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      await expect(postTokenRefresh("rt")).rejects.toThrow(
+        "Token refresh failed: Network error",
+      );
+    });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(postTokenRefresh("rt")).rejects.toThrow(
+        "Token refresh failed: string error",
+      );
+    });
   });
 
   describe("postTokenRevoke", () => {
@@ -89,6 +136,30 @@ describe("auth service", () => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("revoke"),
         expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    it("throws on failure", async () => {
+      mockFetch.mockResolvedValueOnce(errorResponse(400));
+
+      await expect(postTokenRevoke("my-token")).rejects.toThrow(
+        "Token revocation failed",
+      );
+    });
+
+    it("wraps network errors with context", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      await expect(postTokenRevoke("my-token")).rejects.toThrow(
+        "Token revocation failed: Network error",
+      );
+    });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(postTokenRevoke("my-token")).rejects.toThrow(
+        "Token revocation failed: string error",
       );
     });
   });
@@ -113,6 +184,22 @@ describe("auth service", () => {
 
       await expect(getUserInfo("token")).rejects.toThrow(
         "Failed to fetch user info: 401",
+      );
+    });
+
+    it("wraps network errors with context", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+      await expect(getUserInfo("token")).rejects.toThrow(
+        "Failed to fetch user info: Network error",
+      );
+    });
+
+    it("handles non-Error throw", async () => {
+      mockFetch.mockRejectedValueOnce("string error");
+
+      await expect(getUserInfo("token")).rejects.toThrow(
+        "Failed to fetch user info: string error",
       );
     });
   });
