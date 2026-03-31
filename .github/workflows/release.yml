@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (e.g. v1.0.0-alpha.1)"
+        required: true
 
 jobs:
   build:
@@ -21,7 +26,13 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
+    env:
+      RELEASE_TAG: ${{ github.ref_name || inputs.tag }}
+
+    steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: pnpm/action-setup@v4
         with:
@@ -51,10 +62,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "QSave ${{ github.ref_name }}"
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: "QSave ${{ env.RELEASE_TAG }}"
           releaseBody: "See the assets below to download and install QSave."
           releaseDraft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}

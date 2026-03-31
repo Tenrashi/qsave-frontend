@@ -41,6 +41,17 @@ jobs:
         run: pnpm install
 
       - name: Run semantic-release
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: pnpm exec semantic-release
+        run: |
+          pnpm exec semantic-release 2>&1 | tee sr-output.txt
+          TAG=$(grep -oP 'Published release \K[^ ]+' sr-output.txt || true)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger release build
+        if: steps.semantic.outputs.tag != ''
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh workflow run release.yml -f tag=${{ steps.semantic.outputs.tag }}
