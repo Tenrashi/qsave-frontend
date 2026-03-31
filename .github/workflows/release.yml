@@ -54,7 +54,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "QSave ${{ github.ref_name }}"
           releaseBody: "See the assets below to download and install QSave."
-          releaseDraft: true
-          prerelease: false
+          releaseDraft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
