@@ -1,3 +1,9 @@
+## [1.0.4](https://github.com/Tenrashi/qsave/compare/v1.0.3...v1.0.4) (2026-03-31)
+
+### Bug Fixes
+
+- resolve Windows compatibility issues across backend and frontend ([#33](https://github.com/Tenrashi/qsave/issues/33)) ([dc8877c](https://github.com/Tenrashi/qsave/commit/dc8877c0fffcb311455513a8e9ad98a3da5c9304))
+
 ## [1.0.3](https://github.com/Tenrashi/qsave/compare/v1.0.2...v1.0.3) (2026-03-31)
 
 ### Bug Fixes
