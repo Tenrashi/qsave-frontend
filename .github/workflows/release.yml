@@ -25,7 +25,6 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
 
-    steps:
     env:
       RELEASE_TAG: ${{ github.ref_name || inputs.tag }}
 
