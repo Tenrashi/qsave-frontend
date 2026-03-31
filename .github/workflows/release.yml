@@ -29,10 +29,6 @@ jobs:
       RELEASE_TAG: ${{ github.ref_name || inputs.tag }}
 
     steps:
-    env:
-      RELEASE_TAG: ${{ github.ref_name || inputs.tag }}
-
-    steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_TAG }}
