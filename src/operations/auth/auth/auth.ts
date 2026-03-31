@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { AuthState } from "@/domain/types";
-import { getAuthState, setAuthState, clearAuth } from "@/lib/store/store";
+import { setAuthState, clearAuth } from "@/lib/store/store";
 import {
   TAURI_COMMANDS,
   TOKEN_EXPIRY_BUFFER_MS,
@@ -72,7 +72,7 @@ export const exchangeCodeForTokens = async (
 };
 
 export const refreshAccessToken = async (): Promise<AuthState> => {
-  const auth = await getAuthState();
+  const auth = useAuthStore.getState().auth;
   if (!auth.refreshToken) throw new Error("No refresh token");
 
   try {
@@ -85,6 +85,7 @@ export const refreshAccessToken = async (): Promise<AuthState> => {
     };
 
     await setAuthState(updated);
+    useAuthStore.setState({ auth: updated });
     return updated;
   } catch (error) {
     await useAuthStore.getState().logout();
@@ -94,7 +95,7 @@ export const refreshAccessToken = async (): Promise<AuthState> => {
 };
 
 export const getValidToken = async (): Promise<string> => {
-  const auth = await getAuthState();
+  const auth = useAuthStore.getState().auth;
   if (!auth.isAuthenticated || !auth.accessToken) {
     throw new Error("Not authenticated");
   }
@@ -108,7 +109,7 @@ export const getValidToken = async (): Promise<string> => {
 };
 
 export const logout = async (): Promise<void> => {
-  const auth = await getAuthState();
+  const auth = useAuthStore.getState().auth;
   const token = auth.refreshToken ?? auth.accessToken;
   if (token) {
     await postTokenRevoke(token).catch(() => {});

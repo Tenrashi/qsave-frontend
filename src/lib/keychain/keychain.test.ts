@@ -15,52 +15,59 @@ describe("keychain", () => {
   });
 
   describe("setTokens", () => {
-    it("stores both tokens via keychain commands", async () => {
+    it("stores both tokens in a single keychain call", async () => {
       await setTokens("access-token", "refresh-token");
 
-      expect(mockInvoke).toHaveBeenCalledWith("keychain_set", {
-        key: "access_token",
-        value: "access-token",
-      });
-      expect(mockInvoke).toHaveBeenCalledWith("keychain_set", {
-        key: "refresh_token",
-        value: "refresh-token",
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+      expect(mockInvoke).toHaveBeenCalledWith("keychain_set_tokens", {
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
       });
     });
 
-    it("stores only access token when refresh token is undefined", async () => {
+    it("passes null for undefined tokens", async () => {
       await setTokens("access-token", undefined);
 
       expect(mockInvoke).toHaveBeenCalledTimes(1);
-      expect(mockInvoke).toHaveBeenCalledWith("keychain_set", {
-        key: "access_token",
-        value: "access-token",
+      expect(mockInvoke).toHaveBeenCalledWith("keychain_set_tokens", {
+        accessToken: "access-token",
+        refreshToken: null,
       });
     });
 
-    it("does nothing when both tokens are undefined", async () => {
+    it("passes null for both when both are undefined", async () => {
       await setTokens(undefined, undefined);
 
-      expect(mockInvoke).not.toHaveBeenCalled();
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+      expect(mockInvoke).toHaveBeenCalledWith("keychain_set_tokens", {
+        accessToken: null,
+        refreshToken: null,
+      });
     });
   });
 
   describe("getTokens", () => {
-    it("retrieves both tokens from keychain", async () => {
-      mockInvoke
-        .mockResolvedValueOnce("access-token")
-        .mockResolvedValueOnce("refresh-token");
+    it("retrieves both tokens from a single keychain call", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+      });
 
       const result = await getTokens();
 
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+      expect(mockInvoke).toHaveBeenCalledWith("keychain_get_tokens");
       expect(result).toEqual({
         accessToken: "access-token",
         refreshToken: "refresh-token",
       });
     });
 
-    it("returns undefined for missing tokens", async () => {
-      mockInvoke.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    it("returns undefined for null tokens", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        access_token: null,
+        refresh_token: null,
+      });
 
       const result = await getTokens();
 
@@ -69,18 +76,48 @@ describe("keychain", () => {
         refreshToken: undefined,
       });
     });
+
+    it("returns only access token when refresh token is null", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        access_token: "access-token",
+        refresh_token: null,
+      });
+
+      const result = await getTokens();
+
+      expect(result).toEqual({
+        accessToken: "access-token",
+        refreshToken: undefined,
+      });
+    });
+
+    it("propagates invoke errors", async () => {
+      mockInvoke.mockRejectedValueOnce(new Error("keychain locked"));
+
+      await expect(getTokens()).rejects.toThrow("keychain locked");
+    });
+  });
+
+  describe("setTokens", () => {
+    it("propagates invoke errors", async () => {
+      mockInvoke.mockRejectedValueOnce(new Error("keychain locked"));
+
+      await expect(setTokens("at", "rt")).rejects.toThrow("keychain locked");
+    });
   });
 
   describe("deleteTokens", () => {
-    it("deletes both tokens from keychain", async () => {
+    it("deletes tokens in a single keychain call", async () => {
       await deleteTokens();
 
-      expect(mockInvoke).toHaveBeenCalledWith("keychain_delete", {
-        key: "access_token",
-      });
-      expect(mockInvoke).toHaveBeenCalledWith("keychain_delete", {
-        key: "refresh_token",
-      });
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+      expect(mockInvoke).toHaveBeenCalledWith("keychain_delete_tokens");
+    });
+
+    it("propagates invoke errors", async () => {
+      mockInvoke.mockRejectedValueOnce(new Error("keychain locked"));
+
+      await expect(deleteTokens()).rejects.toThrow("keychain locked");
     });
   });
 });

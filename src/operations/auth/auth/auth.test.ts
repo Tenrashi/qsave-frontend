@@ -9,7 +9,7 @@ import {
 
 const {
   mockInvoke,
-  mockGetAuthState,
+  mockAuthState,
   mockSetAuthState,
   mockClearAuth,
   mockPostTokenExchange,
@@ -18,11 +18,14 @@ const {
   mockGetUserInfo,
   mockNotify,
   mockLogout,
+  mockSetState,
   mockGenerateCodeVerifier,
   mockGenerateCodeChallenge,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn(),
-  mockGetAuthState: vi.fn(),
+  mockAuthState: {
+    current: { isAuthenticated: false } as Record<string, unknown>,
+  },
   mockSetAuthState: vi.fn(),
   mockClearAuth: vi.fn(),
   mockPostTokenExchange: vi.fn(),
@@ -31,6 +34,7 @@ const {
   mockGetUserInfo: vi.fn(),
   mockNotify: vi.fn(),
   mockLogout: vi.fn(() => Promise.resolve()),
+  mockSetState: vi.fn(),
   mockGenerateCodeVerifier: vi.fn(() => "test-verifier"),
   mockGenerateCodeChallenge: vi.fn(() => Promise.resolve("test-challenge")),
 }));
@@ -40,7 +44,6 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 vi.mock("@/lib/store/store", () => ({
-  getAuthState: mockGetAuthState,
   setAuthState: mockSetAuthState,
   clearAuth: mockClearAuth,
 }));
@@ -63,47 +66,60 @@ vi.mock("@/lib/notify/notify", () => ({
 
 vi.mock("@/stores/auth", () => ({
   useAuthStore: {
-    getState: () => ({ logout: mockLogout }),
+    getState: () => ({ auth: mockAuthState.current, logout: mockLogout }),
+    setState: mockSetState,
   },
 }));
 
 describe("auth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthState.current = { isAuthenticated: false };
   });
 
   describe("getValidToken", () => {
     it("returns access token when authenticated and not expired", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         accessToken: "valid-token",
         expiresAt: Date.now() + 3_600_000,
-      });
+      };
 
       expect(await getValidToken()).toBe("valid-token");
     });
 
+    it("reads from in-memory store without hitting keychain", async () => {
+      mockAuthState.current = {
+        isAuthenticated: true,
+        accessToken: "valid-token",
+        expiresAt: Date.now() + 3_600_000,
+      };
+
+      await getValidToken();
+
+      expect(mockSetAuthState).not.toHaveBeenCalled();
+      expect(mockInvoke).not.toHaveBeenCalled();
+    });
+
     it("throws when not authenticated", async () => {
-      mockGetAuthState.mockResolvedValueOnce({ isAuthenticated: false });
+      mockAuthState.current = { isAuthenticated: false };
+
+      await expect(getValidToken()).rejects.toThrow("Not authenticated");
+    });
+
+    it("throws when authenticated but accessToken is missing", async () => {
+      mockAuthState.current = { isAuthenticated: true };
 
       await expect(getValidToken()).rejects.toThrow("Not authenticated");
     });
 
     it("refreshes token when expiring within buffer", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         accessToken: "old-token",
         refreshToken: "refresh-token",
         expiresAt: Date.now() + 60_000,
-      });
-
-      // refreshAccessToken calls getAuthState again
-      mockGetAuthState.mockResolvedValueOnce({
-        isAuthenticated: true,
-        accessToken: "old-token",
-        refreshToken: "refresh-token",
-        expiresAt: Date.now() + 60_000,
-      });
+      };
 
       mockPostTokenRefresh.mockResolvedValueOnce({
         access_token: "new-token",
@@ -116,18 +132,12 @@ describe("auth", () => {
     });
 
     it("falls back to original token when refresh returns no accessToken", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         accessToken: "original-token",
         refreshToken: "refresh-token",
         expiresAt: Date.now() + 60_000,
-      });
-
-      mockGetAuthState.mockResolvedValueOnce({
-        isAuthenticated: true,
-        refreshToken: "refresh-token",
-        expiresAt: Date.now() + 60_000,
-      });
+      };
 
       mockPostTokenRefresh.mockResolvedValueOnce({
         access_token: undefined,
@@ -138,15 +148,27 @@ describe("auth", () => {
 
       expect(token).toBe("original-token");
     });
+
+    it("does not refresh when expiresAt is undefined", async () => {
+      mockAuthState.current = {
+        isAuthenticated: true,
+        accessToken: "valid-token",
+      };
+
+      const token = await getValidToken();
+
+      expect(token).toBe("valid-token");
+      expect(mockPostTokenRefresh).not.toHaveBeenCalled();
+    });
   });
 
   describe("logout", () => {
     it("revokes refresh token and clears auth state", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         accessToken: "at",
         refreshToken: "rt",
-      });
+      };
 
       await logout();
 
@@ -154,11 +176,23 @@ describe("auth", () => {
       expect(mockClearAuth).toHaveBeenCalledOnce();
     });
 
-    it("falls back to access token when no refresh token", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+    it("reads from in-memory store without hitting keychain", async () => {
+      mockAuthState.current = {
         isAuthenticated: true,
         accessToken: "at",
-      });
+        refreshToken: "rt",
+      };
+
+      await logout();
+
+      expect(mockInvoke).not.toHaveBeenCalled();
+    });
+
+    it("falls back to access token when no refresh token", async () => {
+      mockAuthState.current = {
+        isAuthenticated: true,
+        accessToken: "at",
+      };
 
       await logout();
 
@@ -167,10 +201,10 @@ describe("auth", () => {
     });
 
     it("clears auth even if revocation fails", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         refreshToken: "rt",
-      });
+      };
       mockPostTokenRevoke.mockRejectedValueOnce(new Error("network error"));
 
       await logout();
@@ -179,7 +213,7 @@ describe("auth", () => {
     });
 
     it("skips revocation when no tokens exist", async () => {
-      mockGetAuthState.mockResolvedValueOnce({ isAuthenticated: false });
+      mockAuthState.current = { isAuthenticated: false };
 
       await logout();
 
@@ -246,14 +280,14 @@ describe("auth", () => {
   });
 
   describe("refreshAccessToken", () => {
-    it("refreshes and persists new token", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+    it("refreshes and persists to both keychain and in-memory store", async () => {
+      mockAuthState.current = {
         isAuthenticated: true,
         accessToken: "old",
         refreshToken: "rt",
         email: "a@b.com",
         expiresAt: Date.now(),
-      });
+      };
 
       mockPostTokenRefresh.mockResolvedValueOnce({
         access_token: "new-at",
@@ -265,22 +299,62 @@ describe("auth", () => {
       expect(result.accessToken).toBe("new-at");
       expect(result.email).toBe("a@b.com");
       expect(mockSetAuthState).toHaveBeenCalledWith(result);
+      expect(mockSetState).toHaveBeenCalledWith({ auth: result });
+    });
+
+    it("reads from in-memory store without hitting keychain", async () => {
+      mockAuthState.current = {
+        isAuthenticated: true,
+        accessToken: "old",
+        refreshToken: "rt",
+        expiresAt: Date.now(),
+      };
+
+      mockPostTokenRefresh.mockResolvedValueOnce({
+        access_token: "new-at",
+        expires_in: 3600,
+      });
+
+      await refreshAccessToken();
+
+      expect(mockInvoke).not.toHaveBeenCalled();
+    });
+
+    it("preserves existing auth fields in updated state", async () => {
+      mockAuthState.current = {
+        isAuthenticated: true,
+        accessToken: "old",
+        refreshToken: "rt",
+        email: "a@b.com",
+        expiresAt: Date.now(),
+      };
+
+      mockPostTokenRefresh.mockResolvedValueOnce({
+        access_token: "new-at",
+        expires_in: 3600,
+      });
+
+      const result = await refreshAccessToken();
+
+      expect(result.isAuthenticated).toBe(true);
+      expect(result.refreshToken).toBe("rt");
+      expect(result.email).toBe("a@b.com");
     });
 
     it("throws when no refresh token", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         accessToken: "at",
-      });
+      };
 
       await expect(refreshAccessToken()).rejects.toThrow("No refresh token");
     });
 
     it("throws on refresh failure", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         refreshToken: "rt",
-      });
+      };
 
       mockPostTokenRefresh.mockRejectedValueOnce(
         new Error("Token refresh failed: 401"),
@@ -292,10 +366,10 @@ describe("auth", () => {
     });
 
     it("logs out and notifies user on refresh failure", async () => {
-      mockGetAuthState.mockResolvedValueOnce({
+      mockAuthState.current = {
         isAuthenticated: true,
         refreshToken: "rt",
-      });
+      };
 
       mockPostTokenRefresh.mockRejectedValueOnce(
         new Error("Token refresh failed: 400"),
@@ -308,6 +382,20 @@ describe("auth", () => {
         "QSave",
         "notifications.sessionExpired",
       );
+    });
+
+    it("does not update stores on refresh failure", async () => {
+      mockAuthState.current = {
+        isAuthenticated: true,
+        refreshToken: "rt",
+      };
+
+      mockPostTokenRefresh.mockRejectedValueOnce(new Error("fail"));
+
+      await expect(refreshAccessToken()).rejects.toThrow();
+
+      expect(mockSetAuthState).not.toHaveBeenCalled();
+      expect(mockSetState).not.toHaveBeenCalled();
     });
   });
 });

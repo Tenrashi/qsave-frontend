@@ -1,30 +1,42 @@
-const SERVICE: &str = "com.qsave.app";
+use serde::{Deserialize, Serialize};
 
-fn keychain_error(action: &str, key: &str, error: keyring::Error) -> String {
+const SERVICE: &str = "com.qsave.app";
+const TOKENS_KEY: &str = "tokens";
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct Tokens {
+    pub access_token: Option<String>,
+    pub refresh_token: Option<String>,
+}
+
+fn keychain_error(action: &str, error: keyring::Error) -> String {
     format!(
-        "Failed to {} keychain entry '{}': {}. On Linux, ensure a Secret Service provider (e.g. gnome-keyring) is running.",
-        action, key, error
+        "Failed to {} keychain entry: {}. On Linux, ensure a Secret Service provider (e.g. gnome-keyring) is running.",
+        action, error
     )
 }
 
-pub fn set(key: &str, value: &str) -> Result<(), String> {
-    let entry = keyring::Entry::new(SERVICE, key).map_err(|e| keychain_error("create", key, e))?;
-    entry.set_password(value).map_err(|e| keychain_error("set", key, e))
+fn entry() -> Result<keyring::Entry, String> {
+    keyring::Entry::new(SERVICE, TOKENS_KEY).map_err(|e| keychain_error("create", e))
 }
 
-pub fn get(key: &str) -> Result<Option<String>, String> {
-    let entry = keyring::Entry::new(SERVICE, key).map_err(|e| keychain_error("create", key, e))?;
-    match entry.get_password() {
-        Ok(value) => Ok(Some(value)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(e) => Err(keychain_error("read", key, e)),
+pub fn set_tokens(access_token: Option<String>, refresh_token: Option<String>) -> Result<(), String> {
+    let tokens = Tokens { access_token, refresh_token };
+    let json = serde_json::to_string(&tokens).map_err(|e| format!("Failed to serialize tokens: {}", e))?;
+    entry()?.set_password(&json).map_err(|e| keychain_error("set", e))
+}
+
+pub fn get_tokens() -> Result<Tokens, String> {
+    match entry()?.get_password() {
+        Ok(json) => serde_json::from_str(&json).map_err(|e| format!("Failed to deserialize tokens: {}", e)),
+        Err(keyring::Error::NoEntry) => Ok(Tokens::default()),
+        Err(e) => Err(keychain_error("read", e)),
     }
 }
 
-pub fn delete(key: &str) -> Result<(), String> {
-    let entry = keyring::Entry::new(SERVICE, key).map_err(|e| keychain_error("create", key, e))?;
-    match entry.delete_credential() {
+pub fn delete_tokens() -> Result<(), String> {
+    match entry()?.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(e) => Err(keychain_error("delete", key, e)),
+        Err(e) => Err(keychain_error("delete", e)),
     }
 }
