@@ -30,15 +30,16 @@ pub fn resolve_path(raw: &str, home: &str, username: &str, root: Option<&str>) -
         let appdata = format!("{}\\AppData\\Roaming", home);
         let local_appdata = format!("{}\\AppData\\Local", home);
         let docs = format!("{}\\Documents", home);
-        let public_dir = "C:\\Users\\Public";
+        let public_dir = std::env::var("PUBLIC")
+            .unwrap_or_else(|_| "C:\\Users\\Public".to_string());
         resolved = resolved.replace("<winAppData>", &appdata);
         resolved = resolved.replace("<WinAppData>", &appdata);
         resolved = resolved.replace("<winLocalAppData>", &local_appdata);
         resolved = resolved.replace("<WinLocalAppData>", &local_appdata);
         resolved = resolved.replace("<winDocuments>", &docs);
         resolved = resolved.replace("<WinDocuments>", &docs);
-        resolved = resolved.replace("<winPublic>", public_dir);
-        resolved = resolved.replace("<WinPublic>", public_dir);
+        resolved = resolved.replace("<winPublic>", &public_dir);
+        resolved = resolved.replace("<WinPublic>", &public_dir);
     }
 
     #[cfg(target_os = "macos")]

@@ -10,6 +10,7 @@ import { scheduleAutoSync, cancelAllAutoSyncs } from "@/lib/autoSync/autoSync";
 import { computeContentHash } from "@/lib/hash/hash";
 import { rescanGame } from "@/operations/scanner/scanner/scanner";
 import { useSyncAndUpdate } from "@/hooks/useSyncAndUpdate/useSyncAndUpdate";
+import { pathStartsWith } from "@/lib/path/path";
 
 export const useAutoSync = (games: Game[] | undefined): void => {
   const queryClient = useQueryClient();
@@ -62,7 +63,7 @@ export const useAutoSync = (games: Game[] | undefined): void => {
       const affectedGames = new Set<string>();
       for (const changed of changedPaths) {
         for (const [dir, gameName] of dirToGame) {
-          if (!changed.startsWith(dir)) continue;
+          if (!pathStartsWith(changed, dir)) continue;
           affectedGames.add(gameName);
         }
       }

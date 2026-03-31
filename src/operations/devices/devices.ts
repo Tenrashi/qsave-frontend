@@ -1,3 +1,4 @@
+import { platform } from "@tauri-apps/plugin-os";
 import type { DeviceEntry, DevicesMap, GameDeviceInfo } from "./devices.types";
 import { normalizeGameInfo } from "./devices.types";
 import {
@@ -9,9 +10,9 @@ import {
 import { ensureDevicesFolder } from "@/operations/drive/folders/folders";
 
 const currentOS = (): string => {
-  const ua = navigator.userAgent;
-  if (ua.includes("Windows")) return "windows";
-  if (ua.includes("Macintosh")) return "macos";
+  const os = platform();
+  if (os === "windows") return "windows";
+  if (os === "macos") return "macos";
   return "linux";
 };
 
