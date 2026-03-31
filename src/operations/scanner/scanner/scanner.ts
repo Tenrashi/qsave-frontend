@@ -18,6 +18,7 @@ const toGame = (game: RustDetectedGame, isManual = false): Game => ({
     }),
   ),
   isManual,
+  platform: game.platform ?? undefined,
   hasSteamCloud: game.hasSteamCloud,
 });
 

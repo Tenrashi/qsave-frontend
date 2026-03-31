@@ -144,10 +144,15 @@ pub fn resolve_candidates(
             let files = entry.files?;
             let steam_id = entry.steam.and_then(|s| s.id);
             let gog_id = entry.gog.and_then(|g| g.id);
-            let has_steam_cloud = entry.cloud.map_or(false, |c| c.steam);
-            let root = steam_id
-                .and_then(|id| steam_roots.get(&id))
-                .or_else(|| gog_id.and_then(|id| gog_roots.get(&id)))
+            let steam_root = steam_id.and_then(|id| steam_roots.get(&id));
+            let gog_root = gog_id.and_then(|id| gog_roots.get(&id));
+            let platform = steam_root
+                .map(|_| "steam".to_string())
+                .or_else(|| gog_root.map(|_| "gog".to_string()));
+            let manifest_has_steam_cloud = entry.cloud.map_or(false, |c| c.steam);
+            let has_steam_cloud = platform.as_deref() == Some("steam") && manifest_has_steam_cloud;
+            let root = steam_root
+                .or(gog_root)
                 .map(|p| p.to_string_lossy().into_owned());
             let paths: Vec<String> = files
                 .keys()
@@ -168,6 +173,7 @@ pub fn resolve_candidates(
                 name,
                 steam_id,
                 paths,
+                platform,
                 has_steam_cloud,
             })
         })
@@ -521,6 +527,132 @@ MultiStoreGame:
 
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].paths, vec!["/steam/MultiStoreGame/saves"]);
+    }
+
+    #[test]
+    fn platform_is_steam_when_steam_root_matches() {
+        let yaml = r#"
+SteamGame:
+  files:
+    <root>/saves: {}
+  steam:
+    id: 42
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut roots = HashMap::new();
+        roots.insert(42u64, PathBuf::from("/games/SteamGame"));
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+
+        assert_eq!(candidates[0].platform.as_deref(), Some("steam"));
+    }
+
+    #[test]
+    fn platform_is_gog_when_gog_root_matches() {
+        let yaml = r#"
+GogGame:
+  files:
+    <root>/saves: {}
+  gog:
+    id: 123
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut gog_roots = HashMap::new();
+        gog_roots.insert(123u64, PathBuf::from("/games/GogGame"));
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &HashMap::new(), &gog_roots);
+
+        assert_eq!(candidates[0].platform.as_deref(), Some("gog"));
+    }
+
+    #[test]
+    fn platform_is_none_when_no_root_matches() {
+        let yaml = r#"
+GenericGame:
+  files:
+    <home>/saves: {}
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &HashMap::new(), &HashMap::new());
+
+        assert!(candidates[0].platform.is_none());
+    }
+
+    #[test]
+    fn platform_is_steam_over_gog_when_both_match() {
+        let yaml = r#"
+MultiStoreGame:
+  files:
+    <root>/saves: {}
+  steam:
+    id: 10
+  gog:
+    id: 20
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut steam_roots = HashMap::new();
+        steam_roots.insert(10u64, PathBuf::from("/steam/MultiStoreGame"));
+        let mut gog_roots = HashMap::new();
+        gog_roots.insert(20u64, PathBuf::from("/gog/MultiStoreGame"));
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &steam_roots, &gog_roots);
+
+        assert_eq!(candidates[0].platform.as_deref(), Some("steam"));
+    }
+
+    #[test]
+    fn has_steam_cloud_true_when_steam_platform_and_manifest_cloud() {
+        let yaml = r#"
+CloudGame:
+  files:
+    <root>/saves: {}
+  steam:
+    id: 50
+  cloud:
+    steam: true
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut roots = HashMap::new();
+        roots.insert(50u64, PathBuf::from("/games/CloudGame"));
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+
+        assert!(candidates[0].has_steam_cloud);
+    }
+
+    #[test]
+    fn has_steam_cloud_false_when_gog_platform_despite_manifest_cloud() {
+        let yaml = r#"
+CloudGame:
+  files:
+    <root>/saves: {}
+  steam:
+    id: 50
+  gog:
+    id: 60
+  cloud:
+    steam: true
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut gog_roots = HashMap::new();
+        gog_roots.insert(60u64, PathBuf::from("/games/CloudGame"));
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &HashMap::new(), &gog_roots);
+
+        assert!(!candidates[0].has_steam_cloud);
+        assert_eq!(candidates[0].platform.as_deref(), Some("gog"));
+    }
+
+    #[test]
+    fn has_steam_cloud_false_when_no_manifest_cloud() {
+        let yaml = r#"
+SteamGame:
+  files:
+    <root>/saves: {}
+  steam:
+    id: 42
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut roots = HashMap::new();
+        roots.insert(42u64, PathBuf::from("/games/SteamGame"));
+        let candidates = resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+
+        assert!(!candidates[0].has_steam_cloud);
     }
 
     #[test]

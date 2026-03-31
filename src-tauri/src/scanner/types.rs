@@ -33,6 +33,7 @@ pub(crate) struct ResolvedCandidate {
     pub name: String,
     pub steam_id: Option<u64>,
     pub paths: Vec<String>,
+    pub platform: Option<String>,
     pub has_steam_cloud: bool,
 }
 
@@ -43,6 +44,7 @@ pub struct DetectedGame {
     pub steam_id: Option<u64>,
     pub save_paths: Vec<String>,
     pub save_files: Vec<SaveFileInfo>,
+    pub platform: Option<String>,
     pub has_steam_cloud: bool,
 }
 

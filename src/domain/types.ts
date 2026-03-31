@@ -5,8 +5,16 @@ export type Game = {
   saveFiles: SaveFile[];
   isManual?: boolean;
   isCloudOnly?: boolean;
+  platform?: Platform;
   hasSteamCloud?: boolean;
 };
+
+export const PLATFORM = {
+  steam: "steam",
+  gog: "gog",
+} as const;
+
+export type Platform = (typeof PLATFORM)[keyof typeof PLATFORM];
 
 export type SaveFile = {
   name: string;
