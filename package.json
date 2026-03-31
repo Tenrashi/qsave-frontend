@@ -82,5 +82,10 @@
     "typescript-eslint": "^8.57.1",
     "vite": "^6",
     "vitest": "^4.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "lodash-es": "4.17.21"
+    }
   }
 }
