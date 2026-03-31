@@ -1,3 +1,9 @@
+# [1.0.0-alpha.2](https://github.com/Tenrashi/qsave/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2026-03-31)
+
+### Bug Fixes
+
+- trigger release build via workflow_dispatch after semantic-release ([8edcbaf](https://github.com/Tenrashi/qsave/commit/8edcbaf0361592ce0b003a26a7d2865149ae7f94))
+
 # 1.0.0-alpha.1 (2026-03-31)
 
 ### Bug Fixes
