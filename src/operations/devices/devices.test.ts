@@ -185,12 +185,8 @@ describe("devices", () => {
       );
     });
 
-    it("detects macOS from userAgent", async () => {
-      const original = navigator.userAgent;
-      Object.defineProperty(navigator, "userAgent", {
-        value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-        configurable: true,
-      });
+    it("detects macOS from platform plugin", async () => {
+      mockPlatform.mockReturnValueOnce("macos");
       mockGetFile.mockResolvedValueOnce(null);
 
       await saveDeviceSync("device-1", "Sims 4", ["/saves"]);
@@ -201,10 +197,6 @@ describe("devices", () => {
         expect.objectContaining({ os: "macos" }),
         null,
       );
-      Object.defineProperty(navigator, "userAgent", {
-        value: original,
-        configurable: true,
-      });
     });
 
     it("merges games into existing device entry", async () => {
