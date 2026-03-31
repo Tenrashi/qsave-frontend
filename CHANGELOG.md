@@ -1,3 +1,9 @@
+## [1.0.3](https://github.com/Tenrashi/qsave/compare/v1.0.2...v1.0.3) (2026-03-31)
+
+### Bug Fixes
+
+- add contents write permission to release workflow ([a8bc078](https://github.com/Tenrashi/qsave/commit/a8bc07825aa055ad84a4e2957940d02ce026cb4f))
+
 ## [1.0.2](https://github.com/Tenrashi/qsave/compare/v1.0.1...v1.0.2) (2026-03-31)
 
 ### Bug Fixes
