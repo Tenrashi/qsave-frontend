@@ -10,6 +10,7 @@ import { addManualGame } from "@/lib/store/store";
 import { TAURI_COMMANDS, QUERY_KEYS } from "@/lib/constants/constants";
 import { scanManualGame } from "@/operations/scanner/scanner/scanner";
 import type { Game } from "@/domain/types";
+import { pathIncluded } from "@/lib/path/path";
 
 export type AddGameContentProps = {
   name: string;
@@ -33,7 +34,7 @@ export const AddGameContent = ({
     try {
       const folder = await invoke<string | null>(TAURI_COMMANDS.pickFolder);
       if (!folder) return;
-      if (!paths.includes(folder)) {
+      if (!pathIncluded(paths, folder)) {
         onPathsChange([...paths, folder]);
       }
     } catch {

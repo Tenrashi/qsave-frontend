@@ -12,12 +12,18 @@ const {
   mockGetFile,
   mockGetFilesInFolder,
   mockPutDeviceFile,
+  mockPlatform,
 } = vi.hoisted(() => ({
   mockEnsureDevicesFolder: vi.fn(() => Promise.resolve("devices-folder")),
   mockGetDeviceFile: vi.fn(),
   mockGetFile: vi.fn(),
   mockGetFilesInFolder: vi.fn(),
   mockPutDeviceFile: vi.fn(),
+  mockPlatform: vi.fn(() => "macos"),
+}));
+
+vi.mock("@tauri-apps/plugin-os", () => ({
+  platform: mockPlatform,
 }));
 
 vi.mock("@/services/drive/drive", () => ({
@@ -165,12 +171,8 @@ describe("devices", () => {
       );
     });
 
-    it("detects Windows OS from userAgent", async () => {
-      const original = navigator.userAgent;
-      Object.defineProperty(navigator, "userAgent", {
-        value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        configurable: true,
-      });
+    it("detects Windows OS from platform plugin", async () => {
+      mockPlatform.mockReturnValueOnce("windows");
       mockGetFile.mockResolvedValueOnce(null);
 
       await saveDeviceSync("device-1", "Sims 4", ["/saves"]);
@@ -181,10 +183,6 @@ describe("devices", () => {
         expect.objectContaining({ os: "windows" }),
         null,
       );
-      Object.defineProperty(navigator, "userAgent", {
-        value: original,
-        configurable: true,
-      });
     });
 
     it("detects macOS from userAgent", async () => {

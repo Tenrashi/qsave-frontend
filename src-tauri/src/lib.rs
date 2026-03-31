@@ -55,6 +55,7 @@ fn send_native_notification(app: tauri::AppHandle, title: String, body: String) 
         .body(&body)
         .show();
 
+    #[cfg(target_os = "macos")]
     if result.is_err() || cfg!(debug_assertions) {
         // Fallback to osascript in dev mode where Tauri notifications may not display
         let script = format!(
@@ -134,6 +135,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![scan_games, create_zip, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
@@ -180,12 +182,14 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| {
-            let tauri::RunEvent::Reopen { .. } = event else { return };
+        .run(|_app, _event| {
             #[cfg(target_os = "macos")]
-            let _ = app.set_dock_visibility(true);
-            let Some(window) = app.get_webview_window("main") else { return };
-            let _ = window.show();
-            let _ = window.set_focus();
+            {
+                let tauri::RunEvent::Reopen { .. } = _event else { return };
+                let _ = _app.set_dock_visibility(true);
+                let Some(window) = _app.get_webview_window("main") else { return };
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
         });
 }

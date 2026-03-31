@@ -41,6 +41,10 @@ vi.mock("@tauri-apps/plugin-http", () => ({
   fetch: vi.fn(),
 }));
 
+vi.mock("@tauri-apps/plugin-os", () => ({
+  platform: vi.fn(() => "macos"),
+}));
+
 // Prevent the real i18n init (with LanguageDetector) from running
 vi.mock("@/i18n", () => ({
   default: { t: (key: string) => key },
