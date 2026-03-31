@@ -18,6 +18,7 @@ QSave detects installed games using the [Ludusavi](https://github.com/mtkennerly
 - **Google Drive sync** — One-click upload of save files with automatic versioning
 - **Up to 5 backups per game** — Keep multiple versions of your saves
 - **Change detection** — Fingerprint-based tracking skips uploads when saves haven't changed
+- **Conflict detection** — Warns when local saves changed before restoring, or when another device uploaded a newer backup before syncing
 - **Sync history** — See recent backup and restore operations with timestamps and status
 
 ### Restore
@@ -100,14 +101,15 @@ pnpm tauri build
 
 ## Release
 
-Push a version tag to trigger the CI build:
+Releases are automated with [semantic-release](https://github.com/semantic-release/semantic-release). Pushing to `main` triggers a stable release; pushing to `alpha` or `beta` creates a prerelease.
 
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
+Versions are determined from [conventional commits](https://www.conventionalcommits.org/):
 
-This creates a draft GitHub release with macOS (ARM + Intel) and Windows installers.
+- `fix:` → patch bump (0.1.0 → 0.1.1)
+- `feat:` → minor bump (0.1.0 → 0.2.0)
+- `BREAKING CHANGE:` → major bump (0.1.0 → 1.0.0)
+
+The CI pipeline bumps versions across `package.json`, `tauri.conf.json`, and `Cargo.toml`, generates a changelog, tags the release, and builds macOS (ARM + Intel) and Windows installers.
 
 ## Game Data
 
