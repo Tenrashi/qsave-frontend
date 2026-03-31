@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/Tenrashi/qsave/compare/v1.0.0...v1.0.1) (2026-03-31)
+
+### Bug Fixes
+
+- include Cargo.lock in semantic-release version sync ([73ba342](https://github.com/Tenrashi/qsave/commit/73ba3425f70713343fe6b3852cfc479d261357bb))
+
 # 1.0.0 (2026-03-31)
 
 ### Bug Fixes
