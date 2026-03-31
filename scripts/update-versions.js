@@ -26,4 +26,13 @@ cargo = cargo.replace(/^version = ".*"$/m, (match) => {
 });
 writeFileSync(cargoPath, cargo);
 
+// Update Cargo.lock (package version entry)
+const cargoLockPath = "src-tauri/Cargo.lock";
+let cargoLock = readFileSync(cargoLockPath, "utf8");
+cargoLock = cargoLock.replace(
+  /name = "qsave"\nversion = ".*"/,
+  `name = "qsave"\nversion = "${version}"`,
+);
+writeFileSync(cargoLockPath, cargoLock);
+
 console.log(`Updated versions to ${version}`);
