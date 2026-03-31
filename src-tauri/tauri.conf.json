@@ -19,7 +19,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com; img-src 'self' data: https://cdn.cloudflare.steamstatic.com"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com; img-src 'self' data: https://*.steamstatic.com"
     }
   },
   "plugins": {
