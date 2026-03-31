@@ -1,3 +1,4 @@
+import { PLATFORM } from "@/domain/types";
 import type { Game, SaveFile } from "@/domain/types";
 
 export const MOCK_DATE = new Date("2026-03-14T12:00:00Z");
@@ -88,6 +89,7 @@ export const steamCloudGame: Game = {
       gameName: "Portal 2",
     },
   ],
+  platform: PLATFORM.steam,
   hasSteamCloud: true,
 };
 

@@ -81,6 +81,7 @@ async fn scan_manual_game(name: String, paths: Vec<String>) -> DetectedGame {
             steam_id: None,
             save_paths: vec![],
             save_files: vec![],
+            platform: None,
             has_steam_cloud: false,
         })
 }

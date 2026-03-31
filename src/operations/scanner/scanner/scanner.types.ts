@@ -1,3 +1,5 @@
+import type { Platform } from "@/domain/types";
+
 export type RustSaveFile = {
   name: string;
   path: string;
@@ -11,5 +13,6 @@ export type RustDetectedGame = {
   steamId: number | null;
   savePaths: string[];
   saveFiles: RustSaveFile[];
+  platform: Platform | null;
   hasSteamCloud: boolean;
 };
