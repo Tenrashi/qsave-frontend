@@ -46,7 +46,8 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           pnpm exec semantic-release 2>&1 | tee sr-output.txt
-          TAG=$(grep -oP 'Published release \K[^ ]+' sr-output.txt || true)
+          TAG=$(grep -oP 'Published release \Kv?[^ ]+' sr-output.txt || true)
+          TAG="v${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Trigger release build
