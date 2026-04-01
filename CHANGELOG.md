@@ -1,3 +1,9 @@
+## [1.0.5](https://github.com/Tenrashi/qsave/compare/v1.0.4...v1.0.5) (2026-04-01)
+
+### Bug Fixes
+
+- enable updater artifact generation for auto-updates ([#34](https://github.com/Tenrashi/qsave/issues/34)) ([016e4d4](https://github.com/Tenrashi/qsave/commit/016e4d45e363ce60834a67dc25a5677de0fb4b08))
+
 ## [1.0.4](https://github.com/Tenrashi/qsave/compare/v1.0.3...v1.0.4) (2026-03-31)
 
 ### Bug Fixes
