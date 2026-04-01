@@ -47,8 +47,9 @@ jobs:
         run: |
           pnpm exec semantic-release 2>&1 | tee sr-output.txt
           TAG=$(grep -oP 'Published release \Kv?[^ ]+' sr-output.txt || true)
-          TAG="v${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [ -n "$TAG" ]; then
+            echo "tag=v${TAG#v}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Trigger release build
         if: steps.semantic.outputs.tag != ''
