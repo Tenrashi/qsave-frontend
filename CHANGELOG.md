@@ -1,3 +1,9 @@
+## [1.0.7](https://github.com/Tenrashi/qsave/compare/v1.0.6...v1.0.7) (2026-04-02)
+
+### Bug Fixes
+
+- exclude .DS_Store files from save backups ([#38](https://github.com/Tenrashi/qsave/issues/38)) ([c2bc06a](https://github.com/Tenrashi/qsave/commit/c2bc06a55260670564cd9b50ef5bc4ca95c0fa66))
+
 ## [1.0.6](https://github.com/Tenrashi/qsave/compare/v1.0.5...v1.0.6) (2026-04-02)
 
 ### Bug Fixes
