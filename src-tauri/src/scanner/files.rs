@@ -15,6 +15,11 @@ pub fn collect_save_files(dir: &Path, game_name: &str) -> Vec<SaveFileInfo> {
         .flatten()
         .flat_map(|entry| {
             let path = entry.path();
+            let name = entry.file_name();
+
+            if name == ".DS_Store" {
+                return Vec::new();
+            }
 
             if path.is_dir() {
                 return collect_save_files(&path, game_name);
@@ -110,6 +115,38 @@ mod tests {
             assert!(f.size_bytes > 0);
             assert!(f.last_modified > 0);
         }
+    }
+
+    #[test]
+    fn excludes_ds_store_files() {
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("subdir");
+        fs::create_dir(&sub).unwrap();
+
+        File::create(dir.path().join(".DS_Store"))
+            .unwrap()
+            .write_all(b"junk")
+            .unwrap();
+        File::create(dir.path().join("save.dat"))
+            .unwrap()
+            .write_all(b"data")
+            .unwrap();
+        File::create(sub.join(".DS_Store"))
+            .unwrap()
+            .write_all(b"junk")
+            .unwrap();
+        File::create(sub.join("nested.dat"))
+            .unwrap()
+            .write_all(b"data")
+            .unwrap();
+
+        let files = collect_save_files(dir.path(), "TestGame");
+        assert_eq!(files.len(), 2);
+
+        let names: Vec<&str> = files.iter().map(|file| file.name.as_str()).collect();
+        assert!(names.contains(&"save.dat"));
+        assert!(names.contains(&"nested.dat"));
+        assert!(!names.contains(&".DS_Store"));
     }
 
     #[test]
