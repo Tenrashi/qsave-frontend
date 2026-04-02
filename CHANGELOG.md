@@ -1,3 +1,9 @@
+## [1.0.8](https://github.com/Tenrashi/qsave/compare/v1.0.7...v1.0.8) (2026-04-02)
+
+### Bug Fixes
+
+- improve sync conflict dialog layout for narrow viewports ([#39](https://github.com/Tenrashi/qsave/issues/39)) ([aac2351](https://github.com/Tenrashi/qsave/commit/aac23512e670f4b04693a6db02ba550a818f2211))
+
 ## [1.0.7](https://github.com/Tenrashi/qsave/compare/v1.0.6...v1.0.7) (2026-04-02)
 
 ### Bug Fixes
