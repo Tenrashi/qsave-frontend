@@ -26,39 +26,37 @@ export const SyncConflictDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPopup className="max-w-sm">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0 text-amber-500" />
-          <div className="space-y-1">
-            <DialogTitle>{t("sync.conflictTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("sync.conflictDescription")}
-            </DialogDescription>
-          </div>
+      <DialogPopup className="max-w-md">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500" />
+          <DialogTitle>{t("sync.conflictTitle")}</DialogTitle>
+          <DialogDescription>{t("sync.conflictDescription")}</DialogDescription>
         </div>
-        <div className="flex justify-end gap-2 mt-4">
-          <DialogClose render={<Button variant="ghost" />}>
-            {t("games.cancel")}
-          </DialogClose>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              onOpenChange(false);
-              onDownloadCloud();
-            }}
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" />
-            {t("sync.downloadCloud")}
-          </Button>
-          <Button
-            onClick={() => {
-              onOpenChange(false);
-              onUploadAnyway();
-            }}
-          >
-            <Upload className="w-3.5 h-3.5 mr-1.5" />
-            {t("sync.uploadAnyway")}
-          </Button>
+        <div className="mt-4 text-center">
+          <div className="inline-grid gap-2">
+            <Button
+              onClick={() => {
+                onOpenChange(false);
+                onUploadAnyway();
+              }}
+            >
+              <Upload className="w-3.5 h-3.5 mr-1.5" />
+              {t("sync.uploadAnyway")}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onOpenChange(false);
+                onDownloadCloud();
+              }}
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              {t("sync.downloadCloud")}
+            </Button>
+            <DialogClose render={<Button variant="ghost" />}>
+              {t("games.cancel")}
+            </DialogClose>
+          </div>
         </div>
       </DialogPopup>
     </Dialog>
