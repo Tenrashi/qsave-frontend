@@ -144,8 +144,9 @@ pub fn run() {
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .icon_as_template(true)
+                .icon_as_template(false)
                 .menu(&menu)
+                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         #[cfg(target_os = "macos")]
@@ -160,7 +161,7 @@ pub fn run() {
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
-                    let tauri::tray::TrayIconEvent::Click { .. } = event else { return };
+                    let tauri::tray::TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event else { return };
                     let app = tray.app_handle();
                     #[cfg(target_os = "macos")]
                     let _ = app.set_dock_visibility(true);
