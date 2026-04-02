@@ -1,3 +1,9 @@
+## [1.0.6](https://github.com/Tenrashi/qsave/compare/v1.0.5...v1.0.6) (2026-04-02)
+
+### Bug Fixes
+
+- correct tray icon behavior on macOS and Windows ([#37](https://github.com/Tenrashi/qsave/issues/37)) ([f51fbe0](https://github.com/Tenrashi/qsave/commit/f51fbe03f2597c84b86bda73f047544271e1dccf))
+
 ## [1.0.5](https://github.com/Tenrashi/qsave/compare/v1.0.4...v1.0.5) (2026-04-01)
 
 ### Bug Fixes
