@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { scanForGames, scanManualGame, rescanGame } from "./scanner";
+import {
+  scanForGames,
+  scanManualGame,
+  rescanGame,
+  loadCachedGames,
+} from "./scanner";
 
 import type { ManualGameEntry } from "@/lib/store/store";
 
@@ -67,6 +72,52 @@ describe("rescanGame", () => {
     });
 
     expect(game.isManual).toBe(true);
+  });
+});
+
+describe("loadCachedGames", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns cached auto games with manual games combined", async () => {
+    mockInvoke.mockResolvedValueOnce([rustGame("Elden Ring")]);
+    mockGetManualGames.mockResolvedValueOnce([
+      { name: "My Custom Game", paths: ["/saves/custom"] },
+    ]);
+
+    const games = await loadCachedGames();
+
+    expect(games.map((game) => game.name)).toEqual([
+      "Elden Ring",
+      "My Custom Game",
+    ]);
+    expect(games[0].isManual).toBeFalsy();
+    expect(games[1].isManual).toBe(true);
+    expect(games[1].saveFiles).toEqual([]);
+  });
+
+  it("returns empty when cache is empty", async () => {
+    mockInvoke.mockResolvedValueOnce([]);
+    mockGetManualGames.mockResolvedValueOnce([
+      { name: "Custom", paths: ["/saves/custom"] },
+    ]);
+
+    const games = await loadCachedGames();
+
+    expect(games).toEqual([]);
+  });
+
+  it("skips manual games that overlap with cached auto games", async () => {
+    mockInvoke.mockResolvedValueOnce([rustGame("Elden Ring")]);
+    mockGetManualGames.mockResolvedValueOnce([
+      { name: "Elden Ring", paths: ["/saves/elden"] },
+    ]);
+
+    const games = await loadCachedGames();
+
+    expect(games).toHaveLength(1);
+    expect(games[0].isManual).toBeFalsy();
   });
 });
 

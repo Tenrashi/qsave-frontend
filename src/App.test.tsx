@@ -51,6 +51,7 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/operations/scanner/scanner/scanner", () => ({
   scanForGames: mockScanForGames,
+  loadCachedGames: () => Promise.resolve([]),
 }));
 
 vi.mock("@/lib/store/store", () => ({

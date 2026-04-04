@@ -12,6 +12,11 @@ use tauri::{
 };
 
 #[tauri::command]
+fn get_cached_games() -> Vec<DetectedGame> {
+    scanner::get_cached_games_blocking()
+}
+
+#[tauri::command]
 async fn scan_games() -> Result<Vec<DetectedGame>, String> {
     tokio::task::spawn_blocking(scanner::scan_games_blocking)
         .await
@@ -136,7 +141,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![scan_games, create_zip, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
+        .invoke_handler(tauri::generate_handler![get_cached_games, scan_games, create_zip, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

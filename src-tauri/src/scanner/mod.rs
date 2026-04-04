@@ -1,3 +1,4 @@
+mod cache;
 mod files;
 mod gog;
 mod localized_names;
@@ -38,6 +39,10 @@ pub fn scan_manual_game_blocking(name: String, paths: Vec<String>) -> DetectedGa
     }
 }
 
+pub fn get_cached_games_blocking() -> Vec<DetectedGame> {
+    cache::load()
+}
+
 pub fn scan_games_blocking() -> Result<Vec<DetectedGame>, String> {
     let manifest = fetch_manifest()?;
 
@@ -51,5 +56,7 @@ pub fn scan_games_blocking() -> Result<Vec<DetectedGame>, String> {
     let gog_roots = find_gog_app_roots();
 
     let candidates = resolve_candidates(manifest, &home, &username, &steam_roots, &gog_roots);
-    Ok(scan_candidates(candidates))
+    let games = scan_candidates(candidates);
+    cache::save(&games);
+    Ok(games)
 }

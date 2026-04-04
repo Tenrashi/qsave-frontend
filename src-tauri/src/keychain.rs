@@ -70,20 +70,27 @@ pub fn delete_tokens() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::MutexGuard;
 
-    fn reset_cache() {
+    /// All cache tests share the global CACHE static, so we serialize them
+    /// by holding this lock for the duration of each test.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_and_reset() -> MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap();
         cache_clear();
+        guard
     }
 
     #[test]
     fn cache_starts_empty() {
-        reset_cache();
+        let _guard = lock_and_reset();
         assert!(cache_get().is_none());
     }
 
     #[test]
     fn cache_set_makes_tokens_retrievable() {
-        reset_cache();
+        let _guard = lock_and_reset();
 
         let tokens = Tokens {
             access_token: Some("at-123".to_string()),
@@ -98,7 +105,7 @@ mod tests {
 
     #[test]
     fn cache_clear_removes_tokens() {
-        reset_cache();
+        let _guard = lock_and_reset();
 
         cache_set(Tokens {
             access_token: Some("at".to_string()),
@@ -111,7 +118,7 @@ mod tests {
 
     #[test]
     fn cache_set_overwrites_previous_value() {
-        reset_cache();
+        let _guard = lock_and_reset();
 
         cache_set(Tokens {
             access_token: Some("old".to_string()),
