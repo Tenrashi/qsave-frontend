@@ -1,3 +1,9 @@
+## [1.1.2](https://github.com/Tenrashi/qsave/compare/v1.1.1...v1.1.2) (2026-04-04)
+
+### Bug Fixes
+
+- move conflict actions to dialog footer and improve spacing ([#44](https://github.com/Tenrashi/qsave/issues/44)) ([fe5e120](https://github.com/Tenrashi/qsave/commit/fe5e120cd7c2fe4debb380fce1c67d4c8ad9a2eb))
+
 ## [1.1.1](https://github.com/Tenrashi/qsave/compare/v1.1.0...v1.1.1) (2026-04-04)
 
 ### Bug Fixes
