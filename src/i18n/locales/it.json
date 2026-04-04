@@ -96,8 +96,8 @@
     "restoreAnyway": "Ripristina comunque"
   },
   "sync": {
-    "conflictTitle": "Esiste un backup più recente",
-    "conflictDescription": "Un altro dispositivo ha caricato un backup più recente dall'ultima sincronizzazione. Il caricamento lo sovrascriverà.",
+    "conflictTitle": "Backup diverso nel cloud",
+    "conflictDescription": "Il cloud contiene un backup diverso dai tuoi salvataggi locali. I tuoi backup esistenti saranno conservati in ogni caso.",
     "uploadAnyway": "Carica comunque",
     "downloadCloud": "Scarica dal cloud"
   },

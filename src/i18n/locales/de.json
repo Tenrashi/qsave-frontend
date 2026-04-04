@@ -96,8 +96,8 @@
     "restoreAnyway": "Trotzdem wiederherstellen"
   },
   "sync": {
-    "conflictTitle": "Neueres Backup vorhanden",
-    "conflictDescription": "Ein anderes Gerät hat seit Ihrer letzten Synchronisierung ein neueres Backup hochgeladen. Das Hochladen wird es überschreiben.",
+    "conflictTitle": "Anderes Backup in der Cloud",
+    "conflictDescription": "Die Cloud enthält ein anderes Backup als Ihre lokalen Speicherstände. Ihre bestehenden Backups bleiben in jedem Fall erhalten.",
     "uploadAnyway": "Trotzdem hochladen",
     "downloadCloud": "Cloud herunterladen"
   },

@@ -25,6 +25,7 @@ import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
 import { getCloudGameHash } from "@/operations/devices/devices";
+import { computeContentHash } from "@/lib/hash/hash";
 import { removeManualGame } from "@/lib/store/store";
 import { useSyncAndUpdate } from "@/hooks/useSyncAndUpdate/useSyncAndUpdate";
 import { useAuthStore } from "@/stores/auth";
@@ -93,21 +94,29 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
     }
   };
 
-  const handleSync = async () => {
+  const hasCloudConflict = async (): Promise<boolean> => {
+    const cloudHash = await getCloudGameHash(game.name);
+    if (!cloudHash) return false;
+
     const fingerprint = syncFingerprints[game.name];
-    if (fingerprint) {
-      setIsChecking(true);
-      try {
-        const cloudHash = await getCloudGameHash(game.name);
-        if (cloudHash && cloudHash.hash !== fingerprint.hash) {
-          setShowConflict(true);
-          return;
-        }
-      } catch (error) {
-        console.warn("Conflict check failed, proceeding with sync:", error);
-      } finally {
-        setIsChecking(false);
+    if (fingerprint) return cloudHash.hash !== fingerprint.hash;
+
+    const filePaths = game.saveFiles.map((file) => file.path);
+    const localHash = await computeContentHash(game.savePaths, filePaths);
+    return localHash !== cloudHash.hash;
+  };
+
+  const handleSync = async () => {
+    setIsChecking(true);
+    try {
+      if (await hasCloudConflict()) {
+        setShowConflict(true);
+        return;
       }
+    } catch (error) {
+      console.warn("Conflict check failed, proceeding with sync:", error);
+    } finally {
+      setIsChecking(false);
     }
     await doSync();
   };

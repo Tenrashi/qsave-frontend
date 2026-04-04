@@ -96,8 +96,8 @@
     "restoreAnyway": "Restore anyway"
   },
   "sync": {
-    "conflictTitle": "Newer backup exists",
-    "conflictDescription": "Another device uploaded a newer backup since your last sync. Uploading will overwrite it.",
+    "conflictTitle": "Different backup on cloud",
+    "conflictDescription": "The cloud contains a different backup than your local saves. Your existing backups will be preserved regardless.",
     "uploadAnyway": "Upload anyway",
     "downloadCloud": "Download cloud"
   },

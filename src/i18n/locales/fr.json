@@ -96,8 +96,8 @@
     "restoreAnyway": "Restaurer quand même"
   },
   "sync": {
-    "conflictTitle": "Sauvegarde plus récente existante",
-    "conflictDescription": "Un autre appareil a envoyé une sauvegarde plus récente depuis votre dernière synchronisation. L'envoi l'écrasera.",
+    "conflictTitle": "Sauvegarde différente sur le cloud",
+    "conflictDescription": "Le cloud contient une sauvegarde différente de vos sauvegardes locales. Vos sauvegardes existantes seront conservées dans tous les cas.",
     "uploadAnyway": "Envoyer quand même",
     "downloadCloud": "Télécharger depuis le cloud"
   },
