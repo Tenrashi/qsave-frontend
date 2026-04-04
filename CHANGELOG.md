@@ -1,3 +1,9 @@
+## [1.0.9](https://github.com/Tenrashi/qsave/compare/v1.0.8...v1.0.9) (2026-04-04)
+
+### Bug Fixes
+
+- cache keychain tokens in memory to avoid repeated macOS password prompts ([#40](https://github.com/Tenrashi/qsave/issues/40)) ([9022539](https://github.com/Tenrashi/qsave/commit/90225393919659ce970b04a3e4f98cf452f80609))
+
 ## [1.0.8](https://github.com/Tenrashi/qsave/compare/v1.0.7...v1.0.8) (2026-04-02)
 
 ### Bug Fixes
