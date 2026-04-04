@@ -1,3 +1,9 @@
+# [1.1.0](https://github.com/Tenrashi/qsave/compare/v1.0.10...v1.1.0) (2026-04-04)
+
+### Features
+
+- show cached game list instantly on app launch while rescanning ([#42](https://github.com/Tenrashi/qsave/issues/42)) ([6c7368f](https://github.com/Tenrashi/qsave/commit/6c7368f527875139f20c7fecf1690731cc68e33c))
+
 ## [1.0.10](https://github.com/Tenrashi/qsave/compare/v1.0.9...v1.0.10) (2026-04-04)
 
 ### Bug Fixes
