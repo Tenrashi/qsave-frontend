@@ -230,12 +230,7 @@ fn extract_entry(
         .and_then(|(idx, rest)| idx.parse::<usize>().ok().map(|parsed| (parsed, rest)))
         .ok_or_else(|| format!("Invalid zip entry (no index prefix): {name}"))?;
 
-    if index >= canonical_targets.len() {
-        return Err(format!(
-            "Zip entry index {index} exceeds target dirs count {}",
-            canonical_targets.len()
-        ));
-    }
+    let clamped_index = index.min(canonical_targets.len() - 1);
 
     if Path::new(relative)
         .components()
@@ -244,7 +239,7 @@ fn extract_entry(
         return Err(format!("Zip entry escapes target directory: {name}"));
     }
 
-    let out_path = canonical_targets[index].join(relative);
+    let out_path = canonical_targets[clamped_index].join(relative);
 
     if let Some(parent) = out_path.parent() {
         fs::create_dir_all(parent)
@@ -539,6 +534,41 @@ mod tests {
             fs::read_to_string(restore_saves.join("slot1.dat")).unwrap(),
             "savedata"
         );
+    }
+
+    #[test]
+    fn clamps_overflow_indices_to_last_target_dir() {
+        let dir = TempDir::new().unwrap();
+        let base_a = dir.path().join("pathA");
+        let base_b = dir.path().join("pathB");
+        let file_a = base_a.join("a.dat");
+        let file_b = base_b.join("b.dat");
+        write_file(&file_a, b"aaa");
+        write_file(&file_b, b"bbb");
+
+        let zip_result = create_zip(
+            vec![
+                base_a.to_string_lossy().to_string(),
+                base_b.to_string_lossy().to_string(),
+            ],
+            vec![
+                file_a.to_string_lossy().to_string(),
+                file_b.to_string_lossy().to_string(),
+            ],
+        )
+        .unwrap();
+
+        // Restore with only 1 target dir (fewer than the 2 in the zip)
+        let restore_dir = dir.path().join("restored");
+        let result = extract_zip(
+            zip_result.zip_bytes,
+            vec![restore_dir.to_string_lossy().to_string()],
+        )
+        .unwrap();
+
+        assert_eq!(result.file_count, 2);
+        assert_eq!(fs::read_to_string(restore_dir.join("a.dat")).unwrap(), "aaa");
+        assert_eq!(fs::read_to_string(restore_dir.join("b.dat")).unwrap(), "bbb");
     }
 
     #[test]
