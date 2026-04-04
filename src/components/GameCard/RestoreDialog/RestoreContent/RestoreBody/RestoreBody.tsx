@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
-import { Download, FolderOpen } from "lucide-react";
+import { Download, FolderOpen, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DialogClose } from "@/components/ui/dialog";
 import type { Game, DriveBackup } from "@/domain/types";
@@ -13,6 +13,7 @@ import {
   getCloudGameHash,
 } from "@/operations/devices/devices";
 import { useSyncStore } from "@/stores/sync";
+import { useSyncAndUpdate } from "@/hooks/useSyncAndUpdate/useSyncAndUpdate";
 import { useGameBackups } from "@/hooks/queries/useGameBackups/useGameBackups";
 import { useRestoreBackup } from "@/hooks/mutations/useRestoreBackup/useRestoreBackup";
 import { useDeleteBackup } from "@/hooks/mutations/useDeleteBackup/useDeleteBackup";
@@ -35,7 +36,9 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
   const [targetPath, setTargetPath] = useState<string>();
   const [showConflict, setShowConflict] = useState(false);
   const [conflictConfirmed, setConflictConfirmed] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const { syncFingerprints } = useSyncStore();
+  const syncAndUpdate = useSyncAndUpdate();
 
   const backupsQuery = useGameBackups(game.name, open && !quick);
   const restoreMutation = useRestoreBackup(game);
@@ -49,6 +52,7 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
     setTargetPath(undefined);
     setShowConflict(false);
     setConflictConfirmed(false);
+    setUploading(false);
     restoreMutation.reset();
     deleteMutation.reset();
   }, [open]);
@@ -80,7 +84,7 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
 
   const canRestore =
     restoreMutation.isIdle &&
-    (quick || selected !== undefined) &&
+    (quick || selected !== undefined || showConflict) &&
     (!game.isCloudOnly || targetPath !== undefined);
 
   const handleRestore = async () => {
@@ -111,6 +115,17 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
     setShowConflict(false);
     const targetPaths = targetPath ? [targetPath] : undefined;
     restoreMutation.mutate({ backupId: selected?.id, targetPaths });
+  };
+
+  const handleUploadFirst = async () => {
+    setUploading(true);
+    try {
+      await syncAndUpdate(game);
+      setShowConflict(false);
+      setUploading(false);
+    } catch {
+      setUploading(false);
+    }
   };
 
   const resolveErrorMessage = (error: unknown, fallback: string) =>
@@ -158,14 +173,7 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
           )}
         />
       );
-    if (showConflict)
-      return (
-        <ConflictWarning
-          game={game}
-          onRestoreAnyway={handleRestoreAnyway}
-          onClose={() => setShowConflict(false)}
-        />
-      );
+    if (showConflict) return <ConflictWarning />;
     if (quick) return <QuickWarning />;
     if (backupsQuery.isLoading) return <BackupsSkeleton />;
     if (backupsQuery.isError)
@@ -214,13 +222,35 @@ export const RestoreBody = ({ game, quick, open }: RestoreBodyProps) => {
           )}
         </button>
       )}
-      <div className="space-y-2 min-h-[60px]">{renderBody()}</div>
+      <div className={`space-y-2${showConflict ? "" : " min-h-[60px]"}`}>
+        {renderBody()}
+      </div>
 
       <div className="flex justify-end gap-2 mt-4">
         <DialogClose render={<Button variant="ghost" />}>
           {t("restore.close")}
         </DialogClose>
-        {canRestore && (
+        {showConflict && (
+          <>
+            <Button
+              variant="ghost"
+              onClick={handleRestoreAnyway}
+              disabled={uploading}
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              {t("restore.restoreAnyway")}
+            </Button>
+            <Button onClick={handleUploadFirst} disabled={uploading}>
+              {uploading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Upload className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              {t("restore.uploadFirst")}
+            </Button>
+          </>
+        )}
+        {!showConflict && canRestore && (
           <Button onClick={handleRestore}>
             <Download className="w-3.5 h-3.5 mr-1.5" />
             {t("restore.restore")}

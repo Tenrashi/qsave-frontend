@@ -20,7 +20,9 @@ export const RestoreContent = ({ game, quick, open }: RestoreContentProps) => {
 
   return (
     <>
-      <DialogTitle className="mb-1">{title}</DialogTitle>
+      <DialogTitle className={description ? "mb-1" : "mb-4"}>
+        {title}
+      </DialogTitle>
       {description && (
         <DialogDescription className="mb-4">{description}</DialogDescription>
       )}

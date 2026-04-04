@@ -35,6 +35,7 @@ const {
   mockInvoke,
   mockGetDeviceId,
   mockComputeContentHash,
+  mockSyncAndUpdate,
 } = vi.hoisted(() => ({
   mockListGameBackups: vi.fn(),
   mockGetDeviceGamePaths: vi.fn(() =>
@@ -49,6 +50,7 @@ const {
   mockInvoke: vi.fn(),
   mockGetDeviceId: vi.fn(() => Promise.resolve("test-device-id")),
   mockComputeContentHash: vi.fn(() => Promise.resolve("hash-abc")),
+  mockSyncAndUpdate: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -85,6 +87,10 @@ vi.mock("@/lib/hash/hash", () => ({
   computeContentHash: mockComputeContentHash,
 }));
 
+vi.mock("@/hooks/useSyncAndUpdate/useSyncAndUpdate", () => ({
+  useSyncAndUpdate: () => mockSyncAndUpdate,
+}));
+
 vi.mock("@/components/ui/status-message", () => ({
   StatusMessage: ({
     variant,
@@ -108,26 +114,7 @@ vi.mock("./EmptyBackups/EmptyBackups", () => ({
 }));
 
 vi.mock("./ConflictWarning/ConflictWarning", () => ({
-  ConflictWarning: ({
-    onRestoreAnyway,
-    onClose,
-  }: {
-    onRestoreAnyway: () => void;
-    onClose: () => void;
-  }) => (
-    <div data-testid="conflict-warning">
-      <button
-        type="button"
-        onClick={onRestoreAnyway}
-        aria-label="restore-anyway"
-      >
-        Restore anyway
-      </button>
-      <button type="button" onClick={onClose} aria-label="close-conflict">
-        Close
-      </button>
-    </div>
-  ),
+  ConflictWarning: () => <div data-testid="conflict-warning" />,
 }));
 
 vi.mock("./BackupList/BackupList", () => ({
@@ -498,10 +485,44 @@ describe("RestoreBody", () => {
         expect(screen.getByTestId("conflict-warning")).toBeInTheDocument();
       });
 
-      await user.click(screen.getByLabelText("restore-anyway"));
+      await user.click(
+        screen.getByRole("button", { name: "restore.restoreAnyway" }),
+      );
 
       await waitFor(() => {
         expect(mockRestoreGame).toHaveBeenCalled();
+      });
+    });
+
+    it("uploads and dismisses conflict when upload first is clicked", async () => {
+      mockComputeContentHash.mockResolvedValue("hash-different");
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-cloud",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      useSyncStore.setState({
+        syncFingerprints: {
+          "The Sims 4": { hash: "hash-abc", syncedAt: "2026-03-14T12:00:00Z" },
+        },
+      });
+
+      renderBody({ quick: true });
+
+      await user.click(screen.getByRole("button", { name: "restore.restore" }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("conflict-warning")).toBeInTheDocument();
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "restore.uploadFirst" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSyncAndUpdate).toHaveBeenCalled();
+        expect(
+          screen.queryByTestId("conflict-warning"),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -531,34 +552,6 @@ describe("RestoreBody", () => {
       </Dialog>,
     );
 
-    expect(screen.getByTestId("quick-warning")).toBeInTheDocument();
-  });
-
-  it("dismisses conflict warning when close is clicked", async () => {
-    mockComputeContentHash.mockResolvedValue("hash-different");
-    mockGetCloudGameHash.mockResolvedValue({
-      hash: "hash-cloud",
-      syncedAt: "2026-03-14T12:00:00Z",
-    });
-    useSyncStore.setState({
-      syncFingerprints: {
-        "The Sims 4": { hash: "hash-abc", syncedAt: "2026-03-14T12:00:00Z" },
-      },
-    });
-
-    renderBody({ quick: true });
-
-    await user.click(screen.getByRole("button", { name: "restore.restore" }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("conflict-warning")).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByLabelText("close-conflict"));
-
-    await waitFor(() => {
-      expect(screen.queryByTestId("conflict-warning")).not.toBeInTheDocument();
-    });
     expect(screen.getByTestId("quick-warning")).toBeInTheDocument();
   });
 
