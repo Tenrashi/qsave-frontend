@@ -96,8 +96,8 @@
     "restoreAnyway": "Restaurar mesmo assim"
   },
   "sync": {
-    "conflictTitle": "Backup mais recente disponível",
-    "conflictDescription": "Outro dispositivo enviou um backup mais recente desde a sua última sincronização. O envio irá substituí-lo.",
+    "conflictTitle": "Backup diferente na nuvem",
+    "conflictDescription": "A nuvem contém um backup diferente dos seus saves locais. Os seus backups existentes serão preservados independentemente da escolha.",
     "uploadAnyway": "Enviar mesmo assim",
     "downloadCloud": "Baixar da nuvem"
   },

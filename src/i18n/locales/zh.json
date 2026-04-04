@@ -96,8 +96,8 @@
     "restoreAnyway": "仍然恢复"
   },
   "sync": {
-    "conflictTitle": "存在更新的备份",
-    "conflictDescription": "自上次同步以来，另一台设备上传了更新的备份。上传将覆盖该备份。",
+    "conflictTitle": "云端存在不同的备份",
+    "conflictDescription": "云端包含与本地存档不同的备份。无论您如何选择，现有备份都将被保留。",
     "uploadAnyway": "仍然上传",
     "downloadCloud": "从云端下载"
   },

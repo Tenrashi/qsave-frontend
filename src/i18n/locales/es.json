@@ -96,8 +96,8 @@
     "restoreAnyway": "Restaurar de todos modos"
   },
   "sync": {
-    "conflictTitle": "Existe una copia más reciente",
-    "conflictDescription": "Otro dispositivo subió una copia más reciente desde tu última sincronización. Subir la reemplazará.",
+    "conflictTitle": "Copia diferente en la nube",
+    "conflictDescription": "La nube contiene una copia diferente a tus partidas guardadas locales. Tus copias existentes se conservarán en cualquier caso.",
     "uploadAnyway": "Subir de todos modos",
     "downloadCloud": "Descargar de la nube"
   },

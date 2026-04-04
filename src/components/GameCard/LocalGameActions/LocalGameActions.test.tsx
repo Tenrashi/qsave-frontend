@@ -16,6 +16,7 @@ const {
   mockSyncGame,
   mockRemoveManualGame,
   mockGetCloudGameHash,
+  mockComputeContentHash,
   mockToastSuccess,
   mockToastError,
 } = vi.hoisted(() => ({
@@ -35,6 +36,7 @@ const {
   mockGetCloudGameHash: vi.fn(() =>
     Promise.resolve(null as { hash: string; syncedAt: string } | null),
   ),
+  mockComputeContentHash: vi.fn(() => Promise.resolve("hash-local")),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
 }));
@@ -62,6 +64,10 @@ vi.mock("@/lib/store/store", () => ({
 
 vi.mock("@/operations/devices/devices", () => ({
   getCloudGameHash: mockGetCloudGameHash,
+}));
+
+vi.mock("@/lib/hash/hash", () => ({
+  computeContentHash: mockComputeContentHash,
 }));
 
 const renderActions = (game = sims4Game) =>
@@ -287,8 +293,44 @@ describe("LocalGameActions", () => {
       expect(mockSyncGame).not.toHaveBeenCalled();
     });
 
-    it("syncs directly when no fingerprint exists", async () => {
+    it("syncs directly when no fingerprint and no cloud data", async () => {
       authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue(null);
+      useSyncStore.setState({ syncFingerprints: {} });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(mockSyncGame).toHaveBeenCalledWith(sims4Game);
+      });
+    });
+
+    it("shows conflict dialog when no fingerprint and local hash differs from cloud", async () => {
+      authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-cloud",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      mockComputeContentHash.mockResolvedValue("hash-local-different");
+      useSyncStore.setState({ syncFingerprints: {} });
+
+      renderActions();
+      await user.click(screen.getByText("games.sync"));
+
+      await waitFor(() => {
+        expect(screen.getByText("sync.conflictTitle")).toBeInTheDocument();
+      });
+      expect(mockSyncGame).not.toHaveBeenCalled();
+    });
+
+    it("syncs directly when no fingerprint and local hash matches cloud", async () => {
+      authenticateUser();
+      mockGetCloudGameHash.mockResolvedValue({
+        hash: "hash-same",
+        syncedAt: "2026-03-14T12:00:00Z",
+      });
+      mockComputeContentHash.mockResolvedValue("hash-same");
       useSyncStore.setState({ syncFingerprints: {} });
 
       renderActions();

@@ -96,8 +96,8 @@
     "restoreAnyway": "それでも復元"
   },
   "sync": {
-    "conflictTitle": "より新しいバックアップが存在します",
-    "conflictDescription": "前回の同期以降、別のデバイスがより新しいバックアップをアップロードしました。アップロードすると上書きされます。",
+    "conflictTitle": "クラウドに異なるバックアップがあります",
+    "conflictDescription": "クラウドにはローカルのセーブデータとは異なるバックアップがあります。既存のバックアップはどちらを選んでも保持されます。",
     "uploadAnyway": "それでもアップロード",
     "downloadCloud": "クラウドからダウンロード"
   },
