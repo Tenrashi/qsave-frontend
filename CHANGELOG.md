@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/Tenrashi/qsave/compare/v1.1.0...v1.1.1) (2026-04-04)
+
+### Bug Fixes
+
+- clamp zip entry indices for cross-platform restore ([7a81e51](https://github.com/Tenrashi/qsave/commit/7a81e514abee56eb5bb5e9d175caf0eec82356d9))
+- detect sync conflicts when no prior sync exists on device ([e7b8871](https://github.com/Tenrashi/qsave/commit/e7b887177187586bd38b4b4fa6ffae0bc707d30d))
+
 # [1.1.0](https://github.com/Tenrashi/qsave/compare/v1.0.10...v1.1.0) (2026-04-04)
 
 ### Features
