@@ -34,7 +34,7 @@ describe("useGames", () => {
     expect(result.current.data![0].name).toBe("Elden Ring");
   });
 
-  it("seeds query cache from cached games while scan is pending", async () => {
+  it("shows cached games as placeholder while scan is pending", async () => {
     let resolveScan!: (value: Game[]) => void;
     mockScanForGames.mockImplementation(
       () =>
@@ -50,7 +50,7 @@ describe("useGames", () => {
 
     await waitFor(() => expect(result.current.data).toHaveLength(1));
     expect(result.current.data![0].name).toBe("Cached Game");
-    expect(result.current.isFetching).toBe(true);
+    expect(result.current.isPlaceholderData).toBe(true);
 
     resolveScan([
       { name: "Fresh Game", savePaths: ["/saves/fresh"], saveFiles: [] },
@@ -59,7 +59,7 @@ describe("useGames", () => {
     await waitFor(() =>
       expect(result.current.data![0].name).toBe("Fresh Game"),
     );
-    expect(result.current.isFetching).toBe(false);
+    expect(result.current.isPlaceholderData).toBe(false);
   });
 
   it("shows error toast when scan fails", async () => {
