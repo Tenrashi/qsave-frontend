@@ -25,6 +25,7 @@ export const TAURI_COMMANDS = {
   extractZip: "extract_zip",
   readZipMeta: "read_zip_meta",
   sendNativeNotification: "send_native_notification",
+  getCachedGames: "get_cached_games",
   scanGames: "scan_games",
   scanManualGame: "scan_manual_game",
   pickFolder: "pick_folder",

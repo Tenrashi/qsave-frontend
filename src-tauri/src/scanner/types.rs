@@ -37,7 +37,7 @@ pub(crate) struct ResolvedCandidate {
     pub has_steam_cloud: bool,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectedGame {
     pub name: String,
@@ -48,7 +48,7 @@ pub struct DetectedGame {
     pub has_steam_cloud: bool,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveFileInfo {
     pub name: String,

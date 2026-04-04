@@ -41,6 +41,31 @@ export const rescanGame = async (game: Game): Promise<Game> => {
   return toGame(result, game.isManual);
 };
 
+export const loadCachedGames = async (): Promise<Game[]> => {
+  const [cachedResults, manualEntries] = await Promise.all([
+    invoke<RustDetectedGame[]>(TAURI_COMMANDS.getCachedGames),
+    getManualGames(),
+  ]);
+
+  if (cachedResults.length === 0) return [];
+
+  const autoGames = cachedResults.map((game) => toGame(game));
+  const autoNames = new Set(autoGames.map((game) => game.name));
+
+  const manualGames: Game[] = manualEntries
+    .filter((entry) => !autoNames.has(entry.name))
+    .map((entry) => ({
+      name: entry.name,
+      savePaths: entry.paths,
+      saveFiles: [],
+      isManual: true,
+    }));
+
+  return [...autoGames, ...manualGames].sort((gameA, gameB) =>
+    gameA.name.localeCompare(gameB.name),
+  );
+};
+
 export const scanForGames = async (): Promise<Game[]> => {
   const [autoResults, manualEntries] = await Promise.all([
     invoke<RustDetectedGame[]>(TAURI_COMMANDS.scanGames),
