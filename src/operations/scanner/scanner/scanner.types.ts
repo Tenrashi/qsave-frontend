@@ -13,6 +13,7 @@ export type RustDetectedGame = {
   steamId: number | null;
   savePaths: string[];
   saveFiles: RustSaveFile[];
+  registryKeys: string[];
   platform: Platform | null;
   hasSteamCloud: boolean;
 };
