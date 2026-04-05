@@ -64,7 +64,13 @@ fn load_from_cache(filename: &str) -> Option<String> {
 
 const MAX_MANIFEST_BYTES: u64 = 10 * 1024 * 1024; // 10 MB
 
-fn download(url: &str, cache_filename: &str) -> Option<String> {
+enum DownloadResult {
+    Fresh(String),
+    NotModified,
+    Failed,
+}
+
+fn download(url: &str, cache_filename: &str) -> DownloadResult {
     let etag_filename = format!("{}.etag", cache_filename);
     let stored_etag = load_from_cache(&etag_filename);
     let client = reqwest::blocking::Client::new();
@@ -80,54 +86,50 @@ fn download(url: &str, cache_filename: &str) -> Option<String> {
         };
 
         if response.status() == reqwest::StatusCode::NOT_MODIFIED {
-            return None;
+            return DownloadResult::NotModified;
         }
 
         let exceeds_limit = response
             .content_length()
             .map_or(false, |len| len > MAX_MANIFEST_BYTES);
         if exceeds_limit {
-            return None;
+            return DownloadResult::Failed;
         }
 
-        if let Some(etag_str) = response
+        let new_etag = response
             .headers()
             .get("etag")
             .and_then(|val| val.to_str().ok())
-        {
-            save_to_cache(&etag_filename, etag_str);
-        }
+            .map(|s| s.to_string());
 
         let Ok(body) = response.text() else {
             continue;
         };
 
         if body.len() as u64 > MAX_MANIFEST_BYTES {
-            return None;
+            return DownloadResult::Failed;
         }
 
-        return Some(body);
-    }
-    None
-}
+        if let Some(etag_str) = new_etag {
+            save_to_cache(&etag_filename, &etag_str);
+        }
 
-fn resolve_with_fallback(
-    downloaded: Option<String>,
-    cached: Option<String>,
-    bundled: &str,
-) -> String {
-    downloaded
-        .or(cached)
-        .unwrap_or_else(|| bundled.to_string())
+        return DownloadResult::Fresh(body);
+    }
+    DownloadResult::Failed
 }
 
 fn fetch_source(source: &ManifestSource) -> String {
-    let downloaded = download(source.url, source.cache_filename);
-    if let Some(body) = &downloaded {
-        save_to_cache(source.cache_filename, body);
+    match download(source.url, source.cache_filename) {
+        DownloadResult::Fresh(body) => {
+            save_to_cache(source.cache_filename, &body);
+            return body;
+        }
+        DownloadResult::NotModified => {}
+        DownloadResult::Failed => {}
     }
-    let cached = load_from_cache(source.cache_filename);
-    resolve_with_fallback(downloaded, cached, source.bundled)
+    load_from_cache(source.cache_filename)
+        .unwrap_or_else(|| source.bundled.to_string())
 }
 
 fn merge_manifests(
@@ -189,6 +191,7 @@ fn resolve_aliases(manifest: &mut HashMap<String, ManifestEntry>) {
             continue;
         };
         let target_files = target.files.clone();
+        let target_registry = target.registry.clone();
         let target_steam = target.steam.clone();
         let target_gog = target.gog.clone();
         let target_cloud = target.cloud.clone();
@@ -198,6 +201,7 @@ fn resolve_aliases(manifest: &mut HashMap<String, ManifestEntry>) {
             continue;
         };
         fill_option(&mut alias_entry.files, target_files);
+        fill_option(&mut alias_entry.registry, target_registry);
         fill_option(&mut alias_entry.steam, target_steam);
         fill_option(&mut alias_entry.gog, target_gog);
         fill_option(&mut alias_entry.cloud, target_cloud);
@@ -207,6 +211,9 @@ fn resolve_aliases(manifest: &mut HashMap<String, ManifestEntry>) {
 
 fn matches_when(when: &Option<Vec<WhenCondition>>, os: &str, store: Option<&str>) -> bool {
     let Some(conditions) = when else { return true };
+    if conditions.is_empty() {
+        return true;
+    }
     conditions.iter().any(|condition| {
         let os_ok = condition
             .os
@@ -235,16 +242,6 @@ pub fn fetch_manifest() -> Result<HashMap<String, ManifestEntry>, String> {
     resolve_aliases(&mut combined);
 
     Ok(combined)
-}
-
-use super::types::FileEntryMeta;
-
-fn load_secondary_manifest(path: &Path) -> Option<HashMap<String, FileEntryMeta>> {
-    let content = fs::read_to_string(path).ok()?;
-    let parsed: HashMap<String, ManifestEntry> = serde_yaml::from_str(&content).ok()?;
-    parsed
-        .into_values()
-        .find_map(|entry| entry.files)
 }
 
 pub fn resolve_candidates(
@@ -295,18 +292,6 @@ pub fn resolve_candidates(
                 .filter(|(_, meta)| matches_when(&meta.when, os, platform.as_deref()))
                 .filter_map(|(raw, _)| resolve_path(raw, &ctx))
                 .collect();
-
-            let secondary_files = root
-                .as_deref()
-                .and_then(|root| load_secondary_manifest(&Path::new(root).join(".ludusavi.yaml")));
-
-            if let Some(extra_files) = secondary_files {
-                extra_files
-                    .iter()
-                    .filter(|(_, meta)| matches_when(&meta.when, os, platform.as_deref()))
-                    .filter_map(|(raw, _)| resolve_path(raw, &ctx))
-                    .for_each(|path| { all_paths.insert(path); });
-            }
 
             let paths: Vec<String> = all_paths.into_iter().collect();
 
@@ -375,31 +360,6 @@ mod tests {
     fn load_from_missing_file_returns_none() {
         let path = PathBuf::from("/nonexistent/path/manifest.yaml");
         assert_eq!(load_from_path(&path), None);
-    }
-
-    // -- fallback chain tests --
-
-    #[test]
-    fn fallback_prefers_download() {
-        let result = resolve_with_fallback(
-            Some("downloaded".to_string()),
-            Some("cached".to_string()),
-            "bundled",
-        );
-        assert_eq!(result, "downloaded");
-    }
-
-    #[test]
-    fn fallback_uses_cache_when_download_fails() {
-        let result =
-            resolve_with_fallback(None, Some("cached".to_string()), "bundled");
-        assert_eq!(result, "cached");
-    }
-
-    #[test]
-    fn fallback_uses_bundled_when_both_fail() {
-        let result = resolve_with_fallback(None, None, "bundled");
-        assert_eq!(result, "bundled");
     }
 
     // -- merge tests --
@@ -682,6 +642,11 @@ TestGame:
     #[test]
     fn matches_when_none_returns_true() {
         assert!(matches_when(&None, "mac", None));
+    }
+
+    #[test]
+    fn matches_when_empty_vec_returns_true() {
+        assert!(matches_when(&Some(vec![]), "mac", None));
     }
 
     #[test]
