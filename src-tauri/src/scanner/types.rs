@@ -20,8 +20,6 @@ pub(crate) struct CloudInfo {
 #[derive(Debug, Deserialize, Default, Clone)]
 pub(crate) struct FileEntryMeta {
     pub when: Option<Vec<WhenCondition>>,
-    #[serde(default)]
-    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]

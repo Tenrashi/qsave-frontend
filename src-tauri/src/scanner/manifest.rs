@@ -427,7 +427,8 @@ GameA:
 GameA:
   files:
     <home>/saves:
-      tags: [save]
+      when:
+        - os: windows
 "#,
         );
         let extra = parse_yaml(
@@ -435,7 +436,8 @@ GameA:
 GameA:
   files:
     <home>/saves:
-      tags: [config]
+      when:
+        - os: linux
 "#,
         );
 
@@ -443,7 +445,8 @@ GameA:
 
         let files = base["GameA"].files.as_ref().unwrap();
         let meta = &files["<home>/saves"];
-        assert_eq!(meta.tags, vec!["save"]);
+        let when = meta.when.as_ref().unwrap();
+        assert_eq!(when[0].os.as_deref(), Some("windows"));
     }
 
     #[test]
