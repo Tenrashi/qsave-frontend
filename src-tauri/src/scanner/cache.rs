@@ -11,6 +11,12 @@ fn save_to(path: &Path, games: &[DetectedGame]) {
     let _ = fs::create_dir_all(parent);
     let Ok(json) = serde_json::to_vec(games) else { return };
     let _ = fs::write(path, json);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
+    }
 }
 
 fn load_from(path: &Path) -> Vec<DetectedGame> {

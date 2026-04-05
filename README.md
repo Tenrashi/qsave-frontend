@@ -63,20 +63,35 @@ English, French, Spanish, German, Italian, Portuguese, Russian, Japanese, Chines
 ```bash
 cd qsave
 pnpm install
-cp .env.example .env
 ```
 
-Edit `.env` with your Google Cloud OAuth credentials:
+Store secrets in your OS secret store (one-time setup):
 
+**macOS (Keychain):**
+
+```bash
+security add-generic-password -a "$USER" -s "qsave-google-client-id" -w "YOUR_CLIENT_ID" -U
+security add-generic-password -a "$USER" -s "qsave-google-client-secret" -w "YOUR_CLIENT_SECRET" -U
+security add-generic-password -a "$USER" -s "qsave-tauri-signing-key" -w "YOUR_SIGNING_KEY" -U
+security add-generic-password -a "$USER" -s "qsave-tauri-signing-key-path" -w "YOUR_KEY_PATH" -U
+security add-generic-password -a "$USER" -s "qsave-tauri-signing-password" -w "YOUR_KEY_PASSWORD" -U
 ```
-VITE_GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
-VITE_GOOGLE_CLIENT_SECRET=your_client_secret
+
+**Linux (libsecret):**
+
+```bash
+# Install: sudo apt install libsecret-tools
+secret-tool store --label="qsave-google-client-id" service "qsave-google-client-id" <<< "YOUR_CLIENT_ID"
+secret-tool store --label="qsave-google-client-secret" service "qsave-google-client-secret" <<< "YOUR_CLIENT_SECRET"
+secret-tool store --label="qsave-tauri-signing-key" service "qsave-tauri-signing-key" <<< "YOUR_SIGNING_KEY"
+secret-tool store --label="qsave-tauri-signing-key-path" service "qsave-tauri-signing-key-path" <<< "YOUR_KEY_PATH"
+secret-tool store --label="qsave-tauri-signing-password" service "qsave-tauri-signing-password" <<< "YOUR_KEY_PASSWORD"
 ```
 
 ### Development
 
 ```bash
-pnpm tauri dev
+source scripts/load-env.sh && pnpm tauri dev
 ```
 
 ### Tests

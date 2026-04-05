@@ -41,7 +41,10 @@ describe("auth service", () => {
         }),
       );
 
-      const result = await postTokenExchange("code", "http://redirect");
+      const result = await postTokenExchange(
+        "code",
+        "http://localhost:8080/callback",
+      );
 
       expect(result.access_token).toBe("at");
       expect(result.refresh_token).toBe("rt");
@@ -54,9 +57,9 @@ describe("auth service", () => {
     it("throws on failure", async () => {
       mockFetch.mockResolvedValueOnce(errorResponse(400));
 
-      await expect(postTokenExchange("code", "http://r")).rejects.toThrow(
-        "Token exchange failed: 400",
-      );
+      await expect(
+        postTokenExchange("code", "http://localhost:9999/callback"),
+      ).rejects.toThrow("Token exchange failed: 400");
     });
 
     it("includes code verifier when provided", async () => {
@@ -68,7 +71,11 @@ describe("auth service", () => {
         }),
       );
 
-      await postTokenExchange("code", "http://redirect", "verifier-123");
+      await postTokenExchange(
+        "code",
+        "http://localhost:8080/callback",
+        "verifier-123",
+      );
 
       const body = mockFetch.mock.calls[0][1].body as string;
       expect(body).toContain("code_verifier=verifier-123");
@@ -77,17 +84,29 @@ describe("auth service", () => {
     it("wraps network errors with context", async () => {
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-      await expect(postTokenExchange("code", "http://r")).rejects.toThrow(
-        "Token exchange failed: Network error",
-      );
+      await expect(
+        postTokenExchange("code", "http://localhost:9999/callback"),
+      ).rejects.toThrow("Token exchange failed: Network error");
     });
 
     it("handles non-Error throw", async () => {
       mockFetch.mockRejectedValueOnce("string error");
 
-      await expect(postTokenExchange("code", "http://r")).rejects.toThrow(
-        "Token exchange failed: string error",
-      );
+      await expect(
+        postTokenExchange("code", "http://localhost:9999/callback"),
+      ).rejects.toThrow("Token exchange failed: string error");
+    });
+
+    it("rejects non-localhost redirect URI", async () => {
+      await expect(
+        postTokenExchange("code", "http://evil.com/callback"),
+      ).rejects.toThrow("Invalid redirect URI");
+    });
+
+    it("rejects redirect URI without /callback path", async () => {
+      await expect(
+        postTokenExchange("code", "http://localhost:8080/other"),
+      ).rejects.toThrow("Invalid redirect URI");
     });
   });
 

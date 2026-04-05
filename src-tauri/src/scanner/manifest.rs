@@ -39,6 +39,12 @@ fn save_to_path(path: &Path, body: &str) {
     let Some(parent) = path.parent() else { return };
     let _ = fs::create_dir_all(parent);
     let _ = fs::write(path, body);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
+    }
 }
 
 fn load_from_path(path: &Path) -> Option<String> {
@@ -55,10 +61,20 @@ fn load_from_cache(filename: &str) -> Option<String> {
     load_from_path(&cache_file_path(&cache_dir, filename))
 }
 
+const MAX_MANIFEST_BYTES: u64 = 10 * 1024 * 1024; // 10 MB
+
 fn download(url: &str) -> Option<String> {
     for _ in 0..2 {
-        let result = reqwest::blocking::get(url).and_then(|response| response.text());
-        if let Ok(body) = result {
+        let response = reqwest::blocking::get(url).ok()?;
+        if let Some(len) = response.content_length() {
+            if len > MAX_MANIFEST_BYTES {
+                return None;
+            }
+        }
+        if let Ok(body) = response.text() {
+            if body.len() as u64 > MAX_MANIFEST_BYTES {
+                return None;
+            }
             return Some(body);
         }
     }

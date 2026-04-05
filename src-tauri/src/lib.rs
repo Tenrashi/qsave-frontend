@@ -54,27 +54,12 @@ async fn read_zip_meta(zip_bytes: Vec<u8>) -> Result<Option<ZipMeta>, String> {
 #[tauri::command]
 fn send_native_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
     use tauri_plugin_notification::NotificationExt;
-    let result = app.notification()
+    app.notification()
         .builder()
         .title(&title)
         .body(&body)
-        .show();
-
-    #[cfg(target_os = "macos")]
-    if result.is_err() || cfg!(debug_assertions) {
-        // Fallback to osascript in dev mode where Tauri notifications may not display
-        let script = format!(
-            "display notification \"{}\" with title \"{}\"",
-            body.replace('\\', "\\\\").replace('"', "\\\""),
-            title.replace('\\', "\\\\").replace('"', "\\\""),
-        );
-        let _ = std::process::Command::new("osascript")
-            .arg("-e")
-            .arg(&script)
-            .output();
-    }
-
-    result.map_err(|e| format!("Notification error: {}", e))
+        .show()
+        .map_err(|e| format!("Notification error: {}", e))
 }
 
 #[tauri::command]
