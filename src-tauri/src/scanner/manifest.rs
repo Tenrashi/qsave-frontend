@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::registry::find_existing_registry_keys;
 use super::resolve::{current_os, resolve_path, ResolutionContext};
 use super::types::{ManifestEntry, ResolvedCandidate, WhenCondition};
 
@@ -82,16 +83,19 @@ fn download(url: &str, cache_filename: &str) -> Option<String> {
             return None;
         }
 
-        if let Some(len) = response.content_length() {
-            if len > MAX_MANIFEST_BYTES {
-                return None;
-            }
+        let exceeds_limit = response
+            .content_length()
+            .map_or(false, |len| len > MAX_MANIFEST_BYTES);
+        if exceeds_limit {
+            return None;
         }
 
-        if let Some(new_etag) = response.headers().get("etag") {
-            if let Ok(etag_str) = new_etag.to_str() {
-                save_to_cache(&etag_filename, etag_str);
-            }
+        if let Some(etag_str) = response
+            .headers()
+            .get("etag")
+            .and_then(|val| val.to_str().ok())
+        {
+            save_to_cache(&etag_filename, etag_str);
         }
 
         let Ok(body) = response.text() else {
@@ -150,6 +154,7 @@ fn merge_manifests(
             std::collections::hash_map::Entry::Vacant(vacant) => {
                 vacant.insert(ManifestEntry {
                     files: Some(extra_files),
+                    registry: entry.registry,
                     install_dir: entry.install_dir,
                     alias: entry.alias,
                     steam: entry.steam,
@@ -232,6 +237,16 @@ pub fn fetch_manifest() -> Result<HashMap<String, ManifestEntry>, String> {
     Ok(combined)
 }
 
+use super::types::FileEntryMeta;
+
+fn load_secondary_manifest(path: &Path) -> Option<HashMap<String, FileEntryMeta>> {
+    let content = fs::read_to_string(path).ok()?;
+    let parsed: HashMap<String, ManifestEntry> = serde_yaml::from_str(&content).ok()?;
+    parsed
+        .into_values()
+        .find_map(|entry| entry.files)
+}
+
 pub fn resolve_candidates(
     manifest: HashMap<String, ManifestEntry>,
     home: &str,
@@ -275,15 +290,33 @@ pub fn resolve_candidates(
                 store_game_id: store_game_id.as_deref(),
             };
 
-            let paths: Vec<String> = files
+            let mut all_paths: HashSet<String> = files
                 .iter()
                 .filter(|(_, meta)| matches_when(&meta.when, os, platform.as_deref()))
                 .filter_map(|(raw, _)| resolve_path(raw, &ctx))
-                .collect::<std::collections::HashSet<_>>()
-                .into_iter()
                 .collect();
 
-            if paths.is_empty() {
+            let secondary_files = root
+                .as_deref()
+                .and_then(|root| load_secondary_manifest(&Path::new(root).join(".ludusavi.yaml")));
+
+            if let Some(extra_files) = secondary_files {
+                extra_files
+                    .iter()
+                    .filter(|(_, meta)| matches_when(&meta.when, os, platform.as_deref()))
+                    .filter_map(|(raw, _)| resolve_path(raw, &ctx))
+                    .for_each(|path| { all_paths.insert(path); });
+            }
+
+            let paths: Vec<String> = all_paths.into_iter().collect();
+
+            let registry_keys = entry
+                .registry
+                .as_ref()
+                .map(|reg| find_existing_registry_keys(reg, platform.as_deref()))
+                .unwrap_or_default();
+
+            if paths.is_empty() && registry_keys.is_empty() {
                 return None;
             }
 
@@ -291,6 +324,7 @@ pub fn resolve_candidates(
                 name,
                 steam_id,
                 paths,
+                registry_keys,
                 platform,
                 has_steam_cloud,
             })
@@ -479,6 +513,7 @@ GameB:
             "GameA".to_string(),
             ManifestEntry {
                 files: None,
+                registry: None,
                 install_dir: None,
                 alias: None,
                 steam: None,

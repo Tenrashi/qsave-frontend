@@ -62,7 +62,7 @@ pub fn scan_candidates(candidates: Vec<ResolvedCandidate>) -> Vec<DetectedGame> 
                 .flat_map(|path| collect_save_files(Path::new(path), &candidate.name))
                 .collect();
 
-            if save_files.is_empty() {
+            if save_files.is_empty() && candidate.registry_keys.is_empty() {
                 return None;
             }
 
@@ -71,6 +71,7 @@ pub fn scan_candidates(candidates: Vec<ResolvedCandidate>) -> Vec<DetectedGame> 
                 steam_id: candidate.steam_id,
                 save_paths: existing,
                 save_files,
+                registry_keys: candidate.registry_keys,
                 platform: candidate.platform,
                 has_steam_cloud: candidate.has_steam_cloud,
             })
@@ -167,6 +168,7 @@ mod tests {
             name: "TestGame".to_string(),
             steam_id: Some(42u64),
             paths: vec![dir.path().to_string_lossy().to_string()],
+            registry_keys: Vec::new(),
             platform: None,
             has_steam_cloud: false,
         }];
@@ -184,6 +186,7 @@ mod tests {
             name: "MissingGame".to_string(),
             steam_id: None,
             paths: vec!["/nonexistent/path/very/unlikely".to_string()],
+            registry_keys: Vec::new(),
             platform: None,
             has_steam_cloud: false,
         }];
@@ -204,6 +207,7 @@ mod tests {
                 name: "Zelda".to_string(),
                 steam_id: None,
                 paths: vec![dir_a.path().to_string_lossy().to_string()],
+                registry_keys: Vec::new(),
                 platform: None,
                 has_steam_cloud: false,
             },
@@ -211,6 +215,7 @@ mod tests {
                 name: "Amnesia".to_string(),
                 steam_id: None,
                 paths: vec![dir_b.path().to_string_lossy().to_string()],
+                registry_keys: Vec::new(),
                 platform: None,
                 has_steam_cloud: false,
             },

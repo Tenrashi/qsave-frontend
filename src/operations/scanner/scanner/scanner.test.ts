@@ -36,6 +36,7 @@ const rustGame = (name: string, steamId: number | null = null) => ({
       gameName: name,
     },
   ],
+  registryKeys: [],
   platform: null,
   hasSteamCloud: false,
 });
