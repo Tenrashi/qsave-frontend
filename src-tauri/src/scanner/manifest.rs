@@ -62,10 +62,15 @@ fn load_from_cache(filename: &str) -> Option<String> {
     load_from_path(&cache_file_path(&cache_dir, filename))
 }
 
-const MAX_MANIFEST_BYTES: u64 = 10 * 1024 * 1024; // 10 MB
+const MAX_MANIFEST_BYTES: u64 = 30 * 1024 * 1024; // 30 MB
+
+struct DownloadedBody {
+    body: String,
+    etag: Option<String>,
+}
 
 enum DownloadResult {
-    Fresh(String),
+    Fresh(DownloadedBody),
     NotModified,
     Failed,
 }
@@ -110,26 +115,23 @@ fn download(url: &str, cache_filename: &str) -> DownloadResult {
             return DownloadResult::Failed;
         }
 
-        if let Some(etag_str) = new_etag {
-            save_to_cache(&etag_filename, &etag_str);
-        }
-
-        return DownloadResult::Fresh(body);
+        return DownloadResult::Fresh(DownloadedBody {
+            body,
+            etag: new_etag,
+        });
     }
     DownloadResult::Failed
 }
 
-fn fetch_source(source: &ManifestSource) -> String {
-    match download(source.url, source.cache_filename) {
-        DownloadResult::Fresh(body) => {
-            save_to_cache(source.cache_filename, &body);
-            return body;
-        }
-        DownloadResult::NotModified => {}
-        DownloadResult::Failed => {}
+/// Saves a freshly downloaded manifest body and its etag to cache.
+/// Called only after the body has been successfully parsed,
+/// preventing a corrupt download from poisoning the etag cache.
+fn commit_download(source: &ManifestSource, downloaded: &DownloadedBody) {
+    save_to_cache(source.cache_filename, &downloaded.body);
+    if let Some(etag) = &downloaded.etag {
+        let etag_filename = format!("{}.etag", source.cache_filename);
+        save_to_cache(&etag_filename, etag);
     }
-    load_from_cache(source.cache_filename)
-        .unwrap_or_else(|| source.bundled.to_string())
 }
 
 fn merge_manifests(
@@ -175,6 +177,9 @@ fn fill_option<T>(target: &mut Option<T>, source: Option<T>) {
     }
 }
 
+/// Resolves alias entries by copying missing fields from their target.
+/// Single-depth only — chained aliases (A→B→C) won't fully resolve.
+/// This matches Ludusavi manifest usage where chains don't occur.
 fn resolve_aliases(manifest: &mut HashMap<String, ManifestEntry>) {
     let aliases: Vec<(String, String)> = manifest
         .iter()
@@ -233,9 +238,22 @@ pub fn fetch_manifest() -> Result<HashMap<String, ManifestEntry>, String> {
     let mut combined: HashMap<String, ManifestEntry> = HashMap::new();
 
     for source in MANIFESTS {
-        let body = fetch_source(source);
+        let downloaded = download(source.url, source.cache_filename);
+        let body = match &downloaded {
+            DownloadResult::Fresh(d) => d.body.clone(),
+            DownloadResult::NotModified => load_from_cache(source.cache_filename)
+                .unwrap_or_else(|| source.bundled.to_string()),
+            DownloadResult::Failed => {
+                eprintln!("[qsave] manifest download failed for {}, using fallback", source.cache_filename);
+                load_from_cache(source.cache_filename)
+                    .unwrap_or_else(|| source.bundled.to_string())
+            }
+        };
         let parsed: HashMap<String, ManifestEntry> = serde_yaml::from_str(&body)
             .map_err(|err| format!("Failed to parse {}: {}", source.cache_filename, err))?;
+        if let DownloadResult::Fresh(d) = &downloaded {
+            commit_download(source, d);
+        }
         merge_manifests(&mut combined, parsed);
     }
 
@@ -256,7 +274,7 @@ pub fn resolve_candidates(
     manifest
         .into_iter()
         .filter_map(|(name, entry)| {
-            let files = entry.files?;
+            let files = entry.files.unwrap_or_default();
             let steam_id = entry.steam.and_then(|s| s.id);
             let gog_id = entry.gog.and_then(|g| g.id);
             let steam_root = steam_id.and_then(|id| steam_roots.get(&id));
@@ -271,6 +289,7 @@ pub fn resolve_candidates(
                 .or(gog_root)
                 .map(|path| path.to_string_lossy().into_owned());
 
+            // First key in installDir is the canonical game directory name
             let game_name = entry
                 .install_dir
                 .as_ref()
@@ -287,13 +306,13 @@ pub fn resolve_candidates(
                 store_game_id: store_game_id.as_deref(),
             };
 
-            let mut all_paths: HashSet<String> = files
+            let paths: Vec<String> = files
                 .iter()
                 .filter(|(_, meta)| matches_when(&meta.when, os, platform.as_deref()))
                 .filter_map(|(raw, _)| resolve_path(raw, &ctx))
+                .collect::<HashSet<_>>()
+                .into_iter()
                 .collect();
-
-            let paths: Vec<String> = all_paths.into_iter().collect();
 
             let registry_keys = entry
                 .registry
