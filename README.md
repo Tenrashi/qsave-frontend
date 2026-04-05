@@ -9,7 +9,7 @@ QSave detects installed games using the [Ludusavi](https://github.com/mtkennerly
 ### Game Detection
 
 - **19,000+ games** — Scans for save files using multiple community-maintained manifests covering Steam, GOG, Epic, Origin, Uplay, Battle.net, and standalone games
-- **Store integration** — Reads Steam libraries and GOG installations to resolve install-relative save paths
+- **Store integration** — Detects Steam and GOG installations to resolve save paths and match store-specific manifest conditions
 - **Manual games** — Add any game with custom save paths for full coverage
 - **Steam Cloud indicator** — Shows which games already have Steam Cloud saves, with a toggle to hide them
 
