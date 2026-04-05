@@ -20,6 +20,10 @@ export const postTokenExchange = async (
   codeVerifier?: string,
 ): Promise<TokenResponse> => {
   try {
+    if (!/^http:\/\/localhost:\d+\/callback$/.test(redirectUri)) {
+      throw new Error("Invalid redirect URI");
+    }
+
     const params: Record<string, string> = {
       code,
       client_id: CLIENT_ID,

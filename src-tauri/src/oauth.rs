@@ -1,26 +1,11 @@
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
+use std::time::Duration;
 
 fn url_decode(s: &str) -> String {
-    let mut result = String::with_capacity(s.len());
-    let mut chars = s.bytes();
-    while let Some(b) = chars.next() {
-        if b == b'%' {
-            let hi = chars.next().unwrap_or(0);
-            let lo = chars.next().unwrap_or(0);
-            let hex = [hi, lo];
-            if let Ok(decoded) = u8::from_str_radix(std::str::from_utf8(&hex).unwrap_or(""), 16) {
-                result.push(decoded as char);
-                continue;
-            }
-            result.push('%');
-            result.push(hi as char);
-            result.push(lo as char);
-            continue;
-        }
-        result.push(b as char);
-    }
-    result
+    urlencoding::decode(s)
+        .unwrap_or(std::borrow::Cow::Borrowed(s))
+        .into_owned()
 }
 
 #[derive(Debug)]
@@ -96,9 +81,25 @@ pub fn wait_for_oauth_code(auth_url_base: &str, expected_state: Option<&str>) ->
 
     open::that(&auth_url).map_err(|e| format!("Failed to open browser: {}", e))?;
 
-    let (mut stream, _) = listener
-        .accept()
-        .map_err(|e| format!("Failed to accept connection: {}", e))?;
+    // 5 minute timeout — avoids blocking forever if user cancels the browser flow
+    listener
+        .set_nonblocking(true)
+        .map_err(|e| format!("Failed to configure listener: {}", e))?;
+
+    let timeout = Duration::from_secs(300);
+    let start = std::time::Instant::now();
+    let (mut stream, _) = loop {
+        match listener.accept() {
+            Ok(conn) => break conn,
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                if start.elapsed() >= timeout {
+                    return Err("OAuth timed out after 5 minutes".to_string());
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+            Err(e) => return Err(format!("Failed to accept connection: {}", e)),
+        }
+    };
 
     let reader = BufReader::new(&stream);
     let request_line = reader
