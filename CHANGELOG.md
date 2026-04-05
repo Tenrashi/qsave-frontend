@@ -1,3 +1,9 @@
+## [1.1.3](https://github.com/Tenrashi/qsave/compare/v1.1.2...v1.1.3) (2026-04-05)
+
+### Bug Fixes
+
+- security hardening from audit ([#46](https://github.com/Tenrashi/qsave/issues/46)) ([88d122f](https://github.com/Tenrashi/qsave/commit/88d122ffed93d99fc1e7aacbb1f8f32327e63f4f))
+
 ## [1.1.2](https://github.com/Tenrashi/qsave/compare/v1.1.1...v1.1.2) (2026-04-04)
 
 ### Bug Fixes
