@@ -23,15 +23,16 @@ pub fn resolve_path(raw: &str, ctx: &ResolutionContext) -> Option<String> {
 
     let base = ctx.root.map(|root| {
         let game = ctx.game_name.unwrap_or("");
-        let root_ends_with_game = !game.is_empty()
-            && std::path::Path::new(root)
-                .file_name()
-                .map_or(false, |name| name == game);
-        match () {
-            _ if root_ends_with_game => root.to_string(),
-            _ if game.is_empty() => root.to_string(),
-            _ => format!("{}/{}", root, game),
+        if game.is_empty() {
+            return root.to_string();
         }
+        let root_ends_with_game = std::path::Path::new(root)
+            .file_name()
+            .map_or(false, |name| name.to_string_lossy().eq_ignore_ascii_case(game));
+        if root_ends_with_game {
+            return root.to_string();
+        }
+        format!("{}/{}", root, game)
     });
 
     if let Some(base) = &base {
@@ -244,6 +245,22 @@ mod tests {
         assert_eq!(
             result,
             Some("/games/steamapps/common/Gnorp/saves".to_string())
+        );
+    }
+
+    #[test]
+    fn replaces_base_case_insensitive_match() {
+        let c = ctx(
+            "/home/user",
+            "user",
+            Some("/games/steamapps/common/gnorp"),
+            Some("Gnorp"),
+            None,
+        );
+        let result = resolve_path("<base>/saves", &c);
+        assert_eq!(
+            result,
+            Some("/games/steamapps/common/gnorp/saves".to_string())
         );
     }
 
