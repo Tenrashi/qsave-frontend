@@ -127,11 +127,11 @@ pub fn resolve_path(raw: &str, ctx: &ResolutionContext) -> Option<String> {
 
 pub fn current_os() -> &'static str {
     #[cfg(target_os = "windows")]
-    { return "windows"; }
+    return "windows";
     #[cfg(target_os = "macos")]
-    { return "mac"; }
+    return "mac";
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    { "linux" }
+    "linux"
 }
 
 #[cfg(test)]
