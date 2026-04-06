@@ -1,3 +1,9 @@
+## [1.3.1](https://github.com/Tenrashi/qsave/compare/v1.3.0...v1.3.1) (2026-04-06)
+
+### Bug Fixes
+
+- use resumable upload, dedup nested saves, normalize Windows paths ([d26a250](https://github.com/Tenrashi/qsave/commit/d26a250c56b63e18e084279f2e57458451a4799f))
+
 # [1.3.0](https://github.com/Tenrashi/qsave/compare/v1.2.0...v1.3.0) (2026-04-06)
 
 ### Bug Fixes
