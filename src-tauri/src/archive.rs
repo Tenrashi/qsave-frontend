@@ -112,10 +112,73 @@ fn compute_hash(resolved: &[ResolvedFile]) -> String {
     result.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+/// Resolves file paths without reading contents — for streaming operations.
+struct ResolvedPath {
+    file_path: PathBuf,
+    relative_path: String,
+    entry_name: String,
+}
+
+fn resolve_paths(save_paths: &[String], files: &[String]) -> Result<Vec<ResolvedPath>, String> {
+    let mut resolved: Vec<ResolvedPath> = Vec::with_capacity(files.len());
+
+    for file_path in files {
+        let path = Path::new(file_path);
+
+        let base_index = find_base_index(path, save_paths)
+            .ok_or_else(|| format!("No matching save path for: {file_path}"))?;
+
+        let relative = path
+            .strip_prefix(&save_paths[base_index])
+            .map_err(|e| format!("Failed to compute relative path for {file_path}: {e}"))?
+            .to_string_lossy()
+            .replace('\\', "/");
+
+        let entry_name = format!("{base_index}/{relative}");
+
+        resolved.push(ResolvedPath {
+            file_path: path.to_path_buf(),
+            relative_path: relative,
+            entry_name,
+        });
+    }
+
+    Ok(resolved)
+}
+
+/// Computes a SHA-256 content hash by streaming files one at a time.
+/// Produces the same hash as `compute_hash` — same (sorted relative_path, contents) sequence.
+fn compute_hash_streaming(resolved: &[ResolvedPath]) -> Result<String, String> {
+    let mut sorted_indices: Vec<usize> = (0..resolved.len()).collect();
+    sorted_indices.sort_by(|a, b| resolved[*a].relative_path.cmp(&resolved[*b].relative_path));
+
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 8192];
+    for index in sorted_indices {
+        let entry = &resolved[index];
+        Digest::update(&mut hasher, entry.relative_path.as_bytes());
+        Digest::update(&mut hasher, b"\0");
+        let mut file = File::open(&entry.file_path)
+            .map_err(|e| format!("Failed to open {}: {e}", entry.file_path.display()))?;
+        loop {
+            let n = file.read(&mut buf)
+                .map_err(|e| format!("Failed to read {}: {e}", entry.file_path.display()))?;
+            if n == 0 {
+                break;
+            }
+            Digest::update(&mut hasher, &buf[..n]);
+        }
+        Digest::update(&mut hasher, b"\0");
+    }
+    let result = hasher.finalize();
+    Ok(result.iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
 /// Computes a content hash for save files without creating a zip.
+/// Streams files one at a time to avoid loading everything into memory.
 pub fn compute_save_hash(save_paths: Vec<String>, files: Vec<String>) -> Result<String, String> {
-    let resolved = resolve_files(&save_paths, &files)?;
-    Ok(compute_hash(&resolved))
+    let resolved = resolve_paths(&save_paths, &files)?;
+    compute_hash_streaming(&resolved)
 }
 
 /// Compresses files into an in-memory zip archive and computes a content hash.
@@ -158,10 +221,10 @@ pub fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZ
 }
 
 /// Compresses files into a temp file and returns the path + content hash.
-/// Avoids holding the entire zip in memory for IPC serialization.
+/// Streams files one at a time — only one file's data is in memory at any point.
 pub fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZipFileResult, String> {
-    let resolved = resolve_files(&save_paths, &files)?;
-    let content_hash = compute_hash(&resolved);
+    let resolved = resolve_paths(&save_paths, &files)?;
+    let content_hash = compute_hash_streaming(&resolved)?;
 
     let temp_path = std::env::temp_dir().join(format!("qsave_upload_{}.zip", uuid_v4()));
     let out_file = File::create(&temp_path)
@@ -180,11 +243,13 @@ pub fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<Cr
     zip.write_all(meta_json.as_bytes())
         .map_err(|e| format!("Failed to write meta to zip: {e}"))?;
 
-    for file in &resolved {
-        zip.start_file(&file.entry_name, options)
-            .map_err(|e| format!("Failed to add {} to zip: {e}", file.entry_name))?;
-        zip.write_all(&file.contents)
-            .map_err(|e| format!("Failed to write {} to zip: {e}", file.entry_name))?;
+    for entry in &resolved {
+        zip.start_file(&entry.entry_name, options)
+            .map_err(|e| format!("Failed to add {} to zip: {e}", entry.entry_name))?;
+        let mut file = File::open(&entry.file_path)
+            .map_err(|e| format!("Failed to open {}: {e}", entry.file_path.display()))?;
+        std::io::copy(&mut file, &mut zip)
+            .map_err(|e| format!("Failed to write {} to zip: {e}", entry.entry_name))?;
     }
 
     zip.finish()
@@ -729,5 +794,87 @@ mod tests {
         )
         .unwrap();
         assert!(result.zip_bytes.len() < data.len());
+    }
+
+    #[test]
+    fn create_zip_file_produces_valid_archive() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file_a = base.join("save1.dat");
+        let file_b = base.join("subdir/save2.dat");
+        write_file(&file_a, b"hello");
+        write_file(&file_b, b"world");
+
+        let result = create_zip_file(
+            vec![base.to_string_lossy().to_string()],
+            vec![
+                file_a.to_string_lossy().to_string(),
+                file_b.to_string_lossy().to_string(),
+            ],
+        )
+        .unwrap();
+
+        assert!(result.file_size > 0);
+        assert_eq!(result.content_hash.len(), 64);
+
+        // Verify the temp file is a valid zip with correct entries
+        let zip_bytes = fs::read(&result.temp_path).unwrap();
+        let cursor = Cursor::new(zip_bytes);
+        let mut archive = zip::ZipArchive::new(cursor).unwrap();
+        let mut names: Vec<String> = (0..archive.len())
+            .map(|i| archive.by_index(i).unwrap().name().to_string())
+            .filter(|name| name != META_FILENAME)
+            .collect();
+        names.sort();
+        assert_eq!(names, vec!["0/save1.dat", "0/subdir/save2.dat"]);
+
+        let _ = fs::remove_file(&result.temp_path);
+    }
+
+    #[test]
+    fn create_zip_file_hash_matches_in_memory_zip() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file_a = base.join("a.dat");
+        let file_b = base.join("b.dat");
+        write_file(&file_a, b"alpha");
+        write_file(&file_b, b"beta");
+
+        let save_paths = vec![base.to_string_lossy().to_string()];
+        let files = vec![
+            file_a.to_string_lossy().to_string(),
+            file_b.to_string_lossy().to_string(),
+        ];
+
+        let mem_result = create_zip(save_paths.clone(), files.clone()).unwrap();
+        let file_result = create_zip_file(save_paths, files).unwrap();
+
+        assert_eq!(mem_result.content_hash, file_result.content_hash);
+
+        let _ = fs::remove_file(&file_result.temp_path);
+    }
+
+    #[test]
+    fn streaming_hash_matches_in_memory_hash() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file_a = base.join("x.dat");
+        let file_b = base.join("y.dat");
+        write_file(&file_a, b"data1");
+        write_file(&file_b, b"data2");
+
+        let save_paths = vec![base.to_string_lossy().to_string()];
+        let files = vec![
+            file_a.to_string_lossy().to_string(),
+            file_b.to_string_lossy().to_string(),
+        ];
+
+        let resolved_files = resolve_files(&save_paths, &files).unwrap();
+        let in_memory_hash = compute_hash(&resolved_files);
+
+        let resolved_paths = resolve_paths(&save_paths, &files).unwrap();
+        let streaming_hash = compute_hash_streaming(&resolved_paths).unwrap();
+
+        assert_eq!(in_memory_hash, streaming_hash);
     }
 }
