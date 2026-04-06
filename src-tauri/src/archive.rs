@@ -105,6 +105,7 @@ struct ResolvedPath {
 
 fn resolve_paths(save_paths: &[String], files: &[String]) -> Result<Vec<ResolvedPath>, String> {
     let mut resolved: Vec<ResolvedPath> = Vec::with_capacity(files.len());
+    let mut seen_entries = std::collections::HashSet::new();
 
     for file_path in files {
         let path = Path::new(file_path);
@@ -119,6 +120,10 @@ fn resolve_paths(save_paths: &[String], files: &[String]) -> Result<Vec<Resolved
             .replace('\\', "/");
 
         let entry_name = format!("{base_index}/{relative}");
+
+        if !seen_entries.insert(entry_name.clone()) {
+            continue;
+        }
 
         resolved.push(ResolvedPath {
             file_path: path.to_path_buf(),
@@ -866,5 +871,42 @@ mod tests {
         let streaming_hash = compute_hash_streaming(&resolved_paths).unwrap();
 
         assert_eq!(in_memory_hash, streaming_hash);
+    }
+
+    #[test]
+    fn deduplicates_files_from_overlapping_save_paths() {
+        let dir = TempDir::new().unwrap();
+        let parent = dir.path().join("profiles").join("user1");
+        let child = parent.join("Savegames");
+        let config_file = parent.join("config.ini");
+        let save_file = child.join("Story").join("slot1.lsv");
+        write_file(&config_file, b"[config]");
+        write_file(&save_file, b"savedata");
+
+        let save_paths = vec![
+            parent.to_string_lossy().to_string(),
+            child.to_string_lossy().to_string(),
+        ];
+
+        // Pass the save file twice — once discovered from each overlapping path
+        let files = vec![
+            config_file.to_string_lossy().to_string(),
+            save_file.to_string_lossy().to_string(),
+            save_file.to_string_lossy().to_string(),
+        ];
+
+        let result = create_zip_file(save_paths, files).unwrap();
+
+        let zip_bytes = fs::read(&result.temp_path).unwrap();
+        let cursor = Cursor::new(zip_bytes);
+        let mut archive = zip::ZipArchive::new(cursor).unwrap();
+        let mut names: Vec<String> = (0..archive.len())
+            .map(|i| archive.by_index(i).unwrap().name().to_string())
+            .filter(|name| name != META_FILENAME)
+            .collect();
+        names.sort();
+        assert_eq!(names, vec!["0/config.ini", "1/Story/slot1.lsv"]);
+
+        let _ = fs::remove_file(&result.temp_path);
     }
 }

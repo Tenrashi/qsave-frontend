@@ -22,9 +22,11 @@ use resolve::{get_home, get_username};
 use steam::{find_steam_app_roots, find_steam_libraries};
 
 pub fn scan_manual_game_blocking(name: String, paths: Vec<String>) -> DetectedGame {
+    let mut seen = std::collections::HashSet::new();
     let save_files: Vec<_> = paths
         .iter()
-        .flat_map(|p| collect_save_files(Path::new(p), &name))
+        .flat_map(|path| collect_save_files(Path::new(path), &name))
+        .filter(|file| seen.insert(file.path.clone()))
         .collect();
 
     let existing_paths = paths
@@ -64,4 +66,39 @@ pub fn scan_games_blocking() -> Result<Vec<DetectedGame>, String> {
     let games = scan_candidates(candidates);
     cache::save(&games);
     Ok(games)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    #[test]
+    fn manual_scan_deduplicates_files_from_nested_paths() {
+        let dir = TempDir::new().unwrap();
+        let parent = dir.path().join("profiles").join("user1");
+        let child = parent.join("Savegames");
+        fs::create_dir_all(&child).unwrap();
+
+        File::create(parent.join("config.ini"))
+            .unwrap()
+            .write_all(b"cfg")
+            .unwrap();
+        File::create(child.join("slot1.dat"))
+            .unwrap()
+            .write_all(b"save")
+            .unwrap();
+
+        let game = scan_manual_game_blocking(
+            "TestGame".to_string(),
+            vec![
+                parent.to_string_lossy().to_string(),
+                child.to_string_lossy().to_string(),
+            ],
+        );
+
+        assert_eq!(game.save_files.len(), 2);
+    }
 }
