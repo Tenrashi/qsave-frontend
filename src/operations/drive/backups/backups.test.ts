@@ -8,6 +8,8 @@ import {
 
 const {
   mockInvoke,
+  mockReadFile,
+  mockRemove,
   mockGetFilesInFolder,
   mockDeleteFile,
   mockPostFile,
@@ -16,6 +18,8 @@ const {
   mockEnsureGameFolder,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn(),
+  mockReadFile: vi.fn(),
+  mockRemove: vi.fn(),
   mockGetFilesInFolder: vi.fn(),
   mockDeleteFile: vi.fn(),
   mockPostFile: vi.fn(),
@@ -26,6 +30,11 @@ const {
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: mockInvoke,
+}));
+
+vi.mock("@tauri-apps/plugin-fs", () => ({
+  readFile: mockReadFile,
+  remove: mockRemove,
 }));
 
 vi.mock("@/services/drive/drive", () => ({
@@ -137,8 +146,16 @@ describe("backups", () => {
   });
 
   describe("uploadGameArchive", () => {
-    it("creates zip, uploads, and returns fileId", async () => {
-      mockInvoke.mockResolvedValueOnce([1, 2, 3]);
+    beforeEach(() => {
+      mockInvoke.mockResolvedValue({
+        temp_path: "/tmp/qsave_upload_test.zip",
+        content_hash: "abc123",
+      });
+      mockReadFile.mockResolvedValue(new Uint8Array([1, 2, 3]));
+      mockRemove.mockResolvedValue(undefined);
+    });
+
+    it("creates zip file, reads it, uploads, and cleans up", async () => {
       mockEnsureGameFolder.mockResolvedValueOnce("game-folder");
       mockGetFilesInFolder.mockResolvedValueOnce([]);
       mockPostFile.mockResolvedValueOnce({ fileId: "uploaded-id" });
@@ -150,14 +167,16 @@ describe("backups", () => {
       );
 
       expect(result.fileId).toBe("uploaded-id");
-      expect(mockInvoke).toHaveBeenCalledWith("create_zip", {
+      expect(result.contentHash).toBe("abc123");
+      expect(mockInvoke).toHaveBeenCalledWith("create_zip_file", {
         savePaths: ["/saves"],
         files: ["/saves/file.sav"],
       });
+      expect(mockReadFile).toHaveBeenCalledWith("/tmp/qsave_upload_test.zip");
+      expect(mockRemove).toHaveBeenCalledWith("/tmp/qsave_upload_test.zip");
     });
 
     it("deletes old saves when at limit", async () => {
-      mockInvoke.mockResolvedValueOnce([1]);
       mockEnsureGameFolder.mockResolvedValueOnce("gf");
       const existingFiles = Array.from({ length: 5 }, (_, index) => ({
         id: `file-${index}`,
@@ -174,24 +193,26 @@ describe("backups", () => {
       expect(mockDeleteFile).toHaveBeenCalledWith("file-0");
     });
 
-    it("wraps errors with gameName context", async () => {
+    it("propagates zip creation errors", async () => {
+      mockInvoke.mockReset();
       mockInvoke.mockRejectedValueOnce(new Error("zip fail"));
 
       await expect(uploadGameArchive("Game", ["/s"], ["/s/f"])).rejects.toThrow(
-        'Failed to upload archive for "Game"',
+        "zip fail",
       );
     });
 
-    it("handles non-Error throw in upload wrapping", async () => {
-      mockInvoke.mockRejectedValueOnce("string error");
+    it("cleans up temp file even when upload fails", async () => {
+      mockEnsureGameFolder.mockRejectedValueOnce(new Error("folder fail"));
 
       await expect(uploadGameArchive("Game", ["/s"], ["/s/f"])).rejects.toThrow(
-        'Failed to upload archive for "Game"',
+        "folder fail",
       );
+
+      expect(mockRemove).toHaveBeenCalledWith("/tmp/qsave_upload_test.zip");
     });
 
-    it("continues upload when cleanup fails", async () => {
-      mockInvoke.mockResolvedValueOnce([1]);
+    it("continues upload when cleanup of old saves fails", async () => {
       mockEnsureGameFolder.mockResolvedValueOnce("gf");
       mockGetFilesInFolder.mockRejectedValueOnce(new Error("list fail"));
       mockPostFile.mockResolvedValueOnce({ fileId: "uploaded-id" });

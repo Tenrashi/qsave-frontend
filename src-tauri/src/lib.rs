@@ -3,7 +3,7 @@ mod keychain;
 mod oauth;
 mod scanner;
 
-use archive::{CreateZipResult, ExtractResult, ZipMeta};
+use archive::{CreateZipFileResult, CreateZipResult, ExtractResult, ZipMeta};
 use scanner::{DetectedGame, scan_manual_game_blocking};
 use tauri::{
     menu::{Menu, MenuItem},
@@ -26,6 +26,13 @@ async fn scan_games() -> Result<Vec<DetectedGame>, String> {
 #[tauri::command]
 async fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZipResult, String> {
     tokio::task::spawn_blocking(move || archive::create_zip(save_paths, files))
+        .await
+        .map_err(|e| format!("Zip task failed: {}", e))?
+}
+
+#[tauri::command]
+async fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZipFileResult, String> {
+    tokio::task::spawn_blocking(move || archive::create_zip_file(save_paths, files))
         .await
         .map_err(|e| format!("Zip task failed: {}", e))?
 }
@@ -127,7 +134,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![get_cached_games, scan_games, create_zip, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
+        .invoke_handler(tauri::generate_handler![get_cached_games, scan_games, create_zip, create_zip_file, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

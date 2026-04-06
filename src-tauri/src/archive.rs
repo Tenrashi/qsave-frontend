@@ -22,6 +22,12 @@ pub struct CreateZipResult {
 }
 
 #[derive(Debug, Serialize)]
+pub struct CreateZipFileResult {
+    pub temp_path: String,
+    pub content_hash: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ExtractResult {
     pub file_count: u32,
 }
@@ -148,6 +154,56 @@ pub fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZ
         zip_bytes: cursor.into_inner(),
         content_hash,
     })
+}
+
+/// Compresses files into a temp file and returns the path + content hash.
+/// Avoids holding the entire zip in memory for IPC serialization.
+pub fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZipFileResult, String> {
+    let resolved = resolve_files(&save_paths, &files)?;
+    let content_hash = compute_hash(&resolved);
+
+    let temp_path = std::env::temp_dir().join(format!("qsave_upload_{}.zip", uuid_v4()));
+    let out_file = File::create(&temp_path)
+        .map_err(|e| format!("Failed to create temp file: {e}"))?;
+    let mut zip = zip::ZipWriter::new(out_file);
+    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+
+    let meta = ZipMeta {
+        platform: current_platform(),
+        save_paths,
+    };
+    let meta_json =
+        serde_json::to_string_pretty(&meta).map_err(|e| format!("Failed to serialize meta: {e}"))?;
+    zip.start_file(META_FILENAME, options)
+        .map_err(|e| format!("Failed to add meta to zip: {e}"))?;
+    zip.write_all(meta_json.as_bytes())
+        .map_err(|e| format!("Failed to write meta to zip: {e}"))?;
+
+    for file in &resolved {
+        zip.start_file(&file.entry_name, options)
+            .map_err(|e| format!("Failed to add {} to zip: {e}", file.entry_name))?;
+        zip.write_all(&file.contents)
+            .map_err(|e| format!("Failed to write {} to zip: {e}", file.entry_name))?;
+    }
+
+    zip.finish()
+        .map_err(|e| format!("Failed to finalize zip: {e}"))?;
+
+    Ok(CreateZipFileResult {
+        temp_path: temp_path.to_string_lossy().to_string(),
+        content_hash,
+    })
+}
+
+/// Simple v4-style UUID using random bytes.
+fn uuid_v4() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let pid = std::process::id();
+    format!("{nanos:x}-{pid:x}")
 }
 
 /// Creates temporary staging directories next to each target (same filesystem for rename).

@@ -21,6 +21,7 @@ export const STORE_KEYS = {
 export const TAURI_COMMANDS = {
   startOAuth: "start_oauth",
   createZip: "create_zip",
+  createZipFile: "create_zip_file",
   computeSaveHash: "compute_save_hash",
   extractZip: "extract_zip",
   readZipMeta: "read_zip_meta",
