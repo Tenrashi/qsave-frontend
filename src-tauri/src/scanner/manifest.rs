@@ -286,11 +286,20 @@ pub fn resolve_candidates(
             let steam_root = steam_id.and_then(|id| steam_roots.get(&id));
             let gog_root = gog_id.and_then(|id| gog_roots.get(&id));
 
-            // Epic: match any installDir key against epic install dir basenames
-            let epic_root = entry.install_dir.as_ref().and_then(|dirs| {
-                dirs.keys()
-                    .find_map(|dir_name| epic_roots.get(&dir_name.to_ascii_lowercase()))
-            });
+            // Epic: match installDir keys when no Steam/GOG install was found.
+            // Unlike Steam/GOG (matched by numeric ID), Epic matches by
+            // install directory basename, so a false-positive is possible if
+            // an unrelated Epic game shares the basename. We accept this
+            // trade-off because the alternative is missing all multi-store
+            // games where the user owns only the Epic version.
+            let epic_root = steam_root.is_none().then(|| {
+                gog_root.is_none().then(|| {
+                    entry.install_dir.as_ref().and_then(|dirs| {
+                        dirs.keys()
+                            .find_map(|dir_name| epic_roots.get(&dir_name.to_ascii_lowercase()))
+                    })
+                }).flatten()
+            }).flatten();
 
             let platform = steam_root
                 .map(|_| "steam".to_string())
@@ -1283,5 +1292,37 @@ MultiStoreGame:
 
         assert_eq!(candidates[0].platform.as_deref(), Some("steam"));
         assert!(candidates[0].paths[0].starts_with("/steam/"));
+    }
+
+    #[test]
+    fn epic_fallback_when_steam_id_not_installed() {
+        let yaml = r#"
+MultiStoreGame:
+  files:
+    <base>/saves: {}
+  steam:
+    id: 999
+  installDir:
+    GameDir: {}
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        // Game has steam id 999 but it's not installed on Steam.
+        // User owns the Epic version — installDir basename matches.
+        let mut epic_roots = HashMap::new();
+        epic_roots.insert(
+            "gamedir".to_string(),
+            PathBuf::from("/epic/GameDir"),
+        );
+        let candidates = resolve_candidates(
+            manifest,
+            "/home/user",
+            "user",
+            &HashMap::new(),
+            &HashMap::new(),
+            &epic_roots,
+        );
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].platform.as_deref(), Some("epic"));
     }
 }
