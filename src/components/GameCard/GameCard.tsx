@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useSyncStore } from "@/stores/sync";
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
+import { isRegistryOnly } from "@/lib/game/game";
 import { GameBanner } from "./GameBanner/GameBanner";
 import { CloudOnlyActions } from "./CloudOnlyActions/CloudOnlyActions";
 import { LocalGameActions } from "./LocalGameActions/LocalGameActions";
@@ -21,8 +22,6 @@ export const GameCard = memo(({ game }: GameCardProps) => {
   const isBusy =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
   const isSynced = status === SYNC_STATUS.success || hasBackup(game.name);
-  const isRegistryOnly =
-    (game.registryKeys?.length ?? 0) > 0 && game.saveFiles.length === 0;
 
   return (
     <Card className="overflow-hidden !py-0">
@@ -47,7 +46,7 @@ export const GameCard = memo(({ game }: GameCardProps) => {
                 {t("games.cloudBadge")}
               </span>
             )}
-            {isRegistryOnly && (
+            {isRegistryOnly(game) && (
               <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-medium">
                 {t("games.registryOnlyBadge")}
               </span>

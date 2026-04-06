@@ -13,6 +13,11 @@ import {
 } from "@/test/mocks/games";
 import { GameCard, type GameCardProps } from "./GameCard";
 
+const mockIsRegistryOnly = vi.hoisted(() => vi.fn(() => false));
+vi.mock("@/lib/game/game", () => ({
+  isRegistryOnly: mockIsRegistryOnly,
+}));
+
 vi.mock("./utils/formatSize", () => ({
   formatSize: (bytes: number) => `${bytes} bytes`,
 }));
@@ -156,12 +161,14 @@ describe("GameCard", () => {
   });
 
   describe("registry-only games", () => {
-    it("shows registry only badge when game has registry keys but no save files", () => {
+    it("shows registry only badge when isRegistryOnly returns true", () => {
+      mockIsRegistryOnly.mockReturnValueOnce(true);
       renderGameCard({ game: registryOnlyGame });
       expect(screen.getByText("games.registryOnlyBadge")).toBeInTheDocument();
     });
 
-    it("does not show registry only badge for games with save files", () => {
+    it("does not show registry only badge when isRegistryOnly returns false", () => {
+      mockIsRegistryOnly.mockReturnValueOnce(false);
       renderGameCard();
       expect(
         screen.queryByText("games.registryOnlyBadge"),
