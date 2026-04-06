@@ -175,6 +175,21 @@ describe("useSyncAndUpdate", () => {
     });
   });
 
+  it("shows stringified error in toast when syncGame throws a non-Error value", async () => {
+    mockSyncGame.mockRejectedValueOnce("raw string failure");
+
+    const { result } = renderHook(() => useSyncAndUpdate(), {
+      wrapper: createWrapper(),
+    });
+
+    await expect(result.current(sims4Game)).rejects.toBe("raw string failure");
+
+    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
+      description: "raw string failure",
+      duration: 10_000,
+    });
+  });
+
   it("returns the sync result on success", async () => {
     const { result } = renderHook(() => useSyncAndUpdate(), {
       wrapper: createWrapper(),
