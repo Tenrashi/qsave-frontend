@@ -26,6 +26,15 @@ vi.mock("@/lib/store/store", () => ({
         error: "Network error",
       },
       {
+        id: "4",
+        gameName: "Stardew Valley",
+        fileName: "Stardew Valley.zip",
+        syncedAt: new Date(),
+        driveFileId: "",
+        revisionCount: 0,
+        status: "error",
+      },
+      {
         id: "3",
         gameName: "Elden Ring",
         fileName: "Elden Ring.zip",
@@ -60,17 +69,22 @@ describe("SyncHistory", () => {
     await screen.findByText("Cyberpunk 2077");
     expect(
       screen.getAllByRole("img", { name: "history.errorIcon" }),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
+  });
+
+  it("shows plain error icon when error message is absent", async () => {
+    renderWithProviders(<SyncHistory />);
+    expect(await screen.findByText("Stardew Valley")).toBeInTheDocument();
   });
 
   it("shows error message tooltip on hover", async () => {
     const user = setupUser();
     renderWithProviders(<SyncHistory />);
-    const errorIcon = await screen.findByRole("img", {
+    const errorIcons = await screen.findAllByRole("img", {
       name: "history.errorIcon",
     });
 
-    await user.hover(errorIcon);
+    await user.hover(errorIcons[0]);
 
     expect(await screen.findByText("Network error")).toBeInTheDocument();
   });
