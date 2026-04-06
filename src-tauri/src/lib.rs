@@ -73,13 +73,13 @@ async fn upload_file(file_path: String, upload_url: String) -> Result<UploadFile
             .send()
             .map_err(|e| format!("Upload failed: {e}"))?;
 
-        let _ = std::fs::remove_file(&file_path);
-
         if !res.status().is_success() {
             let status = res.status();
             let body = res.text().unwrap_or_default();
             return Err(format!("Upload failed: {status} {body}"));
         }
+
+        let _ = std::fs::remove_file(&file_path);
 
         #[derive(serde::Deserialize)]
         struct DriveFile {
