@@ -53,45 +53,29 @@ fn find_base_index(file_path: &Path, save_paths: &[String]) -> Option<usize> {
         .map(|(index, _)| index)
 }
 
-/// Reads files and resolves their relative paths for archiving/hashing.
+/// Resolved file with contents loaded into memory — used by `create_zip`.
 struct ResolvedFile {
     relative_path: String,
     contents: Vec<u8>,
-    /// The index-prefixed entry name for the zip (e.g., `0/subdir/save.dat`).
     entry_name: String,
 }
 
 fn resolve_files(save_paths: &[String], files: &[String]) -> Result<Vec<ResolvedFile>, String> {
-    let mut resolved: Vec<ResolvedFile> = Vec::with_capacity(files.len());
-
-    for file_path in files {
-        let path = Path::new(file_path);
-
-        let base_index = find_base_index(path, save_paths)
-            .ok_or_else(|| format!("No matching save path for: {file_path}"))?;
-
-        let relative = path
-            .strip_prefix(&save_paths[base_index])
-            .map_err(|e| format!("Failed to compute relative path for {file_path}: {e}"))?
-            .to_string_lossy()
-            .replace('\\', "/");
-
-        let entry_name = format!("{base_index}/{relative}");
-
-        let mut file =
-            File::open(path).map_err(|e| format!("Failed to open {file_path}: {e}"))?;
-        let mut contents = Vec::new();
-        file.read_to_end(&mut contents)
-            .map_err(|e| format!("Failed to read {file_path}: {e}"))?;
-
-        resolved.push(ResolvedFile {
-            relative_path: relative,
-            contents,
-            entry_name,
-        });
-    }
-
-    Ok(resolved)
+    resolve_paths(save_paths, files)?
+        .into_iter()
+        .map(|entry| {
+            let mut file = File::open(&entry.file_path)
+                .map_err(|e| format!("Failed to open {}: {e}", entry.file_path.display()))?;
+            let mut contents = Vec::new();
+            file.read_to_end(&mut contents)
+                .map_err(|e| format!("Failed to read {}: {e}", entry.file_path.display()))?;
+            Ok(ResolvedFile {
+                relative_path: entry.relative_path,
+                contents,
+                entry_name: entry.entry_name,
+            })
+        })
+        .collect()
 }
 
 /// Computes a SHA-256 content hash over sorted (relative_path, file_bytes) pairs.
