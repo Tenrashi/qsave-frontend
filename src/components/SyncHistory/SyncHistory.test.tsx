@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen } from "@/test/test-utils";
+import { renderWithProviders, screen, setupUser } from "@/test/test-utils";
 import { SyncHistory } from "./SyncHistory";
 
 vi.mock("@/lib/store/store", () => ({
@@ -50,12 +50,28 @@ describe("SyncHistory", () => {
   it("shows success icon for successful syncs", async () => {
     renderWithProviders(<SyncHistory />);
     await screen.findByText("The Sims 4");
-    expect(screen.getAllByRole("img", { name: "history.successIcon" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("img", { name: "history.successIcon" }),
+    ).toHaveLength(2);
   });
 
   it("shows error icon for failed syncs", async () => {
     renderWithProviders(<SyncHistory />);
     await screen.findByText("Cyberpunk 2077");
-    expect(screen.getAllByRole("img", { name: "history.errorIcon" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("img", { name: "history.errorIcon" }),
+    ).toHaveLength(1);
+  });
+
+  it("shows error message tooltip on hover", async () => {
+    const user = setupUser();
+    renderWithProviders(<SyncHistory />);
+    const errorIcon = await screen.findByRole("img", {
+      name: "history.errorIcon",
+    });
+
+    await user.hover(errorIcon);
+
+    expect(await screen.findByText("Network error")).toBeInTheDocument();
   });
 });

@@ -1,9 +1,20 @@
 import { useTranslation } from "react-i18next";
-import { CheckCircle, AlertCircle, History, Upload, Download } from "lucide-react";
+import {
+  CheckCircle,
+  AlertCircle,
+  History,
+  Upload,
+  Download,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { RECORD_STATUS } from "@/domain/types";
 import { useSyncHistory } from "@/hooks/queries/useSyncHistory/useSyncHistory";
 import { dateFnsLocales } from "@/lib/date-locales/date-locales";
@@ -32,18 +43,50 @@ export const SyncHistory = () => {
               const isRestore = record.type === "restore";
               const DirectionIcon = isRestore ? Download : Upload;
               return (
-              <div key={record.id} className="flex items-center gap-2 py-1 text-xs">
-                {record.status === RECORD_STATUS.success ? (
-                  <CheckCircle className="w-3 h-3 text-green-500 shrink-0" role="img" aria-label={t("history.successIcon")} aria-hidden={false} />
-                ) : (
-                  <AlertCircle className="w-3 h-3 text-destructive shrink-0" role="img" aria-label={t("history.errorIcon")} aria-hidden={false} />
-                )}
-                <DirectionIcon className={`w-3 h-3 shrink-0 ${isRestore ? "text-orange-500" : "text-blue-500"}`} />
-                <span className="truncate">{record.gameName}</span>
-                <span className="text-muted-foreground text-xs ml-auto shrink-0">
-                  {formatDistanceToNow(new Date(record.syncedAt), { addSuffix: true, locale })}
-                </span>
-              </div>
+                <div
+                  key={record.id}
+                  className="flex items-center gap-2 py-1 text-xs"
+                >
+                  {record.status === RECORD_STATUS.success ? (
+                    <CheckCircle
+                      className="w-3 h-3 text-green-500 shrink-0"
+                      role="img"
+                      aria-label={t("history.successIcon")}
+                      aria-hidden={false}
+                    />
+                  ) : record.error ? (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <AlertCircle
+                          className="w-3 h-3 text-destructive shrink-0"
+                          role="img"
+                          aria-label={t("history.errorIcon")}
+                          aria-hidden={false}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm break-all">
+                        {record.error}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <AlertCircle
+                      className="w-3 h-3 text-destructive shrink-0"
+                      role="img"
+                      aria-label={t("history.errorIcon")}
+                      aria-hidden={false}
+                    />
+                  )}
+                  <DirectionIcon
+                    className={`w-3 h-3 shrink-0 ${isRestore ? "text-orange-500" : "text-blue-500"}`}
+                  />
+                  <span className="truncate">{record.gameName}</span>
+                  <span className="text-muted-foreground text-xs ml-auto shrink-0">
+                    {formatDistanceToNow(new Date(record.syncedAt), {
+                      addSuffix: true,
+                      locale,
+                    })}
+                  </span>
+                </div>
               );
             })}
           </div>
