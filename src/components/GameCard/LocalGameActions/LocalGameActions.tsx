@@ -62,6 +62,8 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
   const isSyncing =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
   const isBusy = isChecking || isSyncing;
+  const isRegistryOnly =
+    (game.registryKeys?.length ?? 0) > 0 && game.saveFiles.length === 0;
   // const watched = isGameWatched(game.name);
 
   const totalSize = game.saveFiles.reduce(
@@ -226,7 +228,7 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
             size="sm"
             variant="secondary"
             onClick={handleSync}
-            disabled={isBusy}
+            disabled={isBusy || isRegistryOnly}
           >
             {status === SYNC_STATUS.syncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />

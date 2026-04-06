@@ -43,6 +43,7 @@
     "hideSteamCloud": "Ocultar jogos com Steam Cloud",
     "showSteamCloud": "Mostrar jogos com Steam Cloud",
     "cloudBadge": "Nuvem",
+    "registryOnlyBadge": "Apenas registro",
     "cloudOnlyHint": "Backup feito em outro dispositivo",
     "removePath": "Remover caminho"
   },

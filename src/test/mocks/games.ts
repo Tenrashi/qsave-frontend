@@ -100,4 +100,12 @@ export const cloudOnlyGame: Game = {
   isCloudOnly: true,
 };
 
+export const registryOnlyGame: Game = {
+  name: "Old Registry Game",
+  savePaths: [],
+  saveFiles: [],
+  registryKeys: ["HKEY_CURRENT_USER/Software/OldGame"],
+  platform: PLATFORM.steam,
+};
+
 export const twoGames: Game[] = [sims4Game, cyberpunkGame];

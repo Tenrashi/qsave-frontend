@@ -9,6 +9,7 @@ import {
   manualGame,
   cloudOnlyGame,
   steamCloudGame,
+  registryOnlyGame,
 } from "@/test/mocks/games";
 import { GameCard, type GameCardProps } from "./GameCard";
 
@@ -150,6 +151,20 @@ describe("GameCard", () => {
       renderGameCard();
       expect(
         screen.queryByText("games.steamCloudBadge"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("registry-only games", () => {
+    it("shows registry only badge when game has registry keys but no save files", () => {
+      renderGameCard({ game: registryOnlyGame });
+      expect(screen.getByText("games.registryOnlyBadge")).toBeInTheDocument();
+    });
+
+    it("does not show registry only badge for games with save files", () => {
+      renderGameCard();
+      expect(
+        screen.queryByText("games.registryOnlyBadge"),
       ).not.toBeInTheDocument();
     });
   });
