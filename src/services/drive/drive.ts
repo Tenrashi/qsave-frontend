@@ -264,7 +264,6 @@ export const postFile = async (
       method: "PUT",
       headers: {
         "Content-Type": MIME_TYPES.octetStream,
-        "Content-Length": String(fileData.byteLength),
       },
       body: fileData.buffer as ArrayBuffer,
     });
