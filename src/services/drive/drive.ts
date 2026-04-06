@@ -239,23 +239,38 @@ export const postFile = async (
       parents: [folderId],
     });
 
-    const boundary = "qsave_boundary_" + crypto.randomUUID();
-    const body = buildMultipartBody(boundary, metadata, fileData);
-
-    const res = await fetch(
-      `${DRIVE_ENDPOINTS.upload}/files?uploadType=multipart`,
+    const initRes = await fetch(
+      `${DRIVE_ENDPOINTS.upload}/files?uploadType=resumable`,
       {
         method: "POST",
         headers: {
           ...headers,
-          "Content-Type": `multipart/related; boundary=${boundary}`,
+          "Content-Type": MIME_TYPES.jsonUtf8,
+          "X-Upload-Content-Type": MIME_TYPES.octetStream,
+          "X-Upload-Content-Length": String(fileData.byteLength),
         },
-        body: body.buffer as ArrayBuffer,
+        body: metadata,
       },
     );
 
-    await assertOk(res, "Failed to upload file");
-    const data = (await res.json()) as { id: string };
+    await assertOk(initRes, "Failed to initiate upload");
+
+    const uploadUrl = initRes.headers.get("Location");
+    if (!uploadUrl) {
+      throw new Error("No upload URI in resumable-upload response");
+    }
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": MIME_TYPES.octetStream,
+        "Content-Length": String(fileData.byteLength),
+      },
+      body: fileData.buffer as ArrayBuffer,
+    });
+
+    await assertOk(uploadRes, "Failed to upload file content");
+    const data = (await uploadRes.json()) as { id: string };
     return { fileId: data.id };
   } catch (error) {
     throw new Error(

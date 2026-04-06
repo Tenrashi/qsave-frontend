@@ -31,9 +31,23 @@ pub fn resolve_localized_paths(path: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// Normalizes path separators to the OS-native separator.
+/// On Windows, replaces `/` with `\` so save paths match file paths from `fs::read_dir`.
+fn normalize_separators(path: &str) -> String {
+    #[cfg(target_os = "windows")]
+    {
+        path.replace('/', "\\")
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        path.to_string()
+    }
+}
+
 fn expand_if_exists(path: &str) -> Option<Vec<String>> {
     if path.contains('*') {
-        let matches: Vec<String> = glob::glob(path)
+        let pattern = normalize_separators(path);
+        let matches: Vec<String> = glob::glob(&pattern)
             .ok()?
             .filter_map(|entry| entry.ok())
             .filter(|matched| matched.is_dir())
@@ -49,7 +63,8 @@ fn expand_if_exists(path: &str) -> Option<Vec<String>> {
         return None;
     }
 
-    Some(vec![path.to_string()])
+    let normalized = normalize_separators(path);
+    Some(vec![normalized])
 }
 
 #[cfg(test)]

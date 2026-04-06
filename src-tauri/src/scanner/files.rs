@@ -1,4 +1,5 @@
 use rayon::prelude::*;
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
@@ -57,9 +58,11 @@ pub fn scan_candidates(candidates: Vec<ResolvedCandidate>) -> Vec<DetectedGame> 
                 .flat_map(|path| resolve_localized_paths(&path))
                 .collect();
 
+            let mut seen = HashSet::new();
             let save_files: Vec<_> = existing
                 .iter()
                 .flat_map(|path| collect_save_files(Path::new(path), &candidate.name))
+                .filter(|file| seen.insert(file.path.clone()))
                 .collect();
 
             if save_files.is_empty() && candidate.registry_keys.is_empty() {
@@ -193,6 +196,41 @@ mod tests {
 
         let games = scan_candidates(candidates);
         assert!(games.is_empty());
+    }
+
+    #[test]
+    fn deduplicates_files_from_nested_save_paths() {
+        let dir = TempDir::new().unwrap();
+        let parent = dir.path().join("game");
+        let child = parent.join("saves");
+        fs::create_dir_all(&child).unwrap();
+
+        File::create(parent.join("config.ini"))
+            .unwrap()
+            .write_all(b"cfg")
+            .unwrap();
+        File::create(child.join("slot1.dat"))
+            .unwrap()
+            .write_all(b"save")
+            .unwrap();
+
+        let candidates = vec![ResolvedCandidate {
+            name: "NestedGame".to_string(),
+            steam_id: None,
+            paths: vec![
+                parent.to_string_lossy().to_string(),
+                child.to_string_lossy().to_string(),
+            ],
+            registry_keys: Vec::new(),
+            platform: None,
+            has_steam_cloud: false,
+        }];
+
+        let games = scan_candidates(candidates);
+        assert_eq!(games.len(), 1);
+        // Without dedup: config.ini (from parent), slot1.dat (from parent), slot1.dat (from child)
+        // With dedup: config.ini, slot1.dat
+        assert_eq!(games[0].save_files.len(), 2);
     }
 
     #[test]
