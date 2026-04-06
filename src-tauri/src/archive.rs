@@ -146,6 +146,19 @@ fn resolve_paths(save_paths: &[String], files: &[String]) -> Result<Vec<Resolved
     Ok(resolved)
 }
 
+/// Adapter that forwards `Write` to `Digest::update`.
+struct DigestWriter<'a>(&'a mut Sha256);
+
+impl std::io::Write for DigestWriter<'_> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        Digest::update(self.0, buf);
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 /// Computes a SHA-256 content hash by streaming files one at a time.
 /// Produces the same hash as `compute_hash` — same (sorted relative_path, contents) sequence.
 fn compute_hash_streaming(resolved: &[ResolvedPath]) -> Result<String, String> {
@@ -153,21 +166,14 @@ fn compute_hash_streaming(resolved: &[ResolvedPath]) -> Result<String, String> {
     sorted_indices.sort_by(|a, b| resolved[*a].relative_path.cmp(&resolved[*b].relative_path));
 
     let mut hasher = Sha256::new();
-    let mut buf = [0u8; 8192];
     for index in sorted_indices {
         let entry = &resolved[index];
         Digest::update(&mut hasher, entry.relative_path.as_bytes());
         Digest::update(&mut hasher, b"\0");
         let mut file = File::open(&entry.file_path)
             .map_err(|e| format!("Failed to open {}: {e}", entry.file_path.display()))?;
-        loop {
-            let n = file.read(&mut buf)
-                .map_err(|e| format!("Failed to read {}: {e}", entry.file_path.display()))?;
-            if n == 0 {
-                break;
-            }
-            Digest::update(&mut hasher, &buf[..n]);
-        }
+        std::io::copy(&mut file, &mut DigestWriter(&mut hasher))
+            .map_err(|e| format!("Failed to read {}: {e}", entry.file_path.display()))?;
         Digest::update(&mut hasher, b"\0");
     }
     let result = hasher.finalize();
