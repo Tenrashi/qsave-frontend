@@ -169,16 +169,7 @@ fn merge_manifests(
                 }
             }
             std::collections::hash_map::Entry::Vacant(vacant) => {
-                vacant.insert(ManifestEntry {
-                    files: entry.files,
-                    registry: entry.registry,
-                    install_dir: entry.install_dir,
-                    alias: entry.alias,
-                    steam: entry.steam,
-                    gog: entry.gog,
-                    cloud: entry.cloud,
-                    _rest: entry._rest,
-                });
+                vacant.insert(entry);
             }
         }
     }
@@ -512,7 +503,6 @@ GameB:
                 steam: None,
                 gog: None,
                 cloud: None,
-                _rest: HashMap::new(),
             },
         );
 
