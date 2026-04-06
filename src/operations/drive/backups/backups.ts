@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { readFile, remove } from "@tauri-apps/plugin-fs";
 import type { DriveBackup } from "@/domain/types";
 import {
   TAURI_COMMANDS,
@@ -65,12 +66,13 @@ export const uploadGameArchive = async (
   savePaths: string[],
   filePaths: string[],
 ): Promise<{ fileId: string; contentHash: string }> => {
+  const result: { temp_path: string; content_hash: string } = await invoke(
+    TAURI_COMMANDS.createZipFile,
+    { savePaths, files: filePaths },
+  );
+
   try {
-    const result: { zip_bytes: number[]; content_hash: string } = await invoke(
-      TAURI_COMMANDS.createZip,
-      { savePaths, files: filePaths },
-    );
-    const zipData = new Uint8Array(result.zip_bytes);
+    const zipData = await readFile(result.temp_path);
 
     const folderId = await ensureGameFolder(gameName);
 
@@ -92,10 +94,11 @@ export const uploadGameArchive = async (
 
     const uploaded = await postFile(folderId, archiveName, zipData);
     return { ...uploaded, contentHash: result.content_hash };
-  } catch (error) {
-    throw new Error(
-      `Failed to upload archive for "${gameName}": ${error instanceof Error ? error.message : error}`,
-      { cause: error },
-    );
+  } finally {
+    try {
+      await remove(result.temp_path);
+    } catch {
+      // Best-effort cleanup
+    }
   }
 };
