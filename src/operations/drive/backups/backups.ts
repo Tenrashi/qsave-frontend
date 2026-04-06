@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { readFile, remove } from "@tauri-apps/plugin-fs";
 import type { DriveBackup } from "@/domain/types";
 import {
   TAURI_COMMANDS,
@@ -66,14 +65,13 @@ export const uploadGameArchive = async (
   savePaths: string[],
   filePaths: string[],
 ): Promise<{ fileId: string; contentHash: string }> => {
-  const result: { temp_path: string; content_hash: string } = await invoke(
-    TAURI_COMMANDS.createZipFile,
-    { savePaths, files: filePaths },
-  );
+  const result: { temp_path: string; content_hash: string; file_size: number } =
+    await invoke(TAURI_COMMANDS.createZipFile, {
+      savePaths,
+      files: filePaths,
+    });
 
   try {
-    const zipData = await readFile(result.temp_path);
-
     const folderId = await ensureGameFolder(gameName);
 
     try {
@@ -92,13 +90,18 @@ export const uploadGameArchive = async (
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const archiveName = `${gameName}_${timestamp}.zip`;
 
-    const uploaded = await postFile(folderId, archiveName, zipData);
+    // upload_file reads the temp file and deletes it after upload
+    const uploaded = await postFile(
+      folderId,
+      archiveName,
+      result.temp_path,
+      result.file_size,
+    );
     return { ...uploaded, contentHash: result.content_hash };
-  } finally {
-    try {
-      await remove(result.temp_path);
-    } catch {
-      // Best-effort cleanup
-    }
+  } catch (error) {
+    await invoke(TAURI_COMMANDS.deleteTempFile, {
+      filePath: result.temp_path,
+    }).catch(() => {});
+    throw error;
   }
 };

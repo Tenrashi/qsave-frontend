@@ -37,6 +37,49 @@ async fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<
         .map_err(|e| format!("Zip task failed: {}", e))?
 }
 
+#[derive(Debug, serde::Serialize)]
+struct UploadFileResult {
+    file_id: String,
+}
+
+#[tauri::command]
+async fn upload_file(file_path: String, upload_url: String) -> Result<UploadFileResult, String> {
+    tokio::task::spawn_blocking(move || {
+        let body = std::fs::read(&file_path)
+            .map_err(|e| format!("Failed to read {file_path}: {e}"))?;
+        let _ = std::fs::remove_file(&file_path);
+
+        let client = reqwest::blocking::Client::new();
+        let res = client
+            .put(&upload_url)
+            .header("Content-Type", "application/octet-stream")
+            .body(body)
+            .send()
+            .map_err(|e| format!("Upload failed: {e}"))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let body = res.text().unwrap_or_default();
+            return Err(format!("Upload failed: {status} {body}"));
+        }
+
+        #[derive(serde::Deserialize)]
+        struct DriveFile {
+            id: String,
+        }
+        let data: DriveFile = res.json().map_err(|e| format!("Failed to parse response: {e}"))?;
+        Ok(UploadFileResult { file_id: data.id })
+    })
+    .await
+    .map_err(|e| format!("Upload task failed: {e}"))?
+}
+
+#[tauri::command]
+fn delete_temp_file(file_path: String) -> Result<(), String> {
+    std::fs::remove_file(&file_path)
+        .map_err(|e| format!("Failed to delete temp file: {e}"))
+}
+
 #[tauri::command]
 async fn compute_save_hash(save_paths: Vec<String>, files: Vec<String>) -> Result<String, String> {
     tokio::task::spawn_blocking(move || archive::compute_save_hash(save_paths, files))
@@ -134,7 +177,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![get_cached_games, scan_games, create_zip, create_zip_file, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
+        .invoke_handler(tauri::generate_handler![get_cached_games, scan_games, create_zip, create_zip_file, upload_file, delete_temp_file, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
