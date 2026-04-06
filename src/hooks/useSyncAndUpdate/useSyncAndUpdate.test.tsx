@@ -151,7 +151,10 @@ describe("useSyncAndUpdate", () => {
     expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
       SYNC_STATUS.error,
     );
-    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
+      description: "upload failed",
+      duration: 10_000,
+    });
   });
 
   it("sets error status, shows error toast, and rethrows when syncGame throws", async () => {
@@ -166,7 +169,10 @@ describe("useSyncAndUpdate", () => {
     expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
       SYNC_STATUS.error,
     );
-    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
+      description: "network error",
+      duration: 10_000,
+    });
   });
 
   it("returns the sync result on success", async () => {

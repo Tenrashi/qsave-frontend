@@ -1,5 +1,6 @@
 mod archive;
 mod keychain;
+mod logger;
 mod oauth;
 mod scanner;
 
@@ -32,9 +33,19 @@ async fn create_zip(save_paths: Vec<String>, files: Vec<String>) -> Result<Creat
 
 #[tauri::command]
 async fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<CreateZipFileResult, String> {
-    tokio::task::spawn_blocking(move || archive::create_zip_file(save_paths, files))
+    let file_count = files.len();
+    logger::info(&format!("create_zip_file: {file_count} files, save_paths={save_paths:?}"));
+    let result = tokio::task::spawn_blocking(move || archive::create_zip_file(save_paths, files))
         .await
-        .map_err(|e| format!("Zip task failed: {}", e))?
+        .map_err(|e| format!("Zip task failed: {}", e))?;
+    match &result {
+        Ok(r) => logger::info(&format!(
+            "create_zip_file: done, size={} bytes, path={}",
+            r.file_size, r.temp_path
+        )),
+        Err(e) => logger::error(&format!("create_zip_file: {e}")),
+    }
+    result
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -44,9 +55,11 @@ struct UploadFileResult {
 
 #[tauri::command]
 async fn upload_file(file_path: String, upload_url: String) -> Result<UploadFileResult, String> {
-    tokio::task::spawn_blocking(move || {
+    logger::info(&format!("upload_file: reading {file_path}"));
+    let result = tokio::task::spawn_blocking(move || {
         let body = std::fs::read(&file_path)
             .map_err(|e| format!("Failed to read {file_path}: {e}"))?;
+        logger::info(&format!("upload_file: read {} bytes, uploading", body.len()));
         let _ = std::fs::remove_file(&file_path);
 
         let client = reqwest::blocking::Client::new();
@@ -68,10 +81,15 @@ async fn upload_file(file_path: String, upload_url: String) -> Result<UploadFile
             id: String,
         }
         let data: DriveFile = res.json().map_err(|e| format!("Failed to parse response: {e}"))?;
+        logger::info(&format!("upload_file: success, file_id={}", data.id));
         Ok(UploadFileResult { file_id: data.id })
     })
     .await
-    .map_err(|e| format!("Upload task failed: {e}"))?
+    .map_err(|e| format!("Upload task failed: {e}"))?;
+    if let Err(ref e) = result {
+        logger::error(&format!("upload_file: {e}"));
+    }
+    result
 }
 
 #[tauri::command]

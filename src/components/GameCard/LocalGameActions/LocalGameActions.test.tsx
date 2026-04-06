@@ -255,7 +255,10 @@ describe("LocalGameActions", () => {
         SYNC_STATUS.error,
       ),
     );
-    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
+      description: "upload failed",
+      duration: 10_000,
+    });
   });
 
   it("sets error status and shows error toast when sync throws", async () => {
@@ -270,7 +273,10 @@ describe("LocalGameActions", () => {
         SYNC_STATUS.error,
       ),
     );
-    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
+      description: "network error",
+      duration: 10_000,
+    });
   });
 
   describe("upload-side conflict detection", () => {

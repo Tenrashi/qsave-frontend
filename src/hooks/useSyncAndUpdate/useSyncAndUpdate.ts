@@ -28,17 +28,22 @@ export const useSyncAndUpdate = (): ((game: Game) => Promise<SyncResult>) => {
         }
       }
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
-      const toastFn =
-        status === SYNC_STATUS.success ? toast.success : toast.error;
-      const toastKey =
-        status === SYNC_STATUS.success
-          ? "toast.syncSuccess"
-          : "toast.syncFailed";
-      toastFn(i18n.t(toastKey, { name: game.name }));
+      if (status === SYNC_STATUS.success) {
+        toast.success(i18n.t("toast.syncSuccess", { name: game.name }));
+        return result;
+      }
+
+      toast.error(i18n.t("toast.syncFailed", { name: game.name }), {
+        description: result.error,
+        duration: 10_000,
+      });
       return result;
     } catch (error) {
       useSyncStore.getState().setGameStatus(game.name, SYNC_STATUS.error);
-      toast.error(i18n.t("toast.syncFailed", { name: game.name }));
+      toast.error(i18n.t("toast.syncFailed", { name: game.name }), {
+        description: error instanceof Error ? error.message : String(error),
+        duration: 10_000,
+      });
       throw error;
     }
   };
