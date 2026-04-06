@@ -1,4 +1,5 @@
 mod cache;
+mod epic;
 mod files;
 mod gog;
 mod localized_names;
@@ -13,6 +14,7 @@ pub use types::DetectedGame;
 
 use std::path::Path;
 
+use epic::find_epic_app_roots;
 use files::{collect_save_files, scan_candidates};
 use gog::find_gog_app_roots;
 use manifest::{fetch_manifest, resolve_candidates};
@@ -56,8 +58,9 @@ pub fn scan_games_blocking() -> Result<Vec<DetectedGame>, String> {
     let steam_libraries = find_steam_libraries();
     let steam_roots = find_steam_app_roots(&steam_libraries);
     let gog_roots = find_gog_app_roots();
+    let epic_roots = find_epic_app_roots();
 
-    let candidates = resolve_candidates(manifest, &home, &username, &steam_roots, &gog_roots);
+    let candidates = resolve_candidates(manifest, &home, &username, &steam_roots, &gog_roots, &epic_roots);
     let games = scan_candidates(candidates);
     cache::save(&games);
     Ok(games)

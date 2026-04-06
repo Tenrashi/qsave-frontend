@@ -273,6 +273,7 @@ pub fn resolve_candidates(
     username: &str,
     steam_roots: &HashMap<u64, PathBuf>,
     gog_roots: &HashMap<u64, PathBuf>,
+    epic_roots: &HashMap<String, PathBuf>,
 ) -> Vec<ResolvedCandidate> {
     let os = current_os();
 
@@ -284,14 +285,23 @@ pub fn resolve_candidates(
             let gog_id = entry.gog.and_then(|g| g.id);
             let steam_root = steam_id.and_then(|id| steam_roots.get(&id));
             let gog_root = gog_id.and_then(|id| gog_roots.get(&id));
+
+            // Epic: match any installDir key against epic install dir basenames
+            let epic_root = entry.install_dir.as_ref().and_then(|dirs| {
+                dirs.keys()
+                    .find_map(|dir_name| epic_roots.get(&dir_name.to_ascii_lowercase()))
+            });
+
             let platform = steam_root
                 .map(|_| "steam".to_string())
-                .or_else(|| gog_root.map(|_| "gog".to_string()));
+                .or_else(|| gog_root.map(|_| "gog".to_string()))
+                .or_else(|| epic_root.map(|_| "epic".to_string()));
             let manifest_has_steam_cloud = entry.cloud.map_or(false, |c| c.steam);
             let has_steam_cloud =
                 platform.as_deref() == Some("steam") && manifest_has_steam_cloud;
             let root = steam_root
                 .or(gog_root)
+                .or(epic_root)
                 .map(|path| path.to_string_lossy().into_owned());
 
             // First key in installDir is the canonical game directory name
@@ -806,6 +816,7 @@ GameB:
             "user",
             &HashMap::new(),
             &HashMap::new(),
+            &HashMap::new(),
         );
 
         assert_eq!(candidates.len(), 2);
@@ -830,6 +841,7 @@ GameB:
             "user",
             &HashMap::new(),
             &HashMap::new(),
+            &HashMap::new(),
         );
 
         assert_eq!(candidates.len(), 1);
@@ -849,7 +861,7 @@ SteamGame:
         let mut roots = HashMap::new();
         roots.insert(42u64, PathBuf::from("/games/SteamGame"));
         let candidates =
-            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new(), &HashMap::new());
 
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].paths, vec!["/games/SteamGame/saves"]);
@@ -873,7 +885,7 @@ TestGame:
             PathBuf::from("/steam/steamapps/common/TestGameDir"),
         );
         let candidates =
-            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new(), &HashMap::new());
 
         assert_eq!(candidates.len(), 1);
         assert_eq!(
@@ -900,6 +912,7 @@ GogGame:
             "user",
             &HashMap::new(),
             &gog_roots,
+            &HashMap::new(),
         );
 
         assert_eq!(candidates.len(), 1);
@@ -928,6 +941,7 @@ MultiStoreGame:
             "user",
             &steam_roots,
             &gog_roots,
+            &HashMap::new(),
         );
 
         assert_eq!(candidates.len(), 1);
@@ -950,7 +964,7 @@ SteamGame:
         let mut roots = HashMap::new();
         roots.insert(42u64, PathBuf::from("/games/SteamGame"));
         let candidates =
-            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new(), &HashMap::new());
 
         assert_eq!(candidates[0].platform.as_deref(), Some("steam"));
     }
@@ -973,6 +987,7 @@ GogGame:
             "user",
             &HashMap::new(),
             &gog_roots,
+            &HashMap::new(),
         );
 
         assert_eq!(candidates[0].platform.as_deref(), Some("gog"));
@@ -990,6 +1005,7 @@ GenericGame:
             manifest,
             "/home/user",
             "user",
+            &HashMap::new(),
             &HashMap::new(),
             &HashMap::new(),
         );
@@ -1019,6 +1035,7 @@ MultiStoreGame:
             "user",
             &steam_roots,
             &gog_roots,
+            &HashMap::new(),
         );
 
         assert_eq!(candidates[0].platform.as_deref(), Some("steam"));
@@ -1039,7 +1056,7 @@ CloudGame:
         let mut roots = HashMap::new();
         roots.insert(50u64, PathBuf::from("/games/CloudGame"));
         let candidates =
-            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new(), &HashMap::new());
 
         assert!(candidates[0].has_steam_cloud);
     }
@@ -1066,6 +1083,7 @@ CloudGame:
             "user",
             &HashMap::new(),
             &gog_roots,
+            &HashMap::new(),
         );
 
         assert!(!candidates[0].has_steam_cloud);
@@ -1085,7 +1103,7 @@ SteamGame:
         let mut roots = HashMap::new();
         roots.insert(42u64, PathBuf::from("/games/SteamGame"));
         let candidates =
-            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new());
+            resolve_candidates(manifest, "/home/user", "user", &roots, &HashMap::new(), &HashMap::new());
 
         assert!(!candidates[0].has_steam_cloud);
     }
@@ -1104,6 +1122,7 @@ SteamGame:
             manifest,
             "/home/user",
             "user",
+            &HashMap::new(),
             &HashMap::new(),
             &HashMap::new(),
         );
@@ -1136,6 +1155,7 @@ FilteredGame:
             "user",
             &HashMap::new(),
             &HashMap::new(),
+            &HashMap::new(),
         );
 
         assert_eq!(candidates.len(), 1);
@@ -1164,10 +1184,104 @@ StoreFilteredGame:
             "user",
             &HashMap::new(),
             &HashMap::new(),
+            &HashMap::new(),
         );
 
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].paths.len(), 1);
         assert!(candidates[0].paths[0].contains("always"));
+    }
+
+    #[test]
+    fn resolves_root_when_epic_install_dir_matches() {
+        let yaml = r#"
+EpicGame:
+  files:
+    <base>/saves: {}
+  installDir:
+    EpicGameDir: {}
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut epic_roots = HashMap::new();
+        epic_roots.insert(
+            "epicgamedir".to_string(),
+            PathBuf::from("/games/epic/EpicGameDir"),
+        );
+        let candidates = resolve_candidates(
+            manifest,
+            "/home/user",
+            "user",
+            &HashMap::new(),
+            &HashMap::new(),
+            &epic_roots,
+        );
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(
+            candidates[0].paths,
+            vec!["/games/epic/EpicGameDir/saves"]
+        );
+    }
+
+    #[test]
+    fn platform_is_epic_when_epic_root_matches() {
+        let yaml = r#"
+EpicGame:
+  files:
+    <base>/saves: {}
+  installDir:
+    EpicGameDir: {}
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut epic_roots = HashMap::new();
+        epic_roots.insert(
+            "epicgamedir".to_string(),
+            PathBuf::from("/games/epic/EpicGameDir"),
+        );
+        let candidates = resolve_candidates(
+            manifest,
+            "/home/user",
+            "user",
+            &HashMap::new(),
+            &HashMap::new(),
+            &epic_roots,
+        );
+
+        assert_eq!(candidates[0].platform.as_deref(), Some("epic"));
+    }
+
+    #[test]
+    fn steam_root_takes_priority_over_epic() {
+        let yaml = r#"
+MultiStoreGame:
+  files:
+    <base>/saves: {}
+  steam:
+    id: 10
+  installDir:
+    MultiStoreDir: {}
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        let mut steam_roots = HashMap::new();
+        steam_roots.insert(
+            10u64,
+            PathBuf::from("/steam/steamapps/common/MultiStoreDir"),
+        );
+        let mut epic_roots = HashMap::new();
+        epic_roots.insert(
+            "multistoredir".to_string(),
+            PathBuf::from("/games/epic/MultiStoreDir"),
+        );
+        let candidates = resolve_candidates(
+            manifest,
+            "/home/user",
+            "user",
+            &steam_roots,
+            &HashMap::new(),
+            &epic_roots,
+        );
+
+        assert_eq!(candidates[0].platform.as_deref(), Some("steam"));
+        assert!(candidates[0].paths[0].starts_with("/steam/"));
     }
 }
