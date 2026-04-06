@@ -1,3 +1,14 @@
+# [1.4.0](https://github.com/Tenrashi/qsave/compare/v1.3.3...v1.4.0) (2026-04-06)
+
+### Bug Fixes
+
+- delete temp file only after upload succeeds, deduplicate resolve_files ([08a1f35](https://github.com/Tenrashi/qsave/commit/08a1f35d40a1764017101507acdae078c1ce654b))
+- stream large saves instead of loading everything into memory ([1366561](https://github.com/Tenrashi/qsave/commit/136656143013a905a40a0e27f6362b9257971c47))
+
+### Features
+
+- surface error details in toasts, sync history, and log file ([e68773d](https://github.com/Tenrashi/qsave/commit/e68773dec1040d2196dca1167d74d466fb663aeb))
+
 ## [1.3.3](https://github.com/Tenrashi/qsave/compare/v1.3.2...v1.3.3) (2026-04-06)
 
 ### Bug Fixes
