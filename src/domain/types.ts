@@ -13,6 +13,7 @@ export type Game = {
 export const PLATFORM = {
   steam: "steam",
   gog: "gog",
+  epic: "epic",
 } as const;
 
 export type Platform = (typeof PLATFORM)[keyof typeof PLATFORM];
