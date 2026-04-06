@@ -1,3 +1,13 @@
+# [1.3.0](https://github.com/Tenrashi/qsave/compare/v1.2.0...v1.3.0) (2026-04-06)
+
+### Bug Fixes
+
+- guard Epic matching behind Steam/GOG install check ([23659a5](https://github.com/Tenrashi/qsave/commit/23659a5ab6a8f5fcfb228992e079c34501cacea7))
+
+### Features
+
+- add Epic Games Store detection ([c229892](https://github.com/Tenrashi/qsave/commit/c2298925135e6ed6faf5155629a445a3438be721))
+
 # [1.2.0](https://github.com/Tenrashi/qsave/compare/v1.1.3...v1.2.0) (2026-04-06)
 
 ### Bug Fixes
