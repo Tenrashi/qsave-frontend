@@ -11,14 +11,6 @@
       "allow": [{ "path": "$HOME/**" }]
     },
     "fs:allow-unwatch",
-    {
-      "identifier": "fs:allow-read-file",
-      "allow": [{ "path": "$TEMP/qsave_upload_*" }]
-    },
-    {
-      "identifier": "fs:allow-remove",
-      "allow": [{ "path": "$TEMP/qsave_upload_*" }]
-    },
     "store:default",
     "notification:default",
     "notification:allow-notify",

@@ -25,6 +25,7 @@ pub struct CreateZipResult {
 pub struct CreateZipFileResult {
     pub temp_path: String,
     pub content_hash: String,
+    pub file_size: u64,
 }
 
 #[derive(Debug, Serialize)]
@@ -189,9 +190,14 @@ pub fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<Cr
     zip.finish()
         .map_err(|e| format!("Failed to finalize zip: {e}"))?;
 
+    let file_size = fs::metadata(&temp_path)
+        .map_err(|e| format!("Failed to read temp file size: {e}"))?
+        .len();
+
     Ok(CreateZipFileResult {
         temp_path: temp_path.to_string_lossy().to_string(),
         content_hash,
+        file_size,
     })
 }
 

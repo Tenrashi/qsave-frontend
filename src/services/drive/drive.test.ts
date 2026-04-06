@@ -12,9 +12,14 @@ import {
   getFolderNames,
 } from "./drive";
 
-const { mockFetch, mockGetValidToken } = vi.hoisted(() => ({
+const { mockFetch, mockGetValidToken, mockInvoke } = vi.hoisted(() => ({
   mockFetch: vi.fn(),
   mockGetValidToken: vi.fn(() => Promise.resolve("test-token")),
+  mockInvoke: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: mockInvoke,
 }));
 
 vi.mock("@tauri-apps/plugin-http", () => ({
@@ -378,30 +383,31 @@ describe("drive service", () => {
       text: () => Promise.resolve(""),
     });
 
-    it("initiates resumable upload then sends content", async () => {
-      mockFetch
-        .mockResolvedValueOnce(resumableInitResponse())
-        .mockResolvedValueOnce(okResponse({ id: "uploaded-id" }));
+    it("initiates resumable upload then delegates to native upload", async () => {
+      mockFetch.mockResolvedValueOnce(resumableInitResponse());
+      mockInvoke.mockResolvedValueOnce({ file_id: "uploaded-id" });
 
       const result = await postFile(
         "folder-id",
         "save.zip",
-        new Uint8Array([1]),
+        "/tmp/save.zip",
+        1024,
       );
 
       expect(result.fileId).toBe("uploaded-id");
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(mockFetch.mock.calls[0][0]).toContain("uploadType=resumable");
-      expect(mockFetch.mock.calls[1][0]).toBe(
-        "https://upload.example.com/resume",
-      );
+      expect(mockInvoke).toHaveBeenCalledWith("upload_file", {
+        filePath: "/tmp/save.zip",
+        uploadUrl: "https://upload.example.com/resume",
+      });
     });
 
     it("throws when init request fails", async () => {
       mockFetch.mockResolvedValueOnce(errorResponse(500));
 
       await expect(
-        postFile("folder-id", "save.zip", new Uint8Array([1])),
+        postFile("folder-id", "save.zip", "/tmp/save.zip", 1024),
       ).rejects.toThrow('Failed to upload file "save.zip"');
     });
 
@@ -414,17 +420,16 @@ describe("drive service", () => {
       });
 
       await expect(
-        postFile("folder-id", "save.zip", new Uint8Array([1])),
+        postFile("folder-id", "save.zip", "/tmp/save.zip", 1024),
       ).rejects.toThrow("No upload URI");
     });
 
-    it("throws when content upload fails", async () => {
-      mockFetch
-        .mockResolvedValueOnce(resumableInitResponse())
-        .mockResolvedValueOnce(errorResponse(500));
+    it("throws when native upload fails", async () => {
+      mockFetch.mockResolvedValueOnce(resumableInitResponse());
+      mockInvoke.mockRejectedValueOnce(new Error("upload failed"));
 
       await expect(
-        postFile("folder-id", "save.zip", new Uint8Array([1])),
+        postFile("folder-id", "save.zip", "/tmp/save.zip", 1024),
       ).rejects.toThrow('Failed to upload file "save.zip"');
     });
 
@@ -432,7 +437,7 @@ describe("drive service", () => {
       mockFetch.mockRejectedValueOnce("string error");
 
       await expect(
-        postFile("folder-id", "save.zip", new Uint8Array([1])),
+        postFile("folder-id", "save.zip", "/tmp/save.zip", 1024),
       ).rejects.toThrow('Failed to upload file "save.zip": string error');
     });
   });

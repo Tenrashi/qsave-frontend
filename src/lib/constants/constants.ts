@@ -22,6 +22,8 @@ export const TAURI_COMMANDS = {
   startOAuth: "start_oauth",
   createZip: "create_zip",
   createZipFile: "create_zip_file",
+  uploadFile: "upload_file",
+  deleteTempFile: "delete_temp_file",
   computeSaveHash: "compute_save_hash",
   extractZip: "extract_zip",
   readZipMeta: "read_zip_meta",

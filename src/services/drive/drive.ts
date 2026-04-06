@@ -1,7 +1,12 @@
+import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { getValidToken } from "@/operations/auth/auth/auth";
 import type { DeviceEntry } from "@/operations/devices/devices.types";
-import { DRIVE_ENDPOINTS, MIME_TYPES } from "@/lib/constants/constants";
+import {
+  DRIVE_ENDPOINTS,
+  MIME_TYPES,
+  TAURI_COMMANDS,
+} from "@/lib/constants/constants";
 import { buildMultipartBody } from "@/lib/drive/multipart/multipart";
 
 const authHeaders = async (): Promise<Record<string, string>> => {
@@ -230,7 +235,8 @@ export const getBackupFile = async (fileId: string): Promise<Uint8Array> => {
 export const postFile = async (
   folderId: string,
   fileName: string,
-  fileData: Uint8Array,
+  filePath: string,
+  fileSize: number,
 ): Promise<{ fileId: string }> => {
   try {
     const headers = await authHeaders();
@@ -247,7 +253,7 @@ export const postFile = async (
           ...headers,
           "Content-Type": MIME_TYPES.jsonUtf8,
           "X-Upload-Content-Type": MIME_TYPES.octetStream,
-          "X-Upload-Content-Length": String(fileData.byteLength),
+          "X-Upload-Content-Length": String(fileSize),
         },
         body: metadata,
       },
@@ -260,17 +266,11 @@ export const postFile = async (
       throw new Error("No upload URI in resumable-upload response");
     }
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": MIME_TYPES.octetStream,
-      },
-      body: fileData.buffer as ArrayBuffer,
-    });
-
-    await assertOk(uploadRes, "Failed to upload file content");
-    const data = (await uploadRes.json()) as { id: string };
-    return { fileId: data.id };
+    const result: { file_id: string } = await invoke(
+      TAURI_COMMANDS.uploadFile,
+      { filePath, uploadUrl },
+    );
+    return { fileId: result.file_id };
   } catch (error) {
     throw new Error(
       `Failed to upload file "${fileName}": ${error instanceof Error ? error.message : error}`,

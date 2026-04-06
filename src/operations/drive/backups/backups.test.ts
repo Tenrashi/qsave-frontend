@@ -8,8 +8,6 @@ import {
 
 const {
   mockInvoke,
-  mockReadFile,
-  mockRemove,
   mockGetFilesInFolder,
   mockDeleteFile,
   mockPostFile,
@@ -18,8 +16,6 @@ const {
   mockEnsureGameFolder,
 } = vi.hoisted(() => ({
   mockInvoke: vi.fn(),
-  mockReadFile: vi.fn(),
-  mockRemove: vi.fn(),
   mockGetFilesInFolder: vi.fn(),
   mockDeleteFile: vi.fn(),
   mockPostFile: vi.fn(),
@@ -30,11 +26,6 @@ const {
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: mockInvoke,
-}));
-
-vi.mock("@tauri-apps/plugin-fs", () => ({
-  readFile: mockReadFile,
-  remove: mockRemove,
 }));
 
 vi.mock("@/services/drive/drive", () => ({
@@ -150,12 +141,11 @@ describe("backups", () => {
       mockInvoke.mockResolvedValue({
         temp_path: "/tmp/qsave_upload_test.zip",
         content_hash: "abc123",
+        file_size: 1024,
       });
-      mockReadFile.mockResolvedValue(new Uint8Array([1, 2, 3]));
-      mockRemove.mockResolvedValue(undefined);
     });
 
-    it("creates zip file, reads it, uploads, and cleans up", async () => {
+    it("creates zip file, uploads via postFile, and returns result", async () => {
       mockEnsureGameFolder.mockResolvedValueOnce("game-folder");
       mockGetFilesInFolder.mockResolvedValueOnce([]);
       mockPostFile.mockResolvedValueOnce({ fileId: "uploaded-id" });
@@ -172,8 +162,12 @@ describe("backups", () => {
         savePaths: ["/saves"],
         files: ["/saves/file.sav"],
       });
-      expect(mockReadFile).toHaveBeenCalledWith("/tmp/qsave_upload_test.zip");
-      expect(mockRemove).toHaveBeenCalledWith("/tmp/qsave_upload_test.zip");
+      expect(mockPostFile).toHaveBeenCalledWith(
+        "game-folder",
+        expect.stringContaining("Sims 4_"),
+        "/tmp/qsave_upload_test.zip",
+        1024,
+      );
     });
 
     it("deletes old saves when at limit", async () => {
@@ -202,14 +196,16 @@ describe("backups", () => {
       );
     });
 
-    it("cleans up temp file even when upload fails", async () => {
+    it("cleans up temp file when upload fails", async () => {
       mockEnsureGameFolder.mockRejectedValueOnce(new Error("folder fail"));
 
       await expect(uploadGameArchive("Game", ["/s"], ["/s/f"])).rejects.toThrow(
         "folder fail",
       );
 
-      expect(mockRemove).toHaveBeenCalledWith("/tmp/qsave_upload_test.zip");
+      expect(mockInvoke).toHaveBeenCalledWith("delete_temp_file", {
+        filePath: "/tmp/qsave_upload_test.zip",
+      });
     });
 
     it("continues upload when cleanup of old saves fails", async () => {
