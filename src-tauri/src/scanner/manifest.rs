@@ -75,10 +75,9 @@ enum DownloadResult {
     Failed,
 }
 
-fn download(url: &str, cache_filename: &str) -> DownloadResult {
+fn download(url: &str, cache_filename: &str, client: &reqwest::blocking::Client) -> DownloadResult {
     let etag_filename = format!("{}.etag", cache_filename);
     let stored_etag = load_from_cache(&etag_filename);
-    let client = reqwest::blocking::Client::new();
 
     for _ in 0..2 {
         let mut request = client.get(url);
@@ -250,9 +249,10 @@ fn matches_when(when: &Option<Vec<WhenCondition>>, os: &str, store: Option<&str>
 
 pub fn fetch_manifest() -> Result<HashMap<String, ManifestEntry>, String> {
     let mut combined: HashMap<String, ManifestEntry> = HashMap::new();
+    let client = reqwest::blocking::Client::new();
 
     for source in MANIFESTS {
-        let downloaded = download(source.url, source.cache_filename);
+        let downloaded = download(source.url, source.cache_filename, &client);
         let body = match &downloaded {
             DownloadResult::Fresh(d) => d.body.clone(),
             DownloadResult::NotModified => load_from_cache(source.cache_filename)
@@ -1119,5 +1119,65 @@ SteamGame:
         );
 
         assert!(candidates.is_empty());
+    }
+
+    #[test]
+    fn when_os_filter_excludes_non_matching_paths() {
+        let other_os = match current_os() {
+            "mac" => "windows",
+            "windows" => "linux",
+            _ => "windows",
+        };
+
+        let yaml = format!(
+            r#"
+FilteredGame:
+  files:
+    <home>/always: {{}}
+    <home>/other_os_only:
+      when:
+        - os: {other_os}
+"#
+        );
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(&yaml).unwrap();
+        let candidates = resolve_candidates(
+            manifest,
+            "/home/user",
+            "user",
+            &HashMap::new(),
+            &HashMap::new(),
+        );
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].name, "FilteredGame");
+        assert_eq!(candidates[0].paths.len(), 1);
+        assert!(candidates[0].paths[0].contains("always"));
+    }
+
+    #[test]
+    fn when_store_filter_excludes_without_matching_platform() {
+        let yaml = r#"
+StoreFilteredGame:
+  files:
+    <home>/steam_only:
+      when:
+        - store: steam
+    <home>/always: {}
+  steam:
+    id: 77
+"#;
+        let manifest: HashMap<String, ManifestEntry> = serde_yaml::from_str(yaml).unwrap();
+        // No steam root provided — platform is None, so store: steam path is excluded
+        let candidates = resolve_candidates(
+            manifest,
+            "/home/user",
+            "user",
+            &HashMap::new(),
+            &HashMap::new(),
+        );
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].paths.len(), 1);
+        assert!(candidates[0].paths[0].contains("always"));
     }
 }

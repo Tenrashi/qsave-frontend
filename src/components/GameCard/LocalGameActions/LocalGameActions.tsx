@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
+import { isRegistryOnly } from "@/lib/game/game";
 import { QUERY_KEYS } from "@/lib/constants/constants";
 import { getCloudGameHash } from "@/operations/devices/devices";
 import { computeContentHash } from "@/lib/hash/hash";
@@ -62,8 +63,6 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
   const isSyncing =
     status === SYNC_STATUS.syncing || status === SYNC_STATUS.restoring;
   const isBusy = isChecking || isSyncing;
-  const isRegistryOnly =
-    (game.registryKeys?.length ?? 0) > 0 && game.saveFiles.length === 0;
   // const watched = isGameWatched(game.name);
 
   const totalSize = game.saveFiles.reduce(
@@ -228,7 +227,7 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
             size="sm"
             variant="secondary"
             onClick={handleSync}
-            disabled={isBusy || isRegistryOnly}
+            disabled={isBusy || isRegistryOnly(game)}
           >
             {status === SYNC_STATUS.syncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />

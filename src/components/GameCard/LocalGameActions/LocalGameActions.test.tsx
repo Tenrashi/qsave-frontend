@@ -48,6 +48,11 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const mockIsRegistryOnly = vi.hoisted(() => vi.fn(() => false));
+vi.mock("@/lib/game/game", () => ({
+  isRegistryOnly: mockIsRegistryOnly,
+}));
+
 vi.mock("../utils/formatSize", () => ({
   formatSize: (bytes: number) => `${bytes} bytes`,
 }));

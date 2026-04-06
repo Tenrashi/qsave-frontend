@@ -19,11 +19,15 @@ pub struct ResolutionContext<'a> {
 }
 
 fn replace_placeholder(resolved: &mut String, placeholder: &str, value: &str) {
-    while let Some(start) = resolved
-        .to_ascii_lowercase()
-        .find(&placeholder.to_ascii_lowercase())
-    {
-        resolved.replace_range(start..start + placeholder.len(), value);
+    let needle = placeholder.to_ascii_lowercase();
+    let mut search_from = 0;
+    while search_from < resolved.len() {
+        let Some(start) = resolved[search_from..].to_ascii_lowercase().find(&needle) else {
+            break;
+        };
+        let abs = search_from + start;
+        resolved.replace_range(abs..abs + placeholder.len(), value);
+        search_from = abs + value.len();
     }
 }
 
