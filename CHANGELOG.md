@@ -1,3 +1,9 @@
+## [1.3.3](https://github.com/Tenrashi/qsave/compare/v1.3.2...v1.3.3) (2026-04-06)
+
+### Bug Fixes
+
+- upload large archives via native reqwest instead of WebView fetch ([#54](https://github.com/Tenrashi/qsave/issues/54)) ([eb175ea](https://github.com/Tenrashi/qsave/commit/eb175ea5723b17b64fe537cfa33b03fdd7d37dc0))
+
 ## [1.3.2](https://github.com/Tenrashi/qsave/compare/v1.3.1...v1.3.2) (2026-04-06)
 
 ### Bug Fixes
