@@ -1,3 +1,19 @@
+# [1.2.0](https://github.com/Tenrashi/qsave/compare/v1.1.3...v1.2.0) (2026-04-06)
+
+### Bug Fixes
+
+- bump manifest size limit, defer etag save until parse succeeds ([cf249a2](https://github.com/Tenrashi/qsave/commit/cf249a21f740139f54ecec733016133fd7250187))
+- drop serde(flatten) \_rest field from ManifestEntry ([d04e12f](https://github.com/Tenrashi/qsave/commit/d04e12f6a401b72b852421175eaf2cd69e16959a))
+- extract isRegistryOnly util, reuse HTTP client, fix quadratic placeholder replace ([e99d231](https://github.com/Tenrashi/qsave/commit/e99d23102b837f6033a7b7d199aff295a97e42b1))
+- harden manifest download, resolve, and alias logic ([b5545ab](https://github.com/Tenrashi/qsave/commit/b5545ab2df280f9a923de4638d2c8f8e034cb6c8))
+- harden manifest merge, resolve placeholders, and flag registry-only games ([b1ad516](https://github.com/Tenrashi/qsave/commit/b1ad516019095f4a9cd59c354f71a5cff7adb477))
+- remove unused tags field from FileEntryMeta ([58231a4](https://github.com/Tenrashi/qsave/commit/58231a41334f7e9c4a8dcda66b2c5f209d7f502e))
+
+### Features
+
+- add registry path support and secondary manifest detection ([6e4197e](https://github.com/Tenrashi/qsave/commit/6e4197e9bf8112f8019a41c5406a0d831d7dfade))
+- implement ludusavi manifest compliance (base, when, aliases, etag) ([8f9d687](https://github.com/Tenrashi/qsave/commit/8f9d687af376bcd7c2d547f6414f965bc9e77e30))
+
 ## [1.1.3](https://github.com/Tenrashi/qsave/compare/v1.1.2...v1.1.3) (2026-04-05)
 
 ### Bug Fixes

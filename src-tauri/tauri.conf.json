@@ -1,6 +1,6 @@
 {
   "productName": "QSave",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "identifier": "com.qsave.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
