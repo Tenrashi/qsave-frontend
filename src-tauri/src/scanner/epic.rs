@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 
 /// Returns a map of `install_dir_basename (lowercase) -> install path`
 /// by scanning Epic Games Launcher manifest `.item` files.
+/// If two games share a basename (different parent paths), the last one wins.
+/// This is acceptable because Epic install basenames are unique in practice.
 pub fn find_epic_app_roots() -> HashMap<String, PathBuf> {
     let mut map = HashMap::new();
 
