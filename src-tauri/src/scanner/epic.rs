@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Returns a map of `install_dir_basename (lowercase) -> install path`
 /// by scanning Epic Games Launcher manifest `.item` files.
@@ -11,32 +11,37 @@ pub fn find_epic_app_roots() -> HashMap<String, PathBuf> {
             continue;
         };
         for entry in entries.flatten() {
-            let path = entry.path();
-            let is_item = path.extension().map_or(false, |ext| ext == "item");
-            if !is_item {
-                continue;
-            }
-            let Ok(content) = std::fs::read_to_string(&path) else {
-                continue;
-            };
-            let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) else {
-                continue;
-            };
-            let Some(install_location) = json["InstallLocation"].as_str() else {
-                continue;
-            };
-            let install_path = PathBuf::from(install_location);
-            if !install_path.exists() {
-                continue;
-            }
-            let Some(dir_name) = install_path.file_name().and_then(|n| n.to_str()) else {
-                continue;
-            };
-            map.insert(dir_name.to_ascii_lowercase(), install_path);
+            scan_item_file(&entry.path(), &mut map);
         }
     }
 
     map
+}
+
+/// Parses a single `.item` manifest file and inserts the game into the map
+/// keyed by lowercase install directory basename.
+fn scan_item_file(path: &Path, map: &mut HashMap<String, PathBuf>) {
+    let is_item = path.extension().map_or(false, |ext| ext == "item");
+    if !is_item {
+        return;
+    }
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return;
+    };
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) else {
+        return;
+    };
+    let Some(install_location) = json["InstallLocation"].as_str() else {
+        return;
+    };
+    let install_path = PathBuf::from(install_location);
+    if !install_path.exists() {
+        return;
+    }
+    let Some(dir_name) = install_path.file_name().and_then(|n| n.to_str()) else {
+        return;
+    };
+    map.insert(dir_name.to_ascii_lowercase(), install_path);
 }
 
 fn epic_manifests_dirs() -> Vec<PathBuf> {
@@ -81,16 +86,12 @@ mod tests {
 
         let dir = TempDir::new().unwrap();
 
-        // Create a fake install location
         let install_dir = dir.path().join("Fortnite");
         fs::create_dir(&install_dir).unwrap();
 
-        // Create a fake manifests directory
-        let manifests_dir = dir.path().join("Manifests");
-        fs::create_dir(&manifests_dir).unwrap();
-
+        let item_path = dir.path().join("abc123.item");
         fs::write(
-            manifests_dir.join("abc123.item"),
+            &item_path,
             format!(
                 r#"{{"AppName":"Fortnite","InstallLocation":"{}"}}"#,
                 install_dir.to_string_lossy().replace('\\', "\\\\")
@@ -99,28 +100,7 @@ mod tests {
         .unwrap();
 
         let mut map = HashMap::new();
-        let Ok(entries) = std::fs::read_dir(&manifests_dir) else {
-            panic!("could not read manifests dir");
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let is_item = path.extension().map_or(false, |ext| ext == "item");
-            if !is_item {
-                continue;
-            }
-            let content = fs::read_to_string(&path).unwrap();
-            let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-            let install_location = json["InstallLocation"].as_str().unwrap();
-            let install_path = PathBuf::from(install_location);
-            if !install_path.exists() {
-                continue;
-            }
-            let dir_name = install_path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap();
-            map.insert(dir_name.to_ascii_lowercase(), install_path);
-        }
+        scan_item_file(&item_path, &mut map);
 
         assert_eq!(map.get("fortnite"), Some(&install_dir));
     }
@@ -131,24 +111,13 @@ mod tests {
         use tempfile::TempDir;
 
         let dir = TempDir::new().unwrap();
-        let manifests_dir = dir.path().join("Manifests");
-        fs::create_dir(&manifests_dir).unwrap();
-        fs::write(manifests_dir.join("readme.txt"), "not a manifest").unwrap();
+        let txt_path = dir.path().join("readme.txt");
+        fs::write(&txt_path, "not a manifest").unwrap();
 
-        let Ok(entries) = std::fs::read_dir(&manifests_dir) else {
-            panic!("could not read manifests dir");
-        };
-        let count = entries
-            .flatten()
-            .filter(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .map_or(false, |ext| ext == "item")
-            })
-            .count();
+        let mut map = HashMap::new();
+        scan_item_file(&txt_path, &mut map);
 
-        assert_eq!(count, 0);
+        assert!(map.is_empty());
     }
 
     #[test]
@@ -157,33 +126,15 @@ mod tests {
         use tempfile::TempDir;
 
         let dir = TempDir::new().unwrap();
-        let manifests_dir = dir.path().join("Manifests");
-        fs::create_dir(&manifests_dir).unwrap();
-
-        // Install location that doesn't exist
+        let item_path = dir.path().join("broken.item");
         fs::write(
-            manifests_dir.join("broken.item"),
+            &item_path,
             r#"{"AppName":"Gone","InstallLocation":"/nonexistent/path/Gone"}"#,
         )
         .unwrap();
 
         let mut map = HashMap::new();
-        let entries = std::fs::read_dir(&manifests_dir).unwrap();
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "item") {
-                let content = fs::read_to_string(&path).unwrap();
-                let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-                if let Some(loc) = json["InstallLocation"].as_str() {
-                    let install_path = PathBuf::from(loc);
-                    if install_path.exists() {
-                        if let Some(name) = install_path.file_name().and_then(|n| n.to_str()) {
-                            map.insert(name.to_ascii_lowercase(), install_path);
-                        }
-                    }
-                }
-            }
-        }
+        scan_item_file(&item_path, &mut map);
 
         assert!(map.is_empty());
     }
