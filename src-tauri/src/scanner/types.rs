@@ -50,9 +50,6 @@ pub(crate) struct ManifestEntry {
     pub steam: Option<SteamInfo>,
     pub gog: Option<GogInfo>,
     pub cloud: Option<CloudInfo>,
-    #[allow(dead_code)]
-    #[serde(flatten)]
-    pub _rest: HashMap<String, serde_yaml::Value>,
 }
 
 #[derive(Debug)]
