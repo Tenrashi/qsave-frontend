@@ -43,6 +43,7 @@
     "hideSteamCloud": "Скрыть игры Steam Cloud",
     "showSteamCloud": "Показать игры Steam Cloud",
     "cloudBadge": "Облако",
+    "registryOnlyBadge": "Только реестр",
     "cloudOnlyHint": "Резервная копия с другого устройства",
     "removePath": "Удалить путь"
   },

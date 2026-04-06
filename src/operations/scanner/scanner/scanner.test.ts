@@ -122,6 +122,25 @@ describe("loadCachedGames", () => {
   });
 });
 
+describe("toGame mapping", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps registryKeys when present", async () => {
+    const gameWithRegistry = {
+      ...rustGame("Registry Game"),
+      registryKeys: ["HKEY_CURRENT_USER/Software/RegGame"],
+      saveFiles: [],
+    };
+    mockInvoke.mockResolvedValueOnce(gameWithRegistry);
+
+    const game = await scanManualGame("Registry Game", []);
+
+    expect(game.registryKeys).toEqual(["HKEY_CURRENT_USER/Software/RegGame"]);
+  });
+});
+
 describe("scanForGames", () => {
   beforeEach(() => {
     vi.clearAllMocks();

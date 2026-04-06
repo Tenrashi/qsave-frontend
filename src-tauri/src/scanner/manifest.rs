@@ -94,6 +94,10 @@ fn download(url: &str, cache_filename: &str) -> DownloadResult {
             return DownloadResult::NotModified;
         }
 
+        if !response.status().is_success() {
+            return DownloadResult::Failed;
+        }
+
         let exceeds_limit = response
             .content_length()
             .map_or(false, |len| len > MAX_MANIFEST_BYTES);
@@ -139,25 +143,35 @@ fn merge_manifests(
     extra: HashMap<String, ManifestEntry>,
 ) {
     for (name, entry) in extra {
-        let extra_files = match entry.files {
-            Some(files) => files,
-            None => continue,
-        };
+        let has_files = entry.files.is_some();
+        let has_registry = entry.registry.is_some();
+
+        if !has_files && !has_registry {
+            continue;
+        }
 
         match base.entry(name) {
             std::collections::hash_map::Entry::Occupied(mut occupied) => {
                 let existing = occupied.get_mut();
-                let existing_files = existing.files.get_or_insert_with(HashMap::new);
-                extra_files.into_iter().for_each(|(path, value)| {
-                    existing_files.entry(path).or_insert(value);
-                });
+                if let Some(extra_files) = entry.files {
+                    let existing_files = existing.files.get_or_insert_with(HashMap::new);
+                    extra_files.into_iter().for_each(|(path, value)| {
+                        existing_files.entry(path).or_insert(value);
+                    });
+                }
+                if let Some(extra_registry) = entry.registry {
+                    let existing_registry = existing.registry.get_or_insert_with(HashMap::new);
+                    extra_registry.into_iter().for_each(|(key, value)| {
+                        existing_registry.entry(key).or_insert(value);
+                    });
+                }
                 if existing.cloud.is_none() {
                     existing.cloud = entry.cloud;
                 }
             }
             std::collections::hash_map::Entry::Vacant(vacant) => {
                 vacant.insert(ManifestEntry {
-                    files: Some(extra_files),
+                    files: entry.files,
                     registry: entry.registry,
                     install_dir: entry.install_dir,
                     alias: entry.alias,

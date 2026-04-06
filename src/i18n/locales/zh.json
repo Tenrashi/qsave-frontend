@@ -43,6 +43,7 @@
     "hideSteamCloud": "隐藏Steam云游戏",
     "showSteamCloud": "显示Steam云游戏",
     "cloudBadge": "云端",
+    "registryOnlyBadge": "仅注册表",
     "cloudOnlyHint": "已在其他设备上备份",
     "removePath": "移除路径"
   },

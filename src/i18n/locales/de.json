@@ -43,6 +43,7 @@
     "hideSteamCloud": "Steam-Cloud-Spiele ausblenden",
     "showSteamCloud": "Steam-Cloud-Spiele anzeigen",
     "cloudBadge": "Cloud",
+    "registryOnlyBadge": "Nur Registry",
     "cloudOnlyHint": "Auf einem anderen Gerät gesichert",
     "removePath": "Pfad entfernen"
   },

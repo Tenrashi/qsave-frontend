@@ -18,9 +18,22 @@ pub struct ResolutionContext<'a> {
     pub store_game_id: Option<&'a str>,
 }
 
+fn replace_placeholder(resolved: &mut String, placeholder: &str, value: &str) {
+    while let Some(start) = resolved
+        .to_ascii_lowercase()
+        .find(&placeholder.to_ascii_lowercase())
+    {
+        resolved.replace_range(start..start + placeholder.len(), value);
+    }
+}
+
 pub fn resolve_path(raw: &str, ctx: &ResolutionContext) -> Option<String> {
     let mut resolved = raw.to_string();
 
+    // <base> = root with installDir game name appended when root doesn't already
+    // end with the game directory. find_steam_app_roots / find_gog_app_roots return
+    // the full install path (e.g. steamapps/common/GameDir), so when installDir
+    // matches that final component, <base> == root with no duplication.
     let base = ctx.root.map(|root| {
         let game = ctx.game_name.unwrap_or("");
         if game.is_empty() {
@@ -36,30 +49,23 @@ pub fn resolve_path(raw: &str, ctx: &ResolutionContext) -> Option<String> {
     });
 
     if let Some(base) = &base {
-        resolved = resolved.replace("<base>", base);
-        resolved = resolved.replace("<Base>", base);
+        replace_placeholder(&mut resolved, "<base>", base);
     }
 
     if let Some(root) = ctx.root {
-        resolved = resolved.replace("<root>", root);
-        resolved = resolved.replace("<Root>", root);
+        replace_placeholder(&mut resolved, "<root>", root);
     }
 
     if let Some(game_name) = ctx.game_name {
-        resolved = resolved.replace("<game>", game_name);
-        resolved = resolved.replace("<Game>", game_name);
+        replace_placeholder(&mut resolved, "<game>", game_name);
     }
 
-    resolved = resolved.replace("<home>", ctx.home);
-    resolved = resolved.replace("<Home>", ctx.home);
-    resolved = resolved.replace("<osUserName>", ctx.username);
-    resolved = resolved.replace("<OsUserName>", ctx.username);
-    resolved = resolved.replace("<storeUserId>", "*");
-    resolved = resolved.replace("<StoreUserId>", "*");
+    replace_placeholder(&mut resolved, "<home>", ctx.home);
+    replace_placeholder(&mut resolved, "<osUserName>", ctx.username);
+    replace_placeholder(&mut resolved, "<storeUserId>", "*");
 
     let store_game_id = ctx.store_game_id.unwrap_or("*");
-    resolved = resolved.replace("<storeGameId>", store_game_id);
-    resolved = resolved.replace("<StoreGameId>", store_game_id);
+    replace_placeholder(&mut resolved, "<storeGameId>", store_game_id);
 
     #[cfg(target_os = "windows")]
     {
@@ -73,39 +79,28 @@ pub fn resolve_path(raw: &str, ctx: &ResolutionContext) -> Option<String> {
             std::env::var("PROGRAMDATA").unwrap_or_else(|_| "C:\\ProgramData".to_string());
         let win_dir = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".to_string());
 
-        resolved = resolved.replace("<winAppData>", &appdata);
-        resolved = resolved.replace("<WinAppData>", &appdata);
-        resolved = resolved.replace("<winLocalAppData>", &local_appdata);
-        resolved = resolved.replace("<WinLocalAppData>", &local_appdata);
-        resolved = resolved.replace("<winLocalAppDataLow>", &local_appdata_low);
-        resolved = resolved.replace("<WinLocalAppDataLow>", &local_appdata_low);
-        resolved = resolved.replace("<winDocuments>", &docs);
-        resolved = resolved.replace("<WinDocuments>", &docs);
-        resolved = resolved.replace("<winPublic>", &public_dir);
-        resolved = resolved.replace("<WinPublic>", &public_dir);
-        resolved = resolved.replace("<winProgramData>", &program_data);
-        resolved = resolved.replace("<WinProgramData>", &program_data);
-        resolved = resolved.replace("<winDir>", &win_dir);
-        resolved = resolved.replace("<WinDir>", &win_dir);
+        replace_placeholder(&mut resolved, "<winAppData>", &appdata);
+        replace_placeholder(&mut resolved, "<winLocalAppData>", &local_appdata);
+        replace_placeholder(&mut resolved, "<winLocalAppDataLow>", &local_appdata_low);
+        replace_placeholder(&mut resolved, "<winDocuments>", &docs);
+        replace_placeholder(&mut resolved, "<winPublic>", &public_dir);
+        replace_placeholder(&mut resolved, "<winProgramData>", &program_data);
+        replace_placeholder(&mut resolved, "<winDir>", &win_dir);
     }
 
     #[cfg(target_os = "macos")]
     {
         let app_support = format!("{}/Library/Application Support", ctx.home);
-        resolved = resolved.replace("<xdgData>", &app_support);
-        resolved = resolved.replace("<XdgData>", &app_support);
-        resolved = resolved.replace("<xdgConfig>", &app_support);
-        resolved = resolved.replace("<XdgConfig>", &app_support);
+        replace_placeholder(&mut resolved, "<xdgData>", &app_support);
+        replace_placeholder(&mut resolved, "<xdgConfig>", &app_support);
     }
 
     #[cfg(target_os = "linux")]
     {
         let xdg_data = format!("{}/.local/share", ctx.home);
         let xdg_config = format!("{}/.config", ctx.home);
-        resolved = resolved.replace("<xdgData>", &xdg_data);
-        resolved = resolved.replace("<XdgData>", &xdg_data);
-        resolved = resolved.replace("<xdgConfig>", &xdg_config);
-        resolved = resolved.replace("<XdgConfig>", &xdg_config);
+        replace_placeholder(&mut resolved, "<xdgData>", &xdg_data);
+        replace_placeholder(&mut resolved, "<xdgConfig>", &xdg_config);
     }
 
     if resolved.contains('<') && resolved.contains('>') {
