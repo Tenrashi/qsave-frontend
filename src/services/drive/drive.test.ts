@@ -371,8 +371,17 @@ describe("drive service", () => {
   });
 
   describe("postFile", () => {
-    it("uploads file and returns fileId", async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ id: "uploaded-id" }));
+    const resumableInitResponse = () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers({ Location: "https://upload.example.com/resume" }),
+      text: () => Promise.resolve(""),
+    });
+
+    it("initiates resumable upload then sends content", async () => {
+      mockFetch
+        .mockResolvedValueOnce(resumableInitResponse())
+        .mockResolvedValueOnce(okResponse({ id: "uploaded-id" }));
 
       const result = await postFile(
         "folder-id",
@@ -381,10 +390,38 @@ describe("drive service", () => {
       );
 
       expect(result.fileId).toBe("uploaded-id");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[0][0]).toContain("uploadType=resumable");
+      expect(mockFetch.mock.calls[1][0]).toBe(
+        "https://upload.example.com/resume",
+      );
     });
 
-    it("wraps errors with fileName context", async () => {
+    it("throws when init request fails", async () => {
       mockFetch.mockResolvedValueOnce(errorResponse(500));
+
+      await expect(
+        postFile("folder-id", "save.zip", new Uint8Array([1])),
+      ).rejects.toThrow('Failed to upload file "save.zip"');
+    });
+
+    it("throws when no Location header returned", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: () => Promise.resolve(""),
+      });
+
+      await expect(
+        postFile("folder-id", "save.zip", new Uint8Array([1])),
+      ).rejects.toThrow("No upload URI");
+    });
+
+    it("throws when content upload fails", async () => {
+      mockFetch
+        .mockResolvedValueOnce(resumableInitResponse())
+        .mockResolvedValueOnce(errorResponse(500));
 
       await expect(
         postFile("folder-id", "save.zip", new Uint8Array([1])),
