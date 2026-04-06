@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/Tenrashi/qsave/compare/v1.4.0...v1.4.1) (2026-04-06)
+
+### Bug Fixes
+
+- deduplicate files from overlapping save paths before zipping ([a386536](https://github.com/Tenrashi/qsave/commit/a386536f78785437de65bfca73340f80302eb0d4))
+
 # [1.4.0](https://github.com/Tenrashi/qsave/compare/v1.3.3...v1.4.0) (2026-04-06)
 
 ### Bug Fixes
