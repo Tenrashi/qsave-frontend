@@ -55,13 +55,16 @@ struct UploadFileResult {
 
 #[tauri::command]
 async fn upload_file(file_path: String, upload_url: String) -> Result<UploadFileResult, String> {
-    logger::info(&format!("upload_file: reading {file_path}"));
+    logger::info(&format!("upload_file: streaming {file_path}"));
     let result = tokio::task::spawn_blocking(move || {
-        let body = std::fs::read(&file_path)
-            .map_err(|e| format!("Failed to read {file_path}: {e}"))?;
-        logger::info(&format!("upload_file: read {} bytes, uploading", body.len()));
-        let _ = std::fs::remove_file(&file_path);
+        let file = std::fs::File::open(&file_path)
+            .map_err(|e| format!("Failed to open {file_path}: {e}"))?;
+        let file_size = file.metadata()
+            .map_err(|e| format!("Failed to read file size for {file_path}: {e}"))?
+            .len();
+        logger::info(&format!("upload_file: {file_size} bytes, uploading"));
 
+        let body = reqwest::blocking::Body::sized(file, file_size);
         let client = reqwest::blocking::Client::new();
         let res = client
             .put(&upload_url)
@@ -69,6 +72,8 @@ async fn upload_file(file_path: String, upload_url: String) -> Result<UploadFile
             .body(body)
             .send()
             .map_err(|e| format!("Upload failed: {e}"))?;
+
+        let _ = std::fs::remove_file(&file_path);
 
         if !res.status().is_success() {
             let status = res.status();
