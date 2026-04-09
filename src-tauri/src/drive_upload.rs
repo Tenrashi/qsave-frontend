@@ -1,7 +1,7 @@
-use std::error::Error;
 use std::io::{Read, Seek, SeekFrom};
 use std::time::Duration;
 
+use crate::drive_common::{backoff_for, format_error_chain, is_retryable_status, truncate_body};
 use crate::logger;
 
 // Drive requires chunks to be a multiple of 256 KiB. 8 MiB keeps each PUT
@@ -11,10 +11,6 @@ use crate::logger;
 const CHUNK_SIZE: u64 = 8 * 1024 * 1024;
 const MAX_RETRIES: u32 = 5;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
-const MAX_ERROR_CHAIN_DEPTH: usize = 16;
-// Response bodies embedded in error messages are capped so a misbehaving
-// server returning a huge HTML error page can't blow up logs or UI toasts.
-const MAX_BODY_IN_ERROR: usize = 1024;
 
 #[derive(Debug, serde::Serialize)]
 pub struct UploadFileResult {
@@ -26,6 +22,7 @@ struct DriveFile {
     id: String,
 }
 
+#[derive(Debug)]
 enum UploadStatus {
     Incomplete(u64),
     Complete(String),
@@ -48,50 +45,44 @@ enum ChunkResponse {
 /// What `resync_after_failure` decided to do after querying Drive for the
 /// upload's current position. `Retry` carries an optional query error so
 /// persistent status query failures surface in the final error message
-/// rather than being silently swallowed.
+/// rather than being silently swallowed. `Fatal` short-circuits the retry
+/// loop when the status query itself returns a permanent error (e.g. a
+/// 401 from a revoked token) — retrying a permanent error just burns the
+/// retry budget before surfacing what was already a non-recoverable state.
 enum ResyncDecision {
     Stop(UploadOutcome),
+    Fatal(String),
     Retry { query_error: Option<String> },
+}
+
+/// Error returned by the status-query path. `permanent == true` means the
+/// retry loop must stop — the most common trigger is a 4xx HTTP response,
+/// where retrying won't change the outcome.
+#[derive(Debug)]
+struct StatusQueryError {
+    permanent: bool,
+    message: String,
+}
+
+impl StatusQueryError {
+    fn permanent(message: impl Into<String>) -> Self {
+        Self {
+            permanent: true,
+            message: message.into(),
+        }
+    }
+
+    fn transient(message: impl Into<String>) -> Self {
+        Self {
+            permanent: false,
+            message: message.into(),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
 // Pure helpers (network-free, trivially unit-testable)
 // ---------------------------------------------------------------------------
-
-/// Walks `Error::source()` so logs show the underlying hyper/IO cause instead
-/// of just the top-level reqwest message. Depth-bounded so a pathological
-/// error that lists itself as its own source can't loop forever.
-fn format_error_chain(err: &(dyn Error + 'static)) -> String {
-    let mut out = err.to_string();
-    let mut source = err.source();
-    let mut depth = 0;
-    while let Some(cause) = source {
-        if depth >= MAX_ERROR_CHAIN_DEPTH {
-            out.push_str(" -> (chain truncated)");
-            break;
-        }
-        out.push_str(" -> ");
-        out.push_str(&cause.to_string());
-        source = cause.source();
-        depth += 1;
-    }
-    out
-}
-
-/// Truncates a response body to `MAX_BODY_IN_ERROR` bytes (respecting UTF-8
-/// char boundaries) so hostile or verbose server responses can't inflate
-/// error messages and log lines. Appends a `(N bytes total)` marker when
-/// truncation happens so the original size is still visible.
-fn truncate_body(body: &str) -> String {
-    if body.len() <= MAX_BODY_IN_ERROR {
-        return body.to_string();
-    }
-    let mut end = MAX_BODY_IN_ERROR;
-    while end > 0 && !body.is_char_boundary(end) {
-        end -= 1;
-    }
-    format!("{}... ({} bytes total)", &body[..end], body.len())
-}
 
 /// Formats the error returned when a chunk's retry budget is exhausted.
 /// Appends the most recent status query error (if any) so the user sees
@@ -109,12 +100,6 @@ fn format_retry_exhausted(send_err: &str, last_query_error: Option<&str>) -> Str
 fn chunk_bounds(start: u64, file_size: u64) -> (u64, u64) {
     let end = std::cmp::min(start + CHUNK_SIZE, file_size) - 1;
     (start, end)
-}
-
-/// Exponential backoff capped at 30 s so MAX_RETRIES stays bounded in time.
-fn backoff_for(attempt: u32) -> Duration {
-    let shifted = 1u64.checked_shl(attempt).unwrap_or(u64::MAX);
-    Duration::from_secs(std::cmp::min(shifted, 30))
 }
 
 /// Parses the `Range: bytes=0-<last>` header Drive returns on 308 responses.
@@ -163,30 +148,42 @@ fn interpret_chunk_response(
 }
 
 /// Interprets a status query response. Missing `Range` on 308 means Drive
-/// has received zero bytes — a valid state, not an error.
+/// has received zero bytes — a valid state, not an error. Unexpected HTTP
+/// statuses are classified as permanent vs transient so the retry loop
+/// can short-circuit on e.g. a 401 from a revoked token.
 fn interpret_status_query(
     status: u16,
     range_header: Option<&str>,
     body: &str,
-) -> Result<UploadStatus, String> {
+) -> Result<UploadStatus, StatusQueryError> {
     if (200..300).contains(&status) {
-        let data: DriveFile = serde_json::from_str(body)
-            .map_err(|e| format!("Failed to parse completion response: {e}"))?;
+        let data: DriveFile = serde_json::from_str(body).map_err(|e| {
+            // A malformed success body is rare but is worth another try —
+            // the server may have glitched mid-response.
+            StatusQueryError::transient(format!("Failed to parse completion response: {e}"))
+        })?;
         return Ok(UploadStatus::Complete(data.id));
     }
 
     if status != 308 {
-        return Err(format!(
+        let message = format!(
             "Unexpected status during status query: HTTP {status} {}",
             truncate_body(body)
-        ));
+        );
+        return Err(if is_retryable_status(status) {
+            StatusQueryError::transient(message)
+        } else {
+            StatusQueryError::permanent(message)
+        });
     }
 
     let Some(header) = range_header else {
         return Ok(UploadStatus::Incomplete(0));
     };
     let Some(last) = parse_range_end(header) else {
-        return Err(format!("Malformed Range header from status query: {header}"));
+        return Err(StatusQueryError::transient(format!(
+            "Malformed Range header from status query: {header}"
+        )));
     };
     Ok(UploadStatus::Incomplete(last + 1))
 }
@@ -282,6 +279,11 @@ fn upload_one_chunk(
 
         match resync_after_failure(client, upload_url, file_size, chunk_start) {
             ResyncDecision::Stop(outcome) => return Ok(outcome),
+            ResyncDecision::Fatal(err) => {
+                return Err(format!(
+                    "Upload aborted after status query returned a permanent error: {err} (last send error: {send_err})"
+                ));
+            }
             ResyncDecision::Retry { query_error: Some(err) } => {
                 last_query_error = Some(err);
             }
@@ -291,10 +293,13 @@ fn upload_one_chunk(
 }
 
 /// Queries Drive after a network failure to decide whether to keep retrying
-/// this chunk, advance past it, or short-circuit on a completed upload. A
-/// failed status query is logged and converted to `Retry` carrying the
-/// query error, so the caller can surface persistent query failures in the
-/// final error message instead of silently swallowing them.
+/// this chunk, advance past it, short-circuit on a completed upload, or
+/// bail out entirely. A transient query failure is logged and converted
+/// to `Retry` carrying the query error, so persistent transient failures
+/// surface in the final error message instead of being silently swallowed.
+/// A permanent query failure (e.g. a 401 from a revoked token) returns
+/// `Fatal` so the caller can stop wasting retries on a non-recoverable
+/// state.
 fn resync_after_failure(
     client: &reqwest::blocking::Client,
     upload_url: &str,
@@ -303,11 +308,21 @@ fn resync_after_failure(
 ) -> ResyncDecision {
     let status = match query_upload_status(client, upload_url, file_size) {
         Ok(status) => status,
+        Err(e) if e.permanent => {
+            logger::error(&format!(
+                "drive_upload: status query returned permanent error: {}; aborting",
+                e.message
+            ));
+            return ResyncDecision::Fatal(e.message);
+        }
         Err(e) => {
             logger::error(&format!(
-                "drive_upload: status query failed: {e}; retrying same chunk"
+                "drive_upload: status query failed: {}; retrying same chunk",
+                e.message
             ));
-            return ResyncDecision::Retry { query_error: Some(e) };
+            return ResyncDecision::Retry {
+                query_error: Some(e.message),
+            };
         }
     };
 
@@ -360,13 +375,20 @@ fn query_upload_status(
     client: &reqwest::blocking::Client,
     upload_url: &str,
     file_size: u64,
-) -> Result<UploadStatus, String> {
+) -> Result<UploadStatus, StatusQueryError> {
     let res = client
         .put(upload_url)
         .header("Content-Length", "0")
         .header("Content-Range", format!("bytes */{file_size}"))
         .send()
-        .map_err(|e| format!("Status query failed: {}", format_error_chain(&e)))?;
+        .map_err(|e| {
+            // Network/connect failures are always transient — retrying
+            // the chunk is still the right call.
+            StatusQueryError::transient(format!(
+                "Status query failed: {}",
+                format_error_chain(&e)
+            ))
+        })?;
 
     let status = res.status().as_u16();
     let range_header = res
@@ -424,7 +446,7 @@ fn finalize_empty_upload(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fmt;
+    use crate::drive_common::MAX_BODY_IN_ERROR;
 
     // --- parse_range_end ---
 
@@ -482,29 +504,6 @@ mod tests {
         let file_size = CHUNK_SIZE * 2;
         let (_, end) = chunk_bounds(CHUNK_SIZE, file_size);
         assert_eq!(end, file_size - 1);
-    }
-
-    // --- backoff_for ---
-
-    #[test]
-    fn backoff_grows_exponentially_until_cap() {
-        assert_eq!(backoff_for(1), Duration::from_secs(2));
-        assert_eq!(backoff_for(2), Duration::from_secs(4));
-        assert_eq!(backoff_for(3), Duration::from_secs(8));
-        assert_eq!(backoff_for(4), Duration::from_secs(16));
-    }
-
-    #[test]
-    fn backoff_is_capped_at_30_seconds() {
-        assert_eq!(backoff_for(5), Duration::from_secs(30));
-        assert_eq!(backoff_for(10), Duration::from_secs(30));
-        assert_eq!(backoff_for(63), Duration::from_secs(30));
-    }
-
-    #[test]
-    fn backoff_handles_oversized_attempt_without_panic() {
-        // 1u64 << 64 would panic; checked_shl saturates to u64::MAX.
-        assert_eq!(backoff_for(200), Duration::from_secs(30));
     }
 
     // --- interpret_chunk_response ---
@@ -601,108 +600,49 @@ mod tests {
     }
 
     #[test]
-    fn status_query_unexpected_status_errors() {
-        let result = interpret_status_query(500, None, "internal error");
-        assert!(result.is_err());
+    fn status_query_5xx_is_transient_error() {
+        let err = interpret_status_query(500, None, "internal error").unwrap_err();
+        assert!(!err.permanent);
+        assert!(err.message.contains("500"));
     }
 
     #[test]
-    fn status_query_308_malformed_range_errors() {
-        let result = interpret_status_query(308, Some("garbage"), "");
-        assert!(result.is_err());
-    }
-
-    // --- format_error_chain ---
-
-    #[derive(Debug)]
-    struct ChainErr {
-        msg: &'static str,
-        source: Option<Box<dyn Error + 'static>>,
-    }
-
-    impl fmt::Display for ChainErr {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.msg)
-        }
-    }
-
-    impl Error for ChainErr {
-        fn source(&self) -> Option<&(dyn Error + 'static)> {
-            self.source.as_deref()
-        }
+    fn status_query_503_is_transient_error() {
+        let err = interpret_status_query(503, None, "busy").unwrap_err();
+        assert!(!err.permanent);
     }
 
     #[test]
-    fn error_chain_single_error() {
-        let err = ChainErr { msg: "top", source: None };
-        assert_eq!(format_error_chain(&err), "top");
+    fn status_query_429_is_transient_error() {
+        let err = interpret_status_query(429, None, "slow down").unwrap_err();
+        assert!(!err.permanent);
     }
 
     #[test]
-    fn error_chain_walks_all_sources() {
-        let err = ChainErr {
-            msg: "top",
-            source: Some(Box::new(ChainErr {
-                msg: "middle",
-                source: Some(Box::new(ChainErr {
-                    msg: "bottom",
-                    source: None,
-                })),
-            })),
-        };
-        assert_eq!(format_error_chain(&err), "top -> middle -> bottom");
+    fn status_query_401_is_permanent_error() {
+        let err = interpret_status_query(401, None, "unauthorized").unwrap_err();
+        assert!(err.permanent);
+        assert!(err.message.contains("401"));
     }
 
     #[test]
-    fn error_chain_is_bounded_by_max_depth() {
-        let mut err = ChainErr { msg: "leaf", source: None };
-        for _ in 0..(MAX_ERROR_CHAIN_DEPTH + 10) {
-            err = ChainErr { msg: "link", source: Some(Box::new(err)) };
-        }
-        let formatted = format_error_chain(&err);
-        assert!(formatted.ends_with("(chain truncated)"));
-        // The walker should produce exactly MAX_ERROR_CHAIN_DEPTH " -> "
-        // separators for the walked sources plus one more for the
-        // "(chain truncated)" suffix.
-        assert_eq!(
-            formatted.matches(" -> ").count(),
-            MAX_ERROR_CHAIN_DEPTH + 1
-        );
-    }
-
-    // --- truncate_body ---
-
-    #[test]
-    fn truncate_body_short_is_unchanged() {
-        assert_eq!(truncate_body("hello"), "hello");
+    fn status_query_403_is_permanent_error() {
+        let err = interpret_status_query(403, None, "forbidden").unwrap_err();
+        assert!(err.permanent);
     }
 
     #[test]
-    fn truncate_body_at_limit_is_unchanged() {
-        let body = "x".repeat(MAX_BODY_IN_ERROR);
-        assert_eq!(truncate_body(&body), body);
+    fn status_query_404_is_permanent_error() {
+        let err = interpret_status_query(404, None, "gone").unwrap_err();
+        assert!(err.permanent);
     }
 
     #[test]
-    fn truncate_body_over_limit_is_truncated_and_reports_size() {
-        let body = "x".repeat(MAX_BODY_IN_ERROR + 500);
-        let truncated = truncate_body(&body);
-        assert!(truncated.len() < body.len());
-        assert!(truncated.starts_with(&"x".repeat(MAX_BODY_IN_ERROR)));
-        assert!(truncated.contains(&format!("{} bytes total", body.len())));
-    }
-
-    #[test]
-    fn truncate_body_respects_utf8_char_boundaries() {
-        // Build a body whose MAX_BODY_IN_ERROR-th byte lands inside a
-        // multi-byte character. "é" is 2 bytes (0xC3 0xA9).
-        let prefix = "a".repeat(MAX_BODY_IN_ERROR - 1);
-        let body = format!("{prefix}éééééé");
-        // Must not panic on a non-char-boundary slice.
-        let truncated = truncate_body(&body);
-        assert!(truncated.contains("bytes total"));
-        // The prefix itself must survive intact.
-        assert!(truncated.starts_with(&prefix));
+    fn status_query_308_malformed_range_is_transient_error() {
+        let err = interpret_status_query(308, Some("garbage"), "").unwrap_err();
+        // Malformed range is weird but not necessarily fatal — retry may
+        // help if the server glitched mid-response.
+        assert!(!err.permanent);
     }
 
     // --- format_retry_exhausted ---
@@ -751,10 +691,8 @@ mod tests {
     #[test]
     fn status_query_unexpected_status_truncates_huge_body() {
         let huge_body = "x".repeat(MAX_BODY_IN_ERROR * 4);
-        let Err(err) = interpret_status_query(500, None, &huge_body) else {
-            panic!("expected Err");
-        };
-        assert!(err.len() < huge_body.len() + 200);
-        assert!(err.contains("bytes total"));
+        let err = interpret_status_query(500, None, &huge_body).unwrap_err();
+        assert!(err.message.len() < huge_body.len() + 200);
+        assert!(err.message.contains("bytes total"));
     }
 }
