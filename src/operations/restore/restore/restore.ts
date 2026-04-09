@@ -2,11 +2,20 @@ import { invoke } from "@tauri-apps/api/core";
 import { RECORD_STATUS } from "@/domain/types";
 import type { Game, SyncRecord } from "@/domain/types";
 import { APP_NAME, TAURI_COMMANDS } from "@/lib/constants/constants";
-import { getBackupFile } from "@/services/drive/drive";
+import { downloadBackupToTempFile } from "@/services/drive/drive";
 import { addSyncRecord } from "@/lib/store/store";
 import { notify } from "@/lib/notify/notify";
 import i18n from "@/i18n";
 import type { ZipMeta, ExtractResult } from "./restore.types";
+
+const deleteTempFile = async (filePath: string): Promise<void> => {
+  try {
+    await invoke(TAURI_COMMANDS.deleteTempFile, { filePath });
+  } catch {
+    // Best-effort cleanup: the temp file is in the OS temp dir and will be
+    // cleaned up eventually. Don't mask the real error, if any.
+  }
+};
 
 export const restoreGame = async (
   game: Game,
@@ -14,13 +23,18 @@ export const restoreGame = async (
   overrideTargetDirs?: string[],
 ): Promise<SyncRecord> => {
   const id = `${game.name}-restore-${Date.now()}`;
+  let tempPath: string | null = null;
 
   try {
-    const zipBytes = await getBackupFile(backupId);
-    const zipArray = Array.from(zipBytes);
+    // Stream the backup straight to disk via Rust. Previously this downloaded
+    // the whole zip into a JS Uint8Array, ran Array.from() over it (8x memory
+    // blowup from boxed Numbers), then shipped the giant array across the
+    // Tauri IPC boundary twice — which OOMed the webview on multi-GB saves.
+    const downloaded = await downloadBackupToTempFile(backupId);
+    tempPath = downloaded.tempPath;
 
-    const meta: ZipMeta | null = await invoke(TAURI_COMMANDS.readZipMeta, {
-      zipBytes: zipArray,
+    const meta: ZipMeta | null = await invoke(TAURI_COMMANDS.readZipMetaFile, {
+      zipPath: tempPath,
     });
 
     const metaPathCount = meta?.save_paths.length ?? 1;
@@ -31,8 +45,8 @@ export const restoreGame = async (
       throw new Error("No save paths available for restore");
     }
 
-    const result: ExtractResult = await invoke(TAURI_COMMANDS.extractZip, {
-      zipBytes: zipArray,
+    const result: ExtractResult = await invoke(TAURI_COMMANDS.extractZipFile, {
+      zipPath: tempPath,
       targetDirs,
     });
 
@@ -72,5 +86,9 @@ export const restoreGame = async (
       i18n.t("notifications.restoreFailed", { name: game.name }),
     );
     return record;
+  } finally {
+    if (tempPath) {
+      await deleteTempFile(tempPath);
+    }
   }
 };

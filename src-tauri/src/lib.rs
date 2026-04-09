@@ -1,4 +1,5 @@
 mod archive;
+mod drive_download;
 mod drive_upload;
 mod keychain;
 mod logger;
@@ -6,6 +7,7 @@ mod oauth;
 mod scanner;
 
 use archive::{CreateZipFileResult, CreateZipResult, ExtractResult, ZipMeta};
+use drive_download::DownloadFileResult;
 use drive_upload::UploadFileResult;
 use scanner::{DetectedGame, scan_manual_game_blocking};
 use tauri::{
@@ -78,17 +80,45 @@ async fn compute_save_hash(save_paths: Vec<String>, files: Vec<String>) -> Resul
 }
 
 #[tauri::command]
-async fn extract_zip(zip_bytes: Vec<u8>, target_dirs: Vec<String>) -> Result<ExtractResult, String> {
-    tokio::task::spawn_blocking(move || archive::extract_zip(zip_bytes, target_dirs))
+async fn extract_zip_file(
+    zip_path: String,
+    target_dirs: Vec<String>,
+) -> Result<ExtractResult, String> {
+    logger::info(&format!(
+        "extract_zip_file: path={zip_path}, targets={target_dirs:?}"
+    ));
+    let result = tokio::task::spawn_blocking(move || archive::extract_zip_file(&zip_path, target_dirs))
         .await
-        .map_err(|e| format!("Extract task failed: {}", e))?
+        .map_err(|e| format!("Extract task failed: {}", e))?;
+    match &result {
+        Ok(r) => logger::info(&format!("extract_zip_file: done, file_count={}", r.file_count)),
+        Err(e) => logger::error(&format!("extract_zip_file: {e}")),
+    }
+    result
 }
 
 #[tauri::command]
-async fn read_zip_meta(zip_bytes: Vec<u8>) -> Result<Option<ZipMeta>, String> {
-    tokio::task::spawn_blocking(move || archive::read_zip_meta(zip_bytes))
+async fn read_zip_meta_file(zip_path: String) -> Result<Option<ZipMeta>, String> {
+    tokio::task::spawn_blocking(move || archive::read_zip_meta_file(&zip_path))
         .await
         .map_err(|e| format!("Read meta task failed: {}", e))?
+}
+
+#[tauri::command]
+async fn download_drive_file(
+    file_id: String,
+    access_token: String,
+) -> Result<DownloadFileResult, String> {
+    logger::info(&format!("download_drive_file: file_id={file_id}"));
+    let result = tokio::task::spawn_blocking(move || {
+        drive_download::download_drive_file(&file_id, &access_token)
+    })
+    .await
+    .map_err(|e| format!("Download task failed: {e}"))?;
+    if let Err(ref e) = result {
+        logger::error(&format!("download_drive_file: {e}"));
+    }
+    result
 }
 
 #[tauri::command]
@@ -167,7 +197,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![get_cached_games, scan_games, create_zip, create_zip_file, upload_file, delete_temp_file, compute_save_hash, extract_zip, read_zip_meta, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
+        .invoke_handler(tauri::generate_handler![get_cached_games, scan_games, create_zip, create_zip_file, upload_file, download_drive_file, delete_temp_file, compute_save_hash, extract_zip_file, read_zip_meta_file, start_oauth, send_native_notification, scan_manual_game, pick_folder, keychain_set_tokens, keychain_get_tokens, keychain_delete_tokens])
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show QSave", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
