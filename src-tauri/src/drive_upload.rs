@@ -12,6 +12,9 @@ const CHUNK_SIZE: u64 = 8 * 1024 * 1024;
 const MAX_RETRIES: u32 = 5;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_ERROR_CHAIN_DEPTH: usize = 16;
+// Response bodies embedded in error messages are capped so a misbehaving
+// server returning a huge HTML error page can't blow up logs or UI toasts.
+const MAX_BODY_IN_ERROR: usize = 1024;
 
 #[derive(Debug, serde::Serialize)]
 pub struct UploadFileResult {
@@ -42,6 +45,15 @@ enum ChunkResponse {
     Failed(String),
 }
 
+/// What `resync_after_failure` decided to do after querying Drive for the
+/// upload's current position. `Retry` carries an optional query error so
+/// persistent status query failures surface in the final error message
+/// rather than being silently swallowed.
+enum ResyncDecision {
+    Stop(UploadOutcome),
+    Retry { query_error: Option<String> },
+}
+
 // ---------------------------------------------------------------------------
 // Pure helpers (network-free, trivially unit-testable)
 // ---------------------------------------------------------------------------
@@ -64,6 +76,32 @@ fn format_error_chain(err: &(dyn Error + 'static)) -> String {
         depth += 1;
     }
     out
+}
+
+/// Truncates a response body to `MAX_BODY_IN_ERROR` bytes (respecting UTF-8
+/// char boundaries) so hostile or verbose server responses can't inflate
+/// error messages and log lines. Appends a `(N bytes total)` marker when
+/// truncation happens so the original size is still visible.
+fn truncate_body(body: &str) -> String {
+    if body.len() <= MAX_BODY_IN_ERROR {
+        return body.to_string();
+    }
+    let mut end = MAX_BODY_IN_ERROR;
+    while end > 0 && !body.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}... ({} bytes total)", &body[..end], body.len())
+}
+
+/// Formats the error returned when a chunk's retry budget is exhausted.
+/// Appends the most recent status query error (if any) so the user sees
+/// both the send failure and any repeated inability to query progress.
+fn format_retry_exhausted(send_err: &str, last_query_error: Option<&str>) -> String {
+    let mut msg = format!("Upload failed after {MAX_RETRIES} retries: {send_err}");
+    if let Some(query_err) = last_query_error {
+        msg.push_str(&format!(" (last status query error: {query_err})"));
+    }
+    msg
 }
 
 /// Inclusive (start, end) bounds of the next chunk. Caller must ensure
@@ -97,7 +135,8 @@ fn interpret_chunk_response(
     if (200..300).contains(&status) {
         let Ok(data) = serde_json::from_str::<DriveFile>(body) else {
             return ChunkResponse::Failed(format!(
-                "Failed to parse completion response body: {body}"
+                "Failed to parse completion response body: {}",
+                truncate_body(body)
             ));
         };
         return ChunkResponse::Complete(data.id);
@@ -117,7 +156,10 @@ fn interpret_chunk_response(
         return ChunkResponse::Incomplete(last + 1);
     }
 
-    ChunkResponse::Failed(format!("Upload failed: HTTP {status} {body}"))
+    ChunkResponse::Failed(format!(
+        "Upload failed: HTTP {status} {}",
+        truncate_body(body)
+    ))
 }
 
 /// Interprets a status query response. Missing `Range` on 308 means Drive
@@ -134,7 +176,10 @@ fn interpret_status_query(
     }
 
     if status != 308 {
-        return Err(format!("Unexpected status during status query: HTTP {status} {body}"));
+        return Err(format!(
+            "Unexpected status during status query: HTTP {status} {}",
+            truncate_body(body)
+        ));
     }
 
     let Some(header) = range_header else {
@@ -210,6 +255,7 @@ fn upload_one_chunk(
     let range_header = format!("bytes {chunk_start}-{chunk_end}/{file_size}");
 
     let mut attempt: u32 = 0;
+    let mut last_query_error: Option<String> = None;
     loop {
         let send_result = client
             .put(upload_url)
@@ -225,9 +271,7 @@ fn upload_one_chunk(
 
         attempt += 1;
         if attempt > MAX_RETRIES {
-            return Err(format!(
-                "Upload failed after {MAX_RETRIES} retries: {send_err}"
-            ));
+            return Err(format_retry_exhausted(&send_err, last_query_error.as_deref()));
         }
         let backoff = backoff_for(attempt);
         logger::error(&format!(
@@ -236,45 +280,49 @@ fn upload_one_chunk(
         ));
         std::thread::sleep(backoff);
 
-        if let Some(outcome) = resync_after_failure(client, upload_url, file_size, chunk_start) {
-            return Ok(outcome);
+        match resync_after_failure(client, upload_url, file_size, chunk_start) {
+            ResyncDecision::Stop(outcome) => return Ok(outcome),
+            ResyncDecision::Retry { query_error: Some(err) } => {
+                last_query_error = Some(err);
+            }
+            ResyncDecision::Retry { query_error: None } => {}
         }
-        // Server is at the same position; retry the same chunk.
     }
 }
 
 /// Queries Drive after a network failure to decide whether to keep retrying
-/// this chunk, advance past it, or short-circuit on a completed upload.
-/// Returns `Some(outcome)` to stop retrying this chunk, `None` to retry it.
-/// A failed status query is logged and converted to a retry.
+/// this chunk, advance past it, or short-circuit on a completed upload. A
+/// failed status query is logged and converted to `Retry` carrying the
+/// query error, so the caller can surface persistent query failures in the
+/// final error message instead of silently swallowing them.
 fn resync_after_failure(
     client: &reqwest::blocking::Client,
     upload_url: &str,
     file_size: u64,
     start: u64,
-) -> Option<UploadOutcome> {
+) -> ResyncDecision {
     let status = match query_upload_status(client, upload_url, file_size) {
         Ok(status) => status,
         Err(e) => {
             logger::error(&format!(
                 "drive_upload: status query failed: {e}; retrying same chunk"
             ));
-            return None;
+            return ResyncDecision::Retry { query_error: Some(e) };
         }
     };
 
     match status {
         UploadStatus::Complete(id) => {
             logger::info(&format!("drive_upload: completed during retry, file_id={id}"));
-            Some(UploadOutcome::Completed(UploadFileResult { file_id: id }))
+            ResyncDecision::Stop(UploadOutcome::Completed(UploadFileResult { file_id: id }))
         }
         UploadStatus::Incomplete(pos) if pos != start => {
             logger::info(&format!(
                 "drive_upload: resyncing, server has {pos} of {file_size}"
             ));
-            Some(UploadOutcome::Advanced(pos))
+            ResyncDecision::Stop(UploadOutcome::Advanced(pos))
         }
-        UploadStatus::Incomplete(_) => None,
+        UploadStatus::Incomplete(_) => ResyncDecision::Retry { query_error: None },
     }
 }
 
@@ -612,6 +660,101 @@ mod tests {
             err = ChainErr { msg: "link", source: Some(Box::new(err)) };
         }
         let formatted = format_error_chain(&err);
-        assert!(formatted.contains("truncated"));
+        assert!(formatted.ends_with("(chain truncated)"));
+        // The walker should produce exactly MAX_ERROR_CHAIN_DEPTH " -> "
+        // separators for the walked sources plus one more for the
+        // "(chain truncated)" suffix.
+        assert_eq!(
+            formatted.matches(" -> ").count(),
+            MAX_ERROR_CHAIN_DEPTH + 1
+        );
+    }
+
+    // --- truncate_body ---
+
+    #[test]
+    fn truncate_body_short_is_unchanged() {
+        assert_eq!(truncate_body("hello"), "hello");
+    }
+
+    #[test]
+    fn truncate_body_at_limit_is_unchanged() {
+        let body = "x".repeat(MAX_BODY_IN_ERROR);
+        assert_eq!(truncate_body(&body), body);
+    }
+
+    #[test]
+    fn truncate_body_over_limit_is_truncated_and_reports_size() {
+        let body = "x".repeat(MAX_BODY_IN_ERROR + 500);
+        let truncated = truncate_body(&body);
+        assert!(truncated.len() < body.len());
+        assert!(truncated.starts_with(&"x".repeat(MAX_BODY_IN_ERROR)));
+        assert!(truncated.contains(&format!("{} bytes total", body.len())));
+    }
+
+    #[test]
+    fn truncate_body_respects_utf8_char_boundaries() {
+        // Build a body whose MAX_BODY_IN_ERROR-th byte lands inside a
+        // multi-byte character. "é" is 2 bytes (0xC3 0xA9).
+        let prefix = "a".repeat(MAX_BODY_IN_ERROR - 1);
+        let body = format!("{prefix}éééééé");
+        // Must not panic on a non-char-boundary slice.
+        let truncated = truncate_body(&body);
+        assert!(truncated.contains("bytes total"));
+        // The prefix itself must survive intact.
+        assert!(truncated.starts_with(&prefix));
+    }
+
+    // --- format_retry_exhausted ---
+
+    #[test]
+    fn retry_exhausted_without_query_error() {
+        let msg = format_retry_exhausted("connection reset", None);
+        assert!(msg.contains(&format!("after {MAX_RETRIES} retries")));
+        assert!(msg.contains("connection reset"));
+        assert!(!msg.contains("status query error"));
+    }
+
+    #[test]
+    fn retry_exhausted_includes_last_query_error() {
+        let msg = format_retry_exhausted(
+            "connection reset",
+            Some("Status query failed: 401 Unauthorized"),
+        );
+        assert!(msg.contains("connection reset"));
+        assert!(msg.contains("last status query error"));
+        assert!(msg.contains("401 Unauthorized"));
+    }
+
+    // --- interpret_chunk_response body truncation ---
+
+    #[test]
+    fn chunk_response_4xx_truncates_huge_body() {
+        let huge_body = "x".repeat(MAX_BODY_IN_ERROR * 4);
+        let ChunkResponse::Failed(msg) = interpret_chunk_response(500, None, &huge_body) else {
+            panic!("expected Failed");
+        };
+        assert!(msg.len() < huge_body.len() + 200);
+        assert!(msg.contains("bytes total"));
+    }
+
+    #[test]
+    fn chunk_response_malformed_json_truncates_huge_body() {
+        let huge_body = format!("not json: {}", "x".repeat(MAX_BODY_IN_ERROR * 4));
+        let ChunkResponse::Failed(msg) = interpret_chunk_response(200, None, &huge_body) else {
+            panic!("expected Failed");
+        };
+        assert!(msg.len() < huge_body.len() + 200);
+        assert!(msg.contains("bytes total"));
+    }
+
+    #[test]
+    fn status_query_unexpected_status_truncates_huge_body() {
+        let huge_body = "x".repeat(MAX_BODY_IN_ERROR * 4);
+        let Err(err) = interpret_status_query(500, None, &huge_body) else {
+            panic!("expected Err");
+        };
+        assert!(err.len() < huge_body.len() + 200);
+        assert!(err.contains("bytes total"));
     }
 }
