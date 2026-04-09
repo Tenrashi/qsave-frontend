@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/Tenrashi/qsave/compare/v1.4.1...v1.4.2) (2026-04-09)
+
+### Bug Fixes
+
+- upload large saves in chunks via Drive resumable protocol ([#57](https://github.com/Tenrashi/qsave/issues/57)) ([9386456](https://github.com/Tenrashi/qsave/commit/93864567cc34261b369701a5a337adbad4695be3))
+
 ## [1.4.1](https://github.com/Tenrashi/qsave/compare/v1.4.0...v1.4.1) (2026-04-06)
 
 ### Bug Fixes
