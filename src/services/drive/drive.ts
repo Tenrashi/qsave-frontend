@@ -214,16 +214,16 @@ export const deleteFile = async (fileId: string): Promise<void> => {
   }
 };
 
-export const getBackupFile = async (fileId: string): Promise<Uint8Array> => {
+export const downloadBackupToTempFile = async (
+  fileId: string,
+): Promise<{ tempPath: string; fileSize: number }> => {
   try {
-    const headers = await authHeaders();
-    const res = await fetch(
-      `${DRIVE_ENDPOINTS.api}/files/${fileId}?alt=media`,
-      { headers },
+    const accessToken = await getValidToken();
+    const result: { temp_path: string; file_size: number } = await invoke(
+      TAURI_COMMANDS.downloadDriveFile,
+      { fileId, accessToken },
     );
-    await assertOk(res, "Failed to download backup");
-    const buffer = await res.arrayBuffer();
-    return new Uint8Array(buffer);
+    return { tempPath: result.temp_path, fileSize: result.file_size };
   } catch (error) {
     throw new Error(
       `Failed to download backup "${fileId}": ${error instanceof Error ? error.message : error}`,

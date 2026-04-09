@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{Cursor, Read, Write};
+use std::io::{BufReader, Cursor, Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -309,16 +309,24 @@ fn swap_staging_to_targets(staging_dirs: &[PathBuf], target_dirs: &[String]) -> 
     Ok(())
 }
 
-/// Extracts a zip archive, routing files to the correct target directories.
+/// Extracts a zip archive from disk, routing files to the correct target directories.
 /// `target_dirs` maps to the save_paths indices stored in the ZIP.
 /// Each entry like `0/subdir/save.dat` is extracted to `target_dirs[0]/subdir/save.dat`.
 ///
 /// Extraction is atomic per target dir: files are extracted to a temp directory first,
 /// then the original is replaced only on success. On failure, originals are untouched.
-pub fn extract_zip(zip_bytes: Vec<u8>, target_dirs: Vec<String>) -> Result<ExtractResult, String> {
-    let cursor = Cursor::new(zip_bytes);
+///
+/// Reads from the file via a BufReader so large archives don't force the whole
+/// payload through JS↔Rust IPC or the webview heap (restoring multi-GB saves
+/// used to OOM the webview).
+pub fn extract_zip_file(
+    zip_path: &str,
+    target_dirs: Vec<String>,
+) -> Result<ExtractResult, String> {
+    let file = File::open(zip_path).map_err(|e| format!("Failed to open zip {zip_path}: {e}"))?;
+    let reader = BufReader::new(file);
     let mut archive =
-        zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to open zip: {e}"))?;
+        zip::ZipArchive::new(reader).map_err(|e| format!("Failed to open zip: {e}"))?;
 
     let staging_dirs = create_staging_dirs(&target_dirs)?;
 
@@ -388,8 +396,8 @@ fn extract_entry(
     Ok(true)
 }
 
-fn extract_to_dirs(
-    archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>,
+fn extract_to_dirs<R: Read + Seek>(
+    archive: &mut zip::ZipArchive<R>,
     target_dirs: &[PathBuf],
 ) -> Result<u32, String> {
     let canonical_targets: Vec<PathBuf> = target_dirs
@@ -415,11 +423,12 @@ fn extract_to_dirs(
     Ok(file_count)
 }
 
-/// Reads the metadata from a zip archive without extracting files.
-pub fn read_zip_meta(zip_bytes: Vec<u8>) -> Result<Option<ZipMeta>, String> {
-    let cursor = Cursor::new(zip_bytes);
+/// Reads the metadata from a zip archive on disk without extracting files.
+pub fn read_zip_meta_file(zip_path: &str) -> Result<Option<ZipMeta>, String> {
+    let file = File::open(zip_path).map_err(|e| format!("Failed to open zip {zip_path}: {e}"))?;
+    let reader = BufReader::new(file);
     let mut archive =
-        zip::ZipArchive::new(cursor).map_err(|e| format!("Failed to open zip: {e}"))?;
+        zip::ZipArchive::new(reader).map_err(|e| format!("Failed to open zip: {e}"))?;
 
     let mut entry = match archive.by_name(META_FILENAME) {
         Ok(entry) => entry,
@@ -447,6 +456,21 @@ mod tests {
             fs::create_dir_all(parent).unwrap();
         }
         File::create(path).unwrap().write_all(content).unwrap();
+    }
+
+    /// Persists an in-memory zip to a temp file so tests can exercise the
+    /// path-based `extract_zip_file` / `read_zip_meta_file` entry points.
+    /// Returns the path as a `String` to match the public function signatures.
+    fn zip_file_from_bytes(dir: &TempDir, bytes: &[u8]) -> String {
+        let path = dir.path().join(format!(
+            "fixture_{}.zip",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        File::create(&path).unwrap().write_all(bytes).unwrap();
+        path.to_string_lossy().to_string()
     }
 
     #[test]
@@ -491,7 +515,8 @@ mod tests {
         )
         .unwrap();
 
-        let meta = read_zip_meta(result.zip_bytes).unwrap().unwrap();
+        let zip_path = zip_file_from_bytes(&dir, &result.zip_bytes);
+        let meta = read_zip_meta_file(&zip_path).unwrap().unwrap();
         assert_eq!(meta.save_paths, vec![base.to_string_lossy().to_string()]);
         assert!(!meta.platform.is_empty());
     }
@@ -600,8 +625,9 @@ mod tests {
         .unwrap();
 
         let extract_dir = dir.path().join("restored");
-        let result = extract_zip(
-            zip_result.zip_bytes,
+        let zip_path = zip_file_from_bytes(&dir, &zip_result.zip_bytes);
+        let result = extract_zip_file(
+            &zip_path,
             vec![extract_dir.to_string_lossy().to_string()],
         )
         .unwrap();
@@ -638,8 +664,9 @@ mod tests {
 
         let restore_config = dir.path().join("restore_config");
         let restore_saves = dir.path().join("restore_saves");
-        let result = extract_zip(
-            zip_result.zip_bytes,
+        let zip_path = zip_file_from_bytes(&dir, &zip_result.zip_bytes);
+        let result = extract_zip_file(
+            &zip_path,
             vec![
                 restore_config.to_string_lossy().to_string(),
                 restore_saves.to_string_lossy().to_string(),
@@ -682,8 +709,9 @@ mod tests {
 
         // Restore with only 1 target dir (fewer than the 2 in the zip)
         let restore_dir = dir.path().join("restored");
-        let result = extract_zip(
-            zip_result.zip_bytes,
+        let zip_path = zip_file_from_bytes(&dir, &zip_result.zip_bytes);
+        let result = extract_zip_file(
+            &zip_path,
             vec![restore_dir.to_string_lossy().to_string()],
         )
         .unwrap();
@@ -708,12 +736,14 @@ mod tests {
 
         let target = dir.path().join("safe").join("nested");
         fs::create_dir_all(&target).unwrap();
-        let result = extract_zip(zip_bytes, vec![target.to_string_lossy().to_string()]);
+        let zip_path = zip_file_from_bytes(&dir, &zip_bytes);
+        let result = extract_zip_file(&zip_path, vec![target.to_string_lossy().to_string()]);
         assert!(result.is_err());
     }
 
     #[test]
     fn read_meta_returns_none_for_zip_without_meta() {
+        let dir = TempDir::new().unwrap();
         let buffer = Cursor::new(Vec::new());
         let mut zip = zip::ZipWriter::new(buffer);
         let options = SimpleFileOptions::default();
@@ -724,7 +754,8 @@ mod tests {
         let cursor = zip.finish().unwrap();
         let zip_bytes = cursor.into_inner();
 
-        let meta = read_zip_meta(zip_bytes).unwrap();
+        let zip_path = zip_file_from_bytes(&dir, &zip_bytes);
+        let meta = read_zip_meta_file(&zip_path).unwrap();
         assert!(meta.is_none());
     }
 
@@ -746,8 +777,9 @@ mod tests {
         write_file(&extract_dir.join("save1.dat"), b"old");
         write_file(&extract_dir.join("extra.dat"), b"should be removed");
 
-        let result = extract_zip(
-            zip_result.zip_bytes,
+        let zip_path = zip_file_from_bytes(&dir, &zip_result.zip_bytes);
+        let result = extract_zip_file(
+            &zip_path,
             vec![extract_dir.to_string_lossy().to_string()],
         )
         .unwrap();
@@ -908,5 +940,57 @@ mod tests {
         assert_eq!(names, vec!["0/config.ini", "1/Story/slot1.lsv"]);
 
         let _ = fs::remove_file(&result.temp_path);
+    }
+
+    #[test]
+    fn create_zip_file_round_trips_through_file_based_restore() {
+        let dir = TempDir::new().unwrap();
+        let base = dir.path().join("saves");
+        let file_a = base.join("save1.dat");
+        let file_b = base.join("subdir/save2.dat");
+        write_file(&file_a, b"alpha");
+        write_file(&file_b, b"beta");
+
+        let zip_result = create_zip_file(
+            vec![base.to_string_lossy().to_string()],
+            vec![
+                file_a.to_string_lossy().to_string(),
+                file_b.to_string_lossy().to_string(),
+            ],
+        )
+        .unwrap();
+
+        // Path-based meta read: no bytes ever cross through a Vec<u8>.
+        let meta = read_zip_meta_file(&zip_result.temp_path).unwrap().unwrap();
+        assert_eq!(meta.save_paths, vec![base.to_string_lossy().to_string()]);
+
+        let restored = dir.path().join("restored");
+        let extracted = extract_zip_file(
+            &zip_result.temp_path,
+            vec![restored.to_string_lossy().to_string()],
+        )
+        .unwrap();
+
+        assert_eq!(extracted.file_count, 2);
+        assert_eq!(fs::read_to_string(restored.join("save1.dat")).unwrap(), "alpha");
+        assert_eq!(
+            fs::read_to_string(restored.join("subdir/save2.dat")).unwrap(),
+            "beta"
+        );
+
+        let _ = fs::remove_file(&zip_result.temp_path);
+    }
+
+    #[test]
+    fn extract_zip_file_errors_for_missing_zip() {
+        let dir = TempDir::new().unwrap();
+        let missing = dir
+            .path()
+            .join("does_not_exist.zip")
+            .to_string_lossy()
+            .to_string();
+        let target = dir.path().join("out").to_string_lossy().to_string();
+        let result = extract_zip_file(&missing, vec![target]);
+        assert!(result.is_err());
     }
 }

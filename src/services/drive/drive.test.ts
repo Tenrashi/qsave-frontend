@@ -7,7 +7,7 @@ import {
   getDeviceFile,
   putDeviceFile,
   deleteFile,
-  getBackupFile,
+  downloadBackupToTempFile,
   postFile,
   getFolderNames,
 } from "./drive";
@@ -344,34 +344,51 @@ describe("drive service", () => {
     });
   });
 
-  describe("getBackupFile", () => {
-    it("returns file as Uint8Array", async () => {
-      const buffer = new ArrayBuffer(4);
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        arrayBuffer: () => Promise.resolve(buffer),
+  describe("downloadBackupToTempFile", () => {
+    it("delegates to the native download command with the valid token", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        temp_path: "/tmp/qsave_restore_abc.zip",
+        file_size: 4096,
       });
 
-      const result = await getBackupFile("file-123");
+      const result = await downloadBackupToTempFile("file-123");
 
-      expect(result).toBeInstanceOf(Uint8Array);
-      expect(result.length).toBe(4);
+      expect(result).toEqual({
+        tempPath: "/tmp/qsave_restore_abc.zip",
+        fileSize: 4096,
+      });
+      expect(mockGetValidToken).toHaveBeenCalled();
+      expect(mockInvoke).toHaveBeenCalledWith("download_drive_file", {
+        fileId: "file-123",
+        accessToken: "test-token",
+      });
     });
 
     it("wraps errors with fileId context", async () => {
-      mockFetch.mockResolvedValueOnce(errorResponse(404));
+      mockInvoke.mockRejectedValueOnce(new Error("HTTP 404"));
 
-      await expect(getBackupFile("file-123")).rejects.toThrow(
-        'Failed to download backup "file-123"',
+      await expect(downloadBackupToTempFile("file-123")).rejects.toThrow(
+        'Failed to download backup "file-123": HTTP 404',
       );
     });
 
     it("handles non-Error throw in backup wrapping", async () => {
-      mockFetch.mockRejectedValueOnce("string error");
+      mockInvoke.mockRejectedValueOnce("string error");
 
-      await expect(getBackupFile("file-123")).rejects.toThrow(
+      await expect(downloadBackupToTempFile("file-123")).rejects.toThrow(
         'Failed to download backup "file-123": string error',
       );
+    });
+
+    it("does not touch fetch — the native side owns the HTTP request", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        temp_path: "/tmp/qsave_restore_xyz.zip",
+        file_size: 10,
+      });
+
+      await downloadBackupToTempFile("file-123");
+
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
