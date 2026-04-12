@@ -8,8 +8,9 @@ import {
 import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { classifyError } from "@/lib/errors/classifyError";
 import App from "./App";
-import "./i18n";
+import i18n from "./i18n";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -17,7 +18,10 @@ const queryClient = new QueryClient({
     onError: (error, query) => {
       const meta = query.meta as { errorMessage?: string } | undefined;
       if (meta?.errorMessage) {
-        toast.error(meta.errorMessage, { description: error.message });
+        toast.error(meta.errorMessage, {
+          description: i18n.t(classifyError(error.message)),
+          duration: 10_000,
+        });
       }
     },
   }),

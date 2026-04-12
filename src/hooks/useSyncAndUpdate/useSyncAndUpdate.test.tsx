@@ -152,7 +152,7 @@ describe("useSyncAndUpdate", () => {
       SYNC_STATUS.error,
     );
     expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
-      description: "upload failed",
+      description: "errors.unknown",
       duration: 10_000,
     });
   });
@@ -170,7 +170,7 @@ describe("useSyncAndUpdate", () => {
       SYNC_STATUS.error,
     );
     expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
-      description: "network error",
+      description: "errors.networkError",
       duration: 10_000,
     });
   });
@@ -185,7 +185,7 @@ describe("useSyncAndUpdate", () => {
     await expect(result.current(sims4Game)).rejects.toBe("raw string failure");
 
     expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
-      description: "raw string failure",
+      description: "errors.unknown",
       duration: 10_000,
     });
   });

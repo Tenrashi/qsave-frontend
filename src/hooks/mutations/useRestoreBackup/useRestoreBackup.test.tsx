@@ -278,7 +278,10 @@ describe("useRestoreBackup", () => {
         SYNC_STATUS.error,
       ),
     );
-    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed", {
+      description: "errors.unknown",
+      duration: 10_000,
+    });
   });
 
   it("uses fallback error message when result has no error string", async () => {
@@ -299,7 +302,10 @@ describe("useRestoreBackup", () => {
         SYNC_STATUS.error,
       ),
     );
-    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed", {
+      description: "errors.unknown",
+      duration: 10_000,
+    });
   });
 
   it("sets game status to error and shows error toast when restore fails", async () => {
@@ -316,6 +322,29 @@ describe("useRestoreBackup", () => {
         SYNC_STATUS.error,
       ),
     );
-    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed", {
+      description: "errors.networkError",
+      duration: 10_000,
+    });
+  });
+
+  it("shows classified error toast when restore rejects with a non-Error value", async () => {
+    mockRestoreGame.mockRejectedValueOnce("403 Forbidden quota exceeded");
+
+    const { result } = renderHook(() => useRestoreBackup(sims4Game), {
+      wrapper: createWrapper().wrapper,
+    });
+
+    result.current.mutate({ backupId: "b1" });
+
+    await waitFor(() =>
+      expect(useSyncStore.getState().gameStatuses["The Sims 4"]).toBe(
+        SYNC_STATUS.error,
+      ),
+    );
+    expect(mockToastError).toHaveBeenCalledWith("toast.restoreFailed", {
+      description: "errors.forbidden",
+      duration: 10_000,
+    });
   });
 });

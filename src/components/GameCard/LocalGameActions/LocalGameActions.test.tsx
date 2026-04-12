@@ -251,7 +251,7 @@ describe("LocalGameActions", () => {
       ),
     );
     expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
-      description: "upload failed",
+      description: "errors.unknown",
       duration: 10_000,
     });
   });
@@ -269,7 +269,7 @@ describe("LocalGameActions", () => {
       ),
     );
     expect(mockToastError).toHaveBeenCalledWith("toast.syncFailed", {
-      description: "network error",
+      description: "errors.networkError",
       duration: 10_000,
     });
   });

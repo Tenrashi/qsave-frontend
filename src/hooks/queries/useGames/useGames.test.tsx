@@ -69,7 +69,8 @@ describe("useGames", () => {
 
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith("toast.scanFailed", {
-        description: "scan failed",
+        description: "errors.unknown",
+        duration: 10_000,
       }),
     );
   });

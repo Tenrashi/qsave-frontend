@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import type { Game } from "@/domain/types";
 import { SYNC_STATUS, RECORD_STATUS } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
+import { classifyError } from "@/lib/errors/classifyError";
 import { listGameBackups } from "@/operations/drive/backups/backups";
 import { saveDeviceSync } from "@/operations/devices/devices";
 import { getCloudGameHash } from "@/operations/devices/devices";
@@ -74,9 +75,14 @@ export const useRestoreBackup = (game: Game) => {
         toast.error(t("toast.restoreFailed", { name: game.name }));
       }
     },
-    onError: () => {
+    onError: (error) => {
       setGameStatus(game.name, SYNC_STATUS.error);
-      toast.error(t("toast.restoreFailed", { name: game.name }));
+      toast.error(t("toast.restoreFailed", { name: game.name }), {
+        description: t(
+          classifyError(error instanceof Error ? error.message : String(error)),
+        ),
+        duration: 10_000,
+      });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.syncHistory });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.games });
     },

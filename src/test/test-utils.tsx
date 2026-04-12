@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { I18nextProvider } from "react-i18next";
 import i18n from "i18next";
+import { classifyError } from "@/lib/errors/classifyError";
 import { initReactI18next } from "react-i18next";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement, ReactNode } from "react";
@@ -29,7 +30,10 @@ const createTestQueryClient = () => {
       onError: (error, query) => {
         const meta = query.meta as { errorMessage?: string } | undefined;
         if (meta?.errorMessage) {
-          toast.error(meta.errorMessage, { description: error.message });
+          toast.error(meta.errorMessage, {
+            description: i18n.t(classifyError(error.message)),
+            duration: 10_000,
+          });
         }
       },
     }),

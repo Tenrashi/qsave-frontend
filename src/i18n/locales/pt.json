@@ -122,6 +122,16 @@
     "install": "Atualizar agora",
     "installing": "Atualizando..."
   },
+  "errors": {
+    "quotaExceeded": "Seu armazenamento do Google Drive está cheio. Libere espaço ou faça upgrade do seu plano.",
+    "authExpired": "Sua sessão expirou. Faça login novamente.",
+    "notFound": "O backup não foi encontrado no Google Drive. Pode ter sido excluído.",
+    "rateLimited": "Muitas solicitações. Aguarde um momento e tente novamente.",
+    "serverError": "O Google Drive está temporariamente indisponível. Tente novamente mais tarde.",
+    "networkError": "Não foi possível acessar o Google Drive. Verifique sua conexão com a internet.",
+    "forbidden": "Acesso ao Google Drive negado. Tente fazer login novamente.",
+    "unknown": "Algo deu errado. Tente novamente."
+  },
   "settings": {
     "language": "Idioma"
   }

@@ -122,6 +122,16 @@
     "install": "今すぐ更新",
     "installing": "更新中..."
   },
+  "errors": {
+    "quotaExceeded": "Google Driveの容量がいっぱいです。空き容量を確保するか、プランをアップグレードしてください。",
+    "authExpired": "セッションが期限切れです。再度サインインしてください。",
+    "notFound": "Google Driveにバックアップが見つかりません。削除された可能性があります。",
+    "rateLimited": "リクエストが多すぎます。しばらく待ってから再試行してください。",
+    "serverError": "Google Driveが一時的に利用できません。しばらくしてから再試行してください。",
+    "networkError": "Google Driveに接続できません。インターネット接続を確認してください。",
+    "forbidden": "Google Driveへのアクセスが拒否されました。再度サインインしてみてください。",
+    "unknown": "問題が発生しました。もう一度お試しください。"
+  },
   "settings": {
     "language": "言語"
   }

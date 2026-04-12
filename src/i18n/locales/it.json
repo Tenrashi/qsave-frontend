@@ -122,6 +122,16 @@
     "install": "Aggiorna ora",
     "installing": "Aggiornamento in corso..."
   },
+  "errors": {
+    "quotaExceeded": "Lo spazio di Google Drive è esaurito. Libera spazio o passa a un piano superiore.",
+    "authExpired": "La sessione è scaduta. Accedi di nuovo.",
+    "notFound": "Il backup non è stato trovato su Google Drive. Potrebbe essere stato eliminato.",
+    "rateLimited": "Troppe richieste. Attendi un momento e riprova.",
+    "serverError": "Google Drive è temporaneamente non disponibile. Riprova più tardi.",
+    "networkError": "Impossibile raggiungere Google Drive. Controlla la tua connessione internet.",
+    "forbidden": "Accesso a Google Drive negato. Prova ad accedere di nuovo.",
+    "unknown": "Qualcosa è andato storto. Riprova."
+  },
   "settings": {
     "language": "Lingua"
   }
