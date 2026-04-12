@@ -1,3 +1,14 @@
+# [1.5.0](https://github.com/Tenrashi/qsave/compare/v1.4.2...v1.5.0) (2026-04-12)
+
+### Bug Fixes
+
+- rename uuid_v4 to temp_id with atomic counter, validate content-length on download ([e44ef99](https://github.com/Tenrashi/qsave/commit/e44ef99e3c3de7c9dd077a3a549b25385d26aaf9))
+
+### Features
+
+- resume partial downloads via Range header and safe backoff_for(0) ([5bf7fe4](https://github.com/Tenrashi/qsave/commit/5bf7fe4345689f6a03ead072c45b433f5efe114b))
+- stream restore downloads and extraction through Rust ([a315f2c](https://github.com/Tenrashi/qsave/commit/a315f2c6a21cf46e35051f7ded113aecacd14afc))
+
 ## [1.4.2](https://github.com/Tenrashi/qsave/compare/v1.4.1...v1.4.2) (2026-04-09)
 
 ### Bug Fixes
