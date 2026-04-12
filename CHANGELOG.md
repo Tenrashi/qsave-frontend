@@ -1,3 +1,9 @@
+## [1.5.1](https://github.com/Tenrashi/qsave/compare/v1.5.0...v1.5.1) (2026-04-12)
+
+### Bug Fixes
+
+- remove registry key detection that showed false "registry only" badges ([38e89e1](https://github.com/Tenrashi/qsave/commit/38e89e1cbdec804bc72e199a7668bbac41ef1d6e))
+
 # [1.5.0](https://github.com/Tenrashi/qsave/compare/v1.4.2...v1.5.0) (2026-04-12)
 
 ### Bug Fixes
