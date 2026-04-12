@@ -98,7 +98,7 @@ fn download(url: &str, cache_filename: &str, client: &reqwest::blocking::Client)
 
         let exceeds_limit = response
             .content_length()
-            .map_or(false, |len| len > MAX_MANIFEST_BYTES);
+            .is_some_and(|len| len > MAX_MANIFEST_BYTES);
         if exceeds_limit {
             return DownloadResult::Failed;
         }
@@ -215,12 +215,12 @@ fn matches_when(when: &Option<Vec<WhenCondition>>, os: &str, store: Option<&str>
         let os_ok = condition
             .os
             .as_ref()
-            .map_or(true, |required_os| required_os == os);
+            .is_none_or(|required_os| required_os == os);
         let store_ok = condition
             .store
             .as_ref()
-            .map_or(true, |required_store| {
-                store.map_or(false, |detected| detected == required_store)
+            .is_none_or(|required_store| {
+                store.is_some_and(|detected| detected == required_store)
             });
         os_ok && store_ok
     })
@@ -293,7 +293,7 @@ pub fn resolve_candidates(
                 .map(|_| "steam".to_string())
                 .or_else(|| gog_root.map(|_| "gog".to_string()))
                 .or_else(|| epic_root.map(|_| "epic".to_string()));
-            let manifest_has_steam_cloud = entry.cloud.map_or(false, |c| c.steam);
+            let manifest_has_steam_cloud = entry.cloud.is_some_and(|c| c.steam);
             let has_steam_cloud =
                 platform.as_deref() == Some("steam") && manifest_has_steam_cloud;
             let root = steam_root

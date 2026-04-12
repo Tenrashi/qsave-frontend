@@ -23,7 +23,7 @@ pub fn find_epic_app_roots() -> HashMap<String, PathBuf> {
 /// Parses a single `.item` manifest file and inserts the game into the map
 /// keyed by lowercase install directory basename.
 fn scan_item_file(path: &Path, map: &mut HashMap<String, PathBuf>) {
-    let is_item = path.extension().map_or(false, |ext| ext == "item");
+    let is_item = path.extension().is_some_and(|ext| ext == "item");
     if !is_item {
         return;
     }
