@@ -2,7 +2,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::drive_common::{backoff_for, format_error_chain, is_retryable_status, truncate_body, uuid_v4};
+use crate::drive_common::{backoff_for, format_error_chain, is_retryable_status, temp_id, truncate_body};
 use crate::logger;
 
 // Match the upload path's 5-minute per-request ceiling so stalled reads fail
@@ -26,7 +26,7 @@ enum DownloadError {
 }
 
 fn temp_download_path() -> PathBuf {
-    std::env::temp_dir().join(format!("qsave_restore_{}.zip", uuid_v4()))
+    std::env::temp_dir().join(format!("qsave_restore_{}.zip", temp_id()))
 }
 
 // ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ pub fn download_drive_file(
         match download_once(&client, &url, access_token, &temp_path) {
             Ok(file_size) => {
                 logger::info(&format!(
-                    "drive_download: success, {file_size} bytes -> {}",
+                    "drive_download: file_id={file_id}, {file_size} bytes -> {}",
                     temp_path.display()
                 ));
                 return Ok(DownloadFileResult {
@@ -65,7 +65,7 @@ pub fn download_drive_file(
             Err(DownloadError::Permanent(err)) => {
                 let _ = std::fs::remove_file(&temp_path);
                 logger::error(&format!(
-                    "drive_download: permanent error, not retrying: {err}"
+                    "drive_download: file_id={file_id}, permanent error, not retrying: {err}"
                 ));
                 return Err(err);
             }
@@ -79,7 +79,7 @@ pub fn download_drive_file(
                 }
                 let backoff = backoff_for(attempt);
                 logger::error(&format!(
-                    "drive_download: error (attempt {attempt}/{MAX_RETRIES}): {err}; retrying in {}s",
+                    "drive_download: file_id={file_id}, error (attempt {attempt}/{MAX_RETRIES}): {err}; retrying in {}s",
                     backoff.as_secs()
                 ));
                 std::thread::sleep(backoff);
@@ -127,6 +127,8 @@ fn download_once(
         });
     }
 
+    let expected_size = res.content_length();
+
     // Local disk failures are the user's problem, not Drive's — retrying
     // won't help if the temp dir is unwritable or full.
     let mut file = File::create(temp_path).map_err(|e| {
@@ -142,6 +144,14 @@ fn download_once(
             format_error_chain(&e)
         ))
     })?;
+
+    if let Some(expected) = expected_size {
+        if bytes_copied != expected {
+            return Err(DownloadError::Retryable(format!(
+                "Truncated download: expected {expected} bytes but received {bytes_copied}"
+            )));
+        }
+    }
 
     Ok(bytes_copied)
 }

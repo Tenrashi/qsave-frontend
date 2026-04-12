@@ -3,23 +3,22 @@ import { RECORD_STATUS } from "@/domain/types";
 import { sims4Game } from "@/test/mocks/games";
 import { restoreGame } from "./restore";
 
+const defaultInvokeResults: Record<string, unknown> = {
+  read_zip_meta_file: { platform: "macos", save_paths: ["/saves/sims4"] },
+  extract_zip_file: { file_count: 3 },
+  delete_temp_file: undefined,
+};
+
 const {
   mockInvoke,
   mockDownloadBackupToTempFile,
   mockAddSyncRecord,
   mockNotify,
 } = vi.hoisted(() => ({
-  mockInvoke: vi.fn((command: string): Promise<unknown> => {
-    if (command === "read_zip_meta_file")
-      return Promise.resolve({
-        platform: "macos",
-        save_paths: ["/saves/sims4"],
-      });
-    if (command === "extract_zip_file")
-      return Promise.resolve({ file_count: 3 });
-    if (command === "delete_temp_file") return Promise.resolve();
-    return Promise.resolve();
-  }),
+  mockInvoke: vi.fn(
+    (command: string): Promise<unknown> =>
+      Promise.resolve(defaultInvokeResults[command]),
+  ),
   mockDownloadBackupToTempFile: vi.fn(() =>
     Promise.resolve({ tempPath: "/tmp/qsave_restore_abc.zip", fileSize: 1234 }),
   ),
@@ -84,17 +83,12 @@ describe("restoreGame", () => {
   });
 
   it("deletes the downloaded temp file after a failed extraction", async () => {
-    mockInvoke.mockImplementationOnce((command: string) => {
-      if (command === "read_zip_meta_file")
-        return Promise.resolve({
-          platform: "macos",
-          save_paths: ["/saves/sims4"],
-        });
-      return Promise.resolve();
-    });
-    mockInvoke.mockImplementationOnce(() =>
-      Promise.reject(new Error("Extract failed")),
-    );
+    mockInvoke
+      .mockResolvedValueOnce({
+        platform: "macos",
+        save_paths: ["/saves/sims4"],
+      })
+      .mockRejectedValueOnce(new Error("Extract failed"));
 
     await restoreGame(sims4Game, "backup-123");
 
@@ -117,18 +111,13 @@ describe("restoreGame", () => {
   });
 
   it("swallows temp file cleanup failures", async () => {
-    mockInvoke.mockImplementation((command: string) => {
-      if (command === "read_zip_meta_file")
-        return Promise.resolve({
-          platform: "macos",
-          save_paths: ["/saves/sims4"],
-        });
-      if (command === "extract_zip_file")
-        return Promise.resolve({ file_count: 3 });
-      if (command === "delete_temp_file")
-        return Promise.reject(new Error("Cleanup failed"));
-      return Promise.resolve();
-    });
+    mockInvoke
+      .mockResolvedValueOnce({
+        platform: "macos",
+        save_paths: ["/saves/sims4"],
+      })
+      .mockResolvedValueOnce({ file_count: 3 })
+      .mockRejectedValueOnce(new Error("Cleanup failed"));
 
     const record = await restoreGame(sims4Game, "backup-123");
 
@@ -190,8 +179,9 @@ describe("restoreGame", () => {
   });
 
   it("uses only first save path when meta has no save_paths", async () => {
-    mockInvoke.mockImplementationOnce(() => Promise.resolve(null)); // read_zip_meta_file
-    mockInvoke.mockImplementationOnce(() => Promise.resolve({ file_count: 1 })); // extract_zip_file
+    mockInvoke
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ file_count: 1 });
 
     const record = await restoreGame(sims4Game, "backup-123");
 
@@ -204,7 +194,7 @@ describe("restoreGame", () => {
 
   it("throws when game has no save paths", async () => {
     const noPathGame = { ...sims4Game, savePaths: [] as string[] };
-    mockInvoke.mockImplementationOnce(() => Promise.resolve(null)); // read_zip_meta_file
+    mockInvoke.mockResolvedValueOnce(null);
 
     const record = await restoreGame(noPathGame, "backup-123");
 
