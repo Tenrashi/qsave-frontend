@@ -1,3 +1,9 @@
+# [1.6.0](https://github.com/Tenrashi/qsave/compare/v1.5.2...v1.6.0) (2026-04-12)
+
+### Features
+
+- display platform badge (Steam, GOG, Epic) on game cards ([04f36d8](https://github.com/Tenrashi/qsave/commit/04f36d8f0b1caa21821ea77cd12a0d9eb2416000))
+
 ## [1.5.2](https://github.com/Tenrashi/qsave/compare/v1.5.1...v1.5.2) (2026-04-12)
 
 ### Bug Fixes
