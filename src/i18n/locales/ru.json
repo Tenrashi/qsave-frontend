@@ -44,7 +44,10 @@
     "showSteamCloud": "Показать игры Steam Cloud",
     "cloudBadge": "Облако",
     "cloudOnlyHint": "Резервная копия с другого устройства",
-    "removePath": "Удалить путь"
+    "removePath": "Удалить путь",
+    "platformSteam": "Steam",
+    "platformGog": "GOG",
+    "platformEpic": "Epic"
   },
   "history": {
     "title": "Недавняя история",

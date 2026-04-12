@@ -30,6 +30,13 @@ export const GameCard = memo(({ game }: GameCardProps) => {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <span className="font-medium truncate">{game.name}</span>
             <SyncStatusIcon status={status} isSynced={isSynced} />
+            {game.platform && (
+              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                {t(
+                  `games.platform${game.platform.charAt(0).toUpperCase() + game.platform.slice(1)}`,
+                )}
+              </span>
+            )}
             {game.isManual && (
               <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
                 {t("games.manualBadge")}

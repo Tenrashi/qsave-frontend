@@ -44,7 +44,10 @@
     "showSteamCloud": "Show Steam Cloud games",
     "cloudBadge": "Cloud",
     "cloudOnlyHint": "Backed up on another device",
-    "removePath": "Remove path"
+    "removePath": "Remove path",
+    "platformSteam": "Steam",
+    "platformGog": "GOG",
+    "platformEpic": "Epic"
   },
   "history": {
     "title": "Recent history",

@@ -93,6 +93,36 @@ export const steamCloudGame: Game = {
   hasSteamCloud: true,
 };
 
+export const gogGame: Game = {
+  name: "The Witcher 3",
+  savePaths: ["/saves/witcher3"],
+  saveFiles: [
+    {
+      name: "save.sav",
+      path: "/saves/witcher3/save.sav",
+      sizeBytes: 4096,
+      lastModified: MOCK_DATE,
+      gameName: "The Witcher 3",
+    },
+  ],
+  platform: PLATFORM.gog,
+};
+
+export const epicGame: Game = {
+  name: "Fortnite",
+  savePaths: ["/saves/fortnite"],
+  saveFiles: [
+    {
+      name: "save.dat",
+      path: "/saves/fortnite/save.dat",
+      sizeBytes: 2048,
+      lastModified: MOCK_DATE,
+      gameName: "Fortnite",
+    },
+  ],
+  platform: PLATFORM.epic,
+};
+
 export const cloudOnlyGame: Game = {
   name: "Cloud Save RPG",
   savePaths: [],

@@ -44,7 +44,10 @@
     "showSteamCloud": "显示Steam云游戏",
     "cloudBadge": "云端",
     "cloudOnlyHint": "已在其他设备上备份",
-    "removePath": "移除路径"
+    "removePath": "移除路径",
+    "platformSteam": "Steam",
+    "platformGog": "GOG",
+    "platformEpic": "Epic"
   },
   "history": {
     "title": "最近记录",

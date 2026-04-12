@@ -44,7 +44,10 @@
     "showSteamCloud": "Steamクラウドのゲームを表示",
     "cloudBadge": "クラウド",
     "cloudOnlyHint": "別のデバイスでバックアップ済み",
-    "removePath": "パスを削除"
+    "removePath": "パスを削除",
+    "platformSteam": "Steam",
+    "platformGog": "GOG",
+    "platformEpic": "Epic"
   },
   "history": {
     "title": "最近の履歴",
