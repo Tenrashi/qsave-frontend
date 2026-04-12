@@ -1,21 +1,36 @@
-# QSave
+# <img src="src-tauri/icons/32x32.png" width="28" align="center" /> QSave
+
+[![GitHub license](https://img.shields.io/github/license/Tenrashi/qsave)](https://github.com/Tenrashi/qsave/blob/main/LICENSE) [![GitHub release](https://img.shields.io/github/v/release/Tenrashi/qsave)](https://github.com/Tenrashi/qsave/releases) [![CI](https://img.shields.io/github/actions/workflow/status/Tenrashi/qsave/release.yml?branch=main&label=CI)](https://github.com/Tenrashi/qsave/actions)
 
 Open-source desktop app that backs up your video game save files to Google Drive.
 
 QSave detects installed games using the [Ludusavi](https://github.com/mtkennerly/ludusavi) manifest, and syncs your saves to Google Drive with built-in versioning. Restore them on any device — even across operating systems.
+
+## Screenshots
+
+|              Game library               |                 Version restore                 |
+| :-------------------------------------: | :---------------------------------------------: |
+| ![Main view](docs/screenshots/main.png) | ![Restore dialog](docs/screenshots/restore.png) |
+
+|                 Search                 |                 Add manual game                  |
+| :------------------------------------: | :----------------------------------------------: |
+| ![Search](docs/screenshots/search.png) | ![Manual game](docs/screenshots/manual-game.png) |
 
 ## Features
 
 ### Game Detection
 
 - **19,000+ games** — Scans for save files using multiple community-maintained manifests covering Steam, GOG, Epic, Origin, Uplay, Battle.net, and standalone games
-- **Store integration** — Detects Steam and GOG installations to resolve save paths and match store-specific manifest conditions
+- **Store integration** — Detects Steam, GOG, and Epic Games Store installations to resolve save paths and match store-specific manifest conditions
+- **Platform badges** — Shows which store each game belongs to (Steam, GOG, Epic)
 - **Manual games** — Add any game with custom save paths for full coverage
 - **Steam Cloud indicator** — Shows which games already have Steam Cloud saves, with a toggle to hide them
+- **Instant launch** — Cached game list loads immediately while a fresh scan runs in the background
 
 ### Backup & Sync
 
 - **Google Drive sync** — One-click upload of save files with automatic versioning
+- **Streaming transfers** — Large saves are streamed and uploaded via resumable protocol, keeping memory usage low
 - **Up to 5 backups per game** — Keep multiple versions of your saves
 - **Change detection** — Fingerprint-based tracking skips uploads when saves haven't changed
 - **Conflict detection** — Warns when local saves changed before restoring, or when another device uploaded a newer backup before syncing
@@ -25,7 +40,7 @@ QSave detects installed games using the [Ludusavi](https://github.com/mtkennerly
 
 - **Quick restore** — One-click restore of the latest backup
 - **Version picker** — Browse and restore from any of your saved versions
-- **Cross-platform restore** — Backups are stored with relative paths, so you can back up on one OS and restore on another. No path translation hacks needed
+- **Cross-platform restore** — Backups use relative paths, so you can back up on one OS and restore on another
 - **Cloud-only games** — See and restore games backed up from other devices, even if the game isn't installed locally
 - **Custom restore location** — Pick any folder as the restore target
 - **Backup deletion** — Remove individual backup versions from the cloud
@@ -35,6 +50,7 @@ QSave detects installed games using the [Ludusavi](https://github.com/mtkennerly
 - **System tray** — Runs in the background; closing the window hides to tray
 - **Autostart** — Optional launch at system startup
 - **Native notifications** — OS notifications when sync or restore completes
+- **Auto-updater** — In-app updates delivered automatically
 - **Dark/Light mode** — Follows your system theme
 
 ### Internationalization
