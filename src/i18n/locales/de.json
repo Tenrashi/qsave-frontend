@@ -44,7 +44,10 @@
     "showSteamCloud": "Steam-Cloud-Spiele anzeigen",
     "cloudBadge": "Cloud",
     "cloudOnlyHint": "Auf einem anderen Gerät gesichert",
-    "removePath": "Pfad entfernen"
+    "removePath": "Pfad entfernen",
+    "platformSteam": "Steam",
+    "platformGog": "GOG",
+    "platformEpic": "Epic"
   },
   "history": {
     "title": "Verlauf",

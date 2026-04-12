@@ -44,7 +44,10 @@
     "showSteamCloud": "Mostrar juegos con Steam Cloud",
     "cloudBadge": "Nube",
     "cloudOnlyHint": "Respaldado en otro dispositivo",
-    "removePath": "Eliminar ruta"
+    "removePath": "Eliminar ruta",
+    "platformSteam": "Steam",
+    "platformGog": "GOG",
+    "platformEpic": "Epic"
   },
   "history": {
     "title": "Historial reciente",

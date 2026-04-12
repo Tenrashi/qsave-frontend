@@ -9,6 +9,8 @@ import {
   manualGame,
   cloudOnlyGame,
   steamCloudGame,
+  gogGame,
+  epicGame,
 } from "@/test/mocks/games";
 import { GameCard, type GameCardProps } from "./GameCard";
 
@@ -138,6 +140,30 @@ describe("GameCard", () => {
   it("renders LocalGameActions for local games", () => {
     renderGameCard();
     expect(screen.getByText("20971520 bytes")).toBeInTheDocument();
+  });
+
+  describe("platform badge", () => {
+    it("shows Steam badge for Steam platform games", () => {
+      renderGameCard({ game: steamCloudGame });
+      expect(screen.getByText("games.platformSteam")).toBeInTheDocument();
+    });
+
+    it("shows GOG badge for GOG platform games", () => {
+      renderGameCard({ game: gogGame });
+      expect(screen.getByText("games.platformGog")).toBeInTheDocument();
+    });
+
+    it("shows Epic badge for Epic platform games", () => {
+      renderGameCard({ game: epicGame });
+      expect(screen.getByText("games.platformEpic")).toBeInTheDocument();
+    });
+
+    it("does not show platform badge when platform is not set", () => {
+      renderGameCard({ game: sims4Game });
+      expect(screen.queryByText("games.platformSteam")).not.toBeInTheDocument();
+      expect(screen.queryByText("games.platformGog")).not.toBeInTheDocument();
+      expect(screen.queryByText("games.platformEpic")).not.toBeInTheDocument();
+    });
   });
 
   describe("steam cloud games", () => {
