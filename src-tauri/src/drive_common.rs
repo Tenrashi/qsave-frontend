@@ -42,10 +42,13 @@ pub fn truncate_body(body: &str) -> String {
 }
 
 /// Exponential backoff capped at 30 s so bounded retry counts stay bounded
-/// in time. `checked_shl` saturates instead of panicking on oversized
-/// attempts, which matters because the upload loop increments `attempt`
-/// unconditionally and would otherwise panic on a pathological run.
+/// in time. Attempt 0 returns zero (no delay before the first try);
+/// callers typically pass 1-based retry numbers. `checked_shl` saturates
+/// instead of panicking on oversized attempts.
 pub fn backoff_for(attempt: u32) -> Duration {
+    if attempt == 0 {
+        return Duration::ZERO;
+    }
     let shifted = 1u64.checked_shl(attempt).unwrap_or(u64::MAX);
     Duration::from_secs(std::cmp::min(shifted, 30))
 }
@@ -114,6 +117,11 @@ mod tests {
     }
 
     // --- backoff_for ---
+
+    #[test]
+    fn backoff_zero_is_instant() {
+        assert_eq!(backoff_for(0), Duration::ZERO);
+    }
 
     #[test]
     fn backoff_grows_exponentially_until_cap() {
