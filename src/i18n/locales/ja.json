@@ -43,7 +43,6 @@
     "hideSteamCloud": "Steamクラウドのゲームを非表示",
     "showSteamCloud": "Steamクラウドのゲームを表示",
     "cloudBadge": "クラウド",
-    "registryOnlyBadge": "レジストリのみ",
     "cloudOnlyHint": "別のデバイスでバックアップ済み",
     "removePath": "パスを削除"
   },

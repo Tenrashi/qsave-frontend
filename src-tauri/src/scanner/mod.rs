@@ -5,7 +5,6 @@ mod gog;
 mod localized_names;
 mod localized_paths;
 mod manifest;
-mod registry;
 mod resolve;
 mod steam;
 mod types;
@@ -39,7 +38,6 @@ pub fn scan_manual_game_blocking(name: String, paths: Vec<String>) -> DetectedGa
         steam_id: None,
         save_paths: existing_paths,
         save_files,
-        registry_keys: Vec::new(),
         platform: None,
         has_steam_cloud: false,
     }

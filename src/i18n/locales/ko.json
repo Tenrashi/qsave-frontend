@@ -43,7 +43,6 @@
     "hideSteamCloud": "Steam 클라우드 게임 숨기기",
     "showSteamCloud": "Steam 클라우드 게임 표시",
     "cloudBadge": "클라우드",
-    "registryOnlyBadge": "레지스트리만",
     "cloudOnlyHint": "다른 기기에서 백업됨",
     "removePath": "경로 제거"
   },

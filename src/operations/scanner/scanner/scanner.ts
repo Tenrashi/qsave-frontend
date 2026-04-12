@@ -17,7 +17,6 @@ const toGame = (game: RustDetectedGame, isManual = false): Game => ({
       gameName: f.gameName,
     }),
   ),
-  registryKeys: game.registryKeys.length > 0 ? game.registryKeys : undefined,
   isManual,
   platform: game.platform ?? undefined,
   hasSteamCloud: game.hasSteamCloud,

@@ -3,7 +3,6 @@ export type Game = {
   steamId?: number;
   savePaths: string[];
   saveFiles: SaveFile[];
-  registryKeys?: string[];
   isManual?: boolean;
   isCloudOnly?: boolean;
   platform?: Platform;

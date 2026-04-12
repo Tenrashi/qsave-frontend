@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::registry::find_existing_registry_keys;
 use super::resolve::{current_os, resolve_path, ResolutionContext};
 use super::types::{ManifestEntry, ResolvedCandidate, WhenCondition};
 
@@ -142,10 +141,7 @@ fn merge_manifests(
     extra: HashMap<String, ManifestEntry>,
 ) {
     for (name, entry) in extra {
-        let has_files = entry.files.is_some();
-        let has_registry = entry.registry.is_some();
-
-        if !has_files && !has_registry {
+        if entry.files.is_none() {
             continue;
         }
 
@@ -156,12 +152,6 @@ fn merge_manifests(
                     let existing_files = existing.files.get_or_insert_with(HashMap::new);
                     extra_files.into_iter().for_each(|(path, value)| {
                         existing_files.entry(path).or_insert(value);
-                    });
-                }
-                if let Some(extra_registry) = entry.registry {
-                    let existing_registry = existing.registry.get_or_insert_with(HashMap::new);
-                    extra_registry.into_iter().for_each(|(key, value)| {
-                        existing_registry.entry(key).or_insert(value);
                     });
                 }
                 if existing.cloud.is_none() {
@@ -200,7 +190,6 @@ fn resolve_aliases(manifest: &mut HashMap<String, ManifestEntry>) {
             continue;
         };
         let target_files = target.files.clone();
-        let target_registry = target.registry.clone();
         let target_steam = target.steam.clone();
         let target_gog = target.gog.clone();
         let target_cloud = target.cloud.clone();
@@ -210,7 +199,6 @@ fn resolve_aliases(manifest: &mut HashMap<String, ManifestEntry>) {
             continue;
         };
         fill_option(&mut alias_entry.files, target_files);
-        fill_option(&mut alias_entry.registry, target_registry);
         fill_option(&mut alias_entry.steam, target_steam);
         fill_option(&mut alias_entry.gog, target_gog);
         fill_option(&mut alias_entry.cloud, target_cloud);
@@ -338,13 +326,7 @@ pub fn resolve_candidates(
                 .into_iter()
                 .collect();
 
-            let registry_keys = entry
-                .registry
-                .as_ref()
-                .map(|reg| find_existing_registry_keys(reg, platform.as_deref()))
-                .unwrap_or_default();
-
-            if paths.is_empty() && registry_keys.is_empty() {
+            if paths.is_empty() {
                 return None;
             }
 
@@ -352,7 +334,6 @@ pub fn resolve_candidates(
                 name,
                 steam_id,
                 paths,
-                registry_keys,
                 platform,
                 has_steam_cloud,
             })
@@ -516,7 +497,6 @@ GameB:
             "GameA".to_string(),
             ManifestEntry {
                 files: None,
-                registry: None,
                 install_dir: None,
                 alias: None,
                 steam: None,
