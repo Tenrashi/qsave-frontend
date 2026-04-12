@@ -45,7 +45,7 @@ pub fn resolve_path(raw: &str, ctx: &ResolutionContext) -> Option<String> {
         }
         let root_ends_with_game = std::path::Path::new(root)
             .file_name()
-            .map_or(false, |name| name.to_string_lossy().eq_ignore_ascii_case(game));
+            .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(game));
         if root_ends_with_game {
             return root.to_string();
         }
