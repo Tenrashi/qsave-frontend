@@ -122,6 +122,16 @@
     "install": "Update now",
     "installing": "Updating..."
   },
+  "errors": {
+    "quotaExceeded": "Your Google Drive storage is full. Free up space or upgrade your plan.",
+    "authExpired": "Your session has expired. Please sign in again.",
+    "notFound": "The backup was not found on Google Drive. It may have been deleted.",
+    "rateLimited": "Too many requests. Please wait a moment and try again.",
+    "serverError": "Google Drive is temporarily unavailable. Please try again later.",
+    "networkError": "Could not reach Google Drive. Check your internet connection.",
+    "forbidden": "Google Drive access was denied. Try signing in again.",
+    "unknown": "Something went wrong. Please try again."
+  },
   "settings": {
     "language": "Language"
   }

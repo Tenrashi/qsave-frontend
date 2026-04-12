@@ -70,6 +70,25 @@ describe("useDeleteBackup", () => {
     result.current.mutate("b1");
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(mockToastError).toHaveBeenCalledWith("toast.deleteFailed");
+    expect(mockToastError).toHaveBeenCalledWith("toast.deleteFailed", {
+      description: "errors.unknown",
+      duration: 10_000,
+    });
+  });
+
+  it("shows classified error toast when deletion rejects with a non-Error value", async () => {
+    mockDeleteGameBackup.mockRejectedValueOnce("403 Forbidden quota exceeded");
+
+    const { result } = renderHook(() => useDeleteBackup("The Sims 4"), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate("b1");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockToastError).toHaveBeenCalledWith("toast.deleteFailed", {
+      description: "errors.forbidden",
+      duration: 10_000,
+    });
   });
 });

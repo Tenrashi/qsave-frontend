@@ -122,6 +122,16 @@
     "install": "Actualizar ahora",
     "installing": "Actualizando..."
   },
+  "errors": {
+    "quotaExceeded": "Tu almacenamiento de Google Drive está lleno. Libera espacio o mejora tu plan.",
+    "authExpired": "Tu sesión ha expirado. Inicia sesión de nuevo.",
+    "notFound": "La copia de seguridad no se encontró en Google Drive. Puede que haya sido eliminada.",
+    "rateLimited": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
+    "serverError": "Google Drive no está disponible temporalmente. Inténtalo más tarde.",
+    "networkError": "No se pudo conectar con Google Drive. Comprueba tu conexión a internet.",
+    "forbidden": "Se denegó el acceso a Google Drive. Intenta iniciar sesión de nuevo.",
+    "unknown": "Algo salió mal. Inténtalo de nuevo."
+  },
   "settings": {
     "language": "Idioma"
   }

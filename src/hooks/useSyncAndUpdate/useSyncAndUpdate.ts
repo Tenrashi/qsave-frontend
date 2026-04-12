@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import type { Game } from "@/domain/types";
 import { SYNC_STATUS } from "@/domain/types";
 import { QUERY_KEYS } from "@/lib/constants/constants";
+import { classifyError } from "@/lib/errors/classifyError";
 import { syncGame, type SyncResult } from "@/operations/sync/sync/sync";
 import { useSyncStore } from "@/stores/sync";
 import i18n from "@/i18n";
@@ -34,14 +35,16 @@ export const useSyncAndUpdate = (): ((game: Game) => Promise<SyncResult>) => {
       }
 
       toast.error(i18n.t("toast.syncFailed", { name: game.name }), {
-        description: result.error,
+        description: i18n.t(classifyError(result.error ?? "")),
         duration: 10_000,
       });
       return result;
     } catch (error) {
       useSyncStore.getState().setGameStatus(game.name, SYNC_STATUS.error);
       toast.error(i18n.t("toast.syncFailed", { name: game.name }), {
-        description: error instanceof Error ? error.message : String(error),
+        description: i18n.t(
+          classifyError(error instanceof Error ? error.message : String(error)),
+        ),
         duration: 10_000,
       });
       throw error;

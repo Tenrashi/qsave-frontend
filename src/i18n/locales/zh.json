@@ -122,6 +122,16 @@
     "install": "立即更新",
     "installing": "正在更新..."
   },
+  "errors": {
+    "quotaExceeded": "Google Drive 存储空间已满。请释放空间或升级您的方案。",
+    "authExpired": "会话已过期，请重新登录。",
+    "notFound": "在 Google Drive 上未找到备份，可能已被删除。",
+    "rateLimited": "请求过多，请稍候再试。",
+    "serverError": "Google Drive 暂时不可用，请稍后再试。",
+    "networkError": "无法连接到 Google Drive，请检查您的网络连接。",
+    "forbidden": "Google Drive 访问被拒绝，请尝试重新登录。",
+    "unknown": "出了点问题，请重试。"
+  },
   "settings": {
     "language": "语言"
   }

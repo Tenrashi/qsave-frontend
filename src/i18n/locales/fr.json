@@ -122,6 +122,16 @@
     "install": "Mettre à jour",
     "installing": "Mise à jour en cours..."
   },
+  "errors": {
+    "quotaExceeded": "Votre espace Google Drive est plein. Libérez de l'espace ou passez à un forfait supérieur.",
+    "authExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "notFound": "La sauvegarde n'a pas été trouvée sur Google Drive. Elle a peut-être été supprimée.",
+    "rateLimited": "Trop de requêtes. Veuillez patienter un instant et réessayer.",
+    "serverError": "Google Drive est temporairement indisponible. Veuillez réessayer plus tard.",
+    "networkError": "Impossible de joindre Google Drive. Vérifiez votre connexion internet.",
+    "forbidden": "L'accès à Google Drive a été refusé. Essayez de vous reconnecter.",
+    "unknown": "Une erreur est survenue. Veuillez réessayer."
+  },
   "settings": {
     "language": "Langue"
   }
