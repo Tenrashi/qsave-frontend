@@ -1,3 +1,9 @@
+# [1.7.0](https://github.com/Tenrashi/qsave/compare/v1.6.0...v1.7.0) (2026-04-12)
+
+### Features
+
+- show user-friendly error messages for API and network failures ([#63](https://github.com/Tenrashi/qsave/issues/63)) ([06b98ab](https://github.com/Tenrashi/qsave/commit/06b98ab7f3c2894fa282640463af192523a55b29))
+
 # [1.6.0](https://github.com/Tenrashi/qsave/compare/v1.5.2...v1.6.0) (2026-04-12)
 
 ### Features
