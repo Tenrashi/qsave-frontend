@@ -10,7 +10,6 @@ const NETWORK_KEYWORDS = [
   "enotfound",
   "econnaborted",
   "failed to stream body",
-  "request failed",
 ];
 
 const extractStatus = (message: string): number | null => {
@@ -39,17 +38,22 @@ export const classifyError = (rawMessage: string): string => {
   const status = extractStatus(rawMessage);
 
   if (status !== null) {
-    switch (true) {
-      case status === 401:
+    switch (status) {
+      case 401:
         return "errors.authExpired";
-      case status === 403:
+      case 403:
         return "errors.forbidden";
-      case status === 404:
+      case 404:
         return "errors.notFound";
-      case status === 429:
+      case 429:
         return "errors.rateLimited";
-      case status >= 500:
+      case 500:
+      case 502:
+      case 503:
+      case 504:
         return "errors.serverError";
+      default:
+        return "errors.unknown";
     }
   }
 
