@@ -221,7 +221,7 @@ pub fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<Cr
     let resolved = resolve_paths(&save_paths, &files)?;
     let content_hash = compute_hash_streaming(&resolved)?;
 
-    let temp_path = std::env::temp_dir().join(format!("qsave_upload_{}.zip", uuid_v4()));
+    let temp_path = std::env::temp_dir().join(format!("qsave_upload_{}.zip", temp_id()));
     let out_file = File::create(&temp_path)
         .map_err(|e| format!("Failed to create temp file: {e}"))?;
     let mut zip = zip::ZipWriter::new(out_file);
@@ -261,15 +261,12 @@ pub fn create_zip_file(save_paths: Vec<String>, files: Vec<String>) -> Result<Cr
     })
 }
 
-/// Simple v4-style UUID using random bytes.
-fn uuid_v4() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
+fn temp_id() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
     let pid = std::process::id();
-    format!("{nanos:x}-{pid:x}")
+    format!("{pid:x}-{seq}")
 }
 
 /// Creates temporary staging directories next to each target (same filesystem for rename).
@@ -462,13 +459,11 @@ mod tests {
     /// path-based `extract_zip_file` / `read_zip_meta_file` entry points.
     /// Returns the path as a `String` to match the public function signatures.
     fn zip_file_from_bytes(dir: &TempDir, bytes: &[u8]) -> String {
-        let path = dir.path().join(format!(
-            "fixture_{}.zip",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let path = dir
+            .path()
+            .join(format!("fixture_{}.zip", SEQ.fetch_add(1, Ordering::Relaxed)));
         File::create(&path).unwrap().write_all(bytes).unwrap();
         path.to_string_lossy().to_string()
     }

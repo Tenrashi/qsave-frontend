@@ -50,17 +50,15 @@ pub fn backoff_for(attempt: u32) -> Duration {
     Duration::from_secs(std::cmp::min(shifted, 30))
 }
 
-/// Best-effort unique id for temp filenames. Avoids pulling in the `uuid`
-/// crate for just this — nanosecond timestamp plus pid is unique enough for
-/// cleanup filenames and effectively free at runtime.
-pub fn uuid_v4() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
+/// Best-effort unique suffix for temp filenames. Uses an atomic counter plus
+/// pid so two calls in the same nanosecond (or on a coarse-grained clock)
+/// never collide.
+pub fn temp_id() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
     let pid = std::process::id();
-    format!("{nanos:x}-{pid:x}")
+    format!("{pid:x}-{seq}")
 }
 
 /// HTTP status codes worth retrying: request timeout (408), too many
@@ -207,12 +205,12 @@ mod tests {
         );
     }
 
-    // --- uuid_v4 ---
+    // --- temp_id ---
 
     #[test]
-    fn uuid_v4_is_unique_across_calls() {
-        let a = uuid_v4();
-        let b = uuid_v4();
+    fn temp_id_is_unique_across_calls() {
+        let a = temp_id();
+        let b = temp_id();
         assert_ne!(a, b);
     }
 
