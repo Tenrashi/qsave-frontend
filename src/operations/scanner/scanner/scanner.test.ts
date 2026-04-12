@@ -36,7 +36,6 @@ const rustGame = (name: string, steamId: number | null = null) => ({
       gameName: name,
     },
   ],
-  registryKeys: [],
   platform: null,
   hasSteamCloud: false,
 });
@@ -119,25 +118,6 @@ describe("loadCachedGames", () => {
 
     expect(games).toHaveLength(1);
     expect(games[0].isManual).toBeFalsy();
-  });
-});
-
-describe("toGame mapping", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("maps registryKeys when present", async () => {
-    const gameWithRegistry = {
-      ...rustGame("Registry Game"),
-      registryKeys: ["HKEY_CURRENT_USER/Software/RegGame"],
-      saveFiles: [],
-    };
-    mockInvoke.mockResolvedValueOnce(gameWithRegistry);
-
-    const game = await scanManualGame("Registry Game", []);
-
-    expect(game.registryKeys).toEqual(["HKEY_CURRENT_USER/Software/RegGame"]);
   });
 });
 

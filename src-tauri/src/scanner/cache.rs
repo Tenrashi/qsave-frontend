@@ -57,7 +57,7 @@ mod tests {
                     last_modified: 1710417600000,
                     game_name: "Elden Ring".to_string(),
                 }],
-                registry_keys: vec![],
+
                 platform: Some("steam".to_string()),
                 has_steam_cloud: true,
             },
@@ -66,7 +66,7 @@ mod tests {
                 steam_id: None,
                 save_paths: vec!["/saves/hollow".to_string()],
                 save_files: vec![],
-                registry_keys: vec![],
+
                 platform: None,
                 has_steam_cloud: false,
             },

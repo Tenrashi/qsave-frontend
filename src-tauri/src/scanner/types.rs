@@ -28,22 +28,9 @@ pub(crate) struct WhenCondition {
     pub store: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default, Clone)]
-pub(crate) struct RegistryEntryMeta {
-    #[cfg_attr(not(any(target_os = "windows", test)), allow(dead_code))]
-    pub when: Option<Vec<RegistryWhenCondition>>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub(crate) struct RegistryWhenCondition {
-    #[cfg_attr(not(any(target_os = "windows", test)), allow(dead_code))]
-    pub store: Option<String>,
-}
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct ManifestEntry {
     pub files: Option<HashMap<String, FileEntryMeta>>,
-    pub registry: Option<HashMap<String, RegistryEntryMeta>>,
     #[serde(rename = "installDir")]
     pub install_dir: Option<HashMap<String, serde_yaml::Value>>,
     pub alias: Option<String>,
@@ -57,7 +44,6 @@ pub(crate) struct ResolvedCandidate {
     pub name: String,
     pub steam_id: Option<u64>,
     pub paths: Vec<String>,
-    pub registry_keys: Vec<String>,
     pub platform: Option<String>,
     pub has_steam_cloud: bool,
 }
@@ -69,7 +55,6 @@ pub struct DetectedGame {
     pub steam_id: Option<u64>,
     pub save_paths: Vec<String>,
     pub save_files: Vec<SaveFileInfo>,
-    pub registry_keys: Vec<String>,
     pub platform: Option<String>,
     pub has_steam_cloud: bool,
 }

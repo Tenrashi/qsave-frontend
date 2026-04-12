@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/tooltip";
 import { SYNC_STATUS } from "@/domain/types";
 import type { Game } from "@/domain/types";
-import { isRegistryOnly } from "@/lib/game/game";
 import { QUERY_KEYS } from "@/lib/constants/constants";
 import { getCloudGameHash } from "@/operations/devices/devices";
 import { computeContentHash } from "@/lib/hash/hash";
@@ -227,7 +226,7 @@ export const LocalGameActions = ({ game }: LocalGameActionsProps) => {
             size="sm"
             variant="secondary"
             onClick={handleSync}
-            disabled={isBusy || isRegistryOnly(game)}
+            disabled={isBusy}
           >
             {status === SYNC_STATUS.syncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
