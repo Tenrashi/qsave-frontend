@@ -1,0 +1,78 @@
+{
+  "hero": {
+    "tagline1": "Faça backup dos seus saves.",
+    "tagline2": "Automaticamente.",
+    "subheadline": "O QSave sincroniza seus arquivos de save no seu próprio Google Drive. Mais de 19.000 jogos suportados em Steam, GOG, Epic e Battle.net. Grátis e de código aberto."
+  },
+  "downloads": {
+    "downloadFor": "Baixar para {{platform}}",
+    "downloadFromGitHub": "Baixar pelo GitHub",
+    "versionLine": "Versão {{version}} · Publicada em {{date}}",
+    "viewAllReleases": "Ver todas as versões",
+    "platform": {
+      "windows": "Windows",
+      "macos-arm": "macOS (Apple Silicon)",
+      "macos-intel": "macOS (Intel)",
+      "unknown": "seu sistema"
+    }
+  },
+  "features": {
+    "heading": "Tudo o que você precisa, nada demais",
+    "subheading": "O QSave não atrapalha. Instale, entre no Google Drive, e seus saves ficam seguros.",
+    "search": {
+      "title": "Encontre seus jogos na hora",
+      "description": "Busque entre os jogos instalados e os mais de 19.000 títulos da nossa base de detecção. Filtre por plataforma — Steam, GOG, Epic, Battle.net.",
+      "alt": "Tela de busca do QSave mostrando resultados de jogos"
+    },
+    "restore": {
+      "title": "Restaure em qualquer lugar, a qualquer hora",
+      "description": "Escolha qualquer backup no seu Drive e restaure com um clique. O remapeamento de caminhos entre plataformas torna seus saves portáveis entre computadores.",
+      "alt": "Tela de restauração do QSave"
+    },
+    "manual": {
+      "title": "Acompanhe jogos que ainda não conhecemos",
+      "description": "Adicione qualquer jogo manualmente indicando sua pasta de save ao QSave. Seus jogos personalizados são sincronizados junto com os detectados.",
+      "alt": "Tela de adição manual de jogo no QSave"
+    }
+  },
+  "faq": {
+    "heading": "Perguntas frequentes",
+    "free": {
+      "question": "O QSave é gratuito?",
+      "answer": "Sim — o QSave é gratuito e de código aberto. O código está no GitHub e você pode inspecionar ou modificar."
+    },
+    "storage": {
+      "question": "Onde meus saves ficam armazenados?",
+      "answer": "No seu próprio Google Drive, numa pasta dedicada do QSave. O QSave só tem acesso aos arquivos que ele mesmo criou nessa pasta — ele não pode ver nem mexer em mais nada no seu Drive. Você controla os dados, e nós nunca vemos nem armazenamos seus saves em servidor algum."
+    },
+    "os": {
+      "question": "Quais sistemas operacionais são suportados?",
+      "answer": "Windows 10/11 e macOS (Apple Silicon e Intel). Versões para Linux ainda não são distribuídas."
+    },
+    "background": {
+      "question": "O QSave roda em segundo plano?",
+      "answer": "À sua escolha. Você pode abrir o QSave só quando quiser fazer backup, ou configurá-lo para iniciar com o sistema e sincronizar automaticamente."
+    },
+    "signing": {
+      "question": "Por que meu computador me avisa ao abrir o instalador?",
+      "intro": "O Windows SmartScreen e o macOS Gatekeeper mostram um aviso porque o QSave ainda não está assinado com um certificado pago de assinatura de código. O app é seguro — o aviso só diz que seu sistema ainda não reconhece o publicador.",
+      "windows": "<strong>Windows:</strong> clique em <em>Mais informações</em> e depois <em>Executar assim mesmo</em>.",
+      "macos": "<strong>macOS:</strong> tente abrir o app primeiro (ele será bloqueado), depois vá em <em>Ajustes do Sistema → Privacidade e Segurança</em>, role até a seção Segurança e clique em <em>Abrir Assim Mesmo</em>. Você precisará digitar sua senha.",
+      "outro": "Se quiser ajudar a comprar certificados de assinatura para que esses avisos desapareçam, veja a seção de Apoio abaixo."
+    },
+    "uninstall": {
+      "question": "Como desinstalo o QSave?",
+      "answer": "Desinstale como qualquer outro app: no Windows, em Configurações → Apps; no macOS, arraste o QSave de Aplicativos para a Lixeira. Seus backups permanecem no seu Google Drive até você apagá-los."
+    }
+  },
+  "support": {
+    "heading": "Ajude a remover o aviso assustador",
+    "body": "O Windows e o macOS mostram um aviso ao instalar o QSave porque certificados de assinatura de código custam dinheiro todo ano. As contribuições no Ko-fi vão direto para comprá-los, deixando as próximas instalações tranquilas para todo mundo.",
+    "button": "Apoiar o QSave no Ko-fi"
+  },
+  "footer": {
+    "tagline": "O QSave é gratuito e de código aberto. Seus saves ficam no seu Google Drive.",
+    "github": "GitHub",
+    "language": "Idioma"
+  }
+}

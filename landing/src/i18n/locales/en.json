@@ -1,0 +1,78 @@
+{
+  "hero": {
+    "tagline1": "Back up your game saves.",
+    "tagline2": "Automatically.",
+    "subheadline": "QSave syncs your save files to your own Google Drive. 19,000+ games supported across Steam, GOG, Epic, and Battle.net. Free and open source."
+  },
+  "downloads": {
+    "downloadFor": "Download for {{platform}}",
+    "downloadFromGitHub": "Download from GitHub",
+    "versionLine": "Version {{version}} · Released {{date}}",
+    "viewAllReleases": "View all releases",
+    "platform": {
+      "windows": "Windows",
+      "macos-arm": "macOS (Apple Silicon)",
+      "macos-intel": "macOS (Intel)",
+      "unknown": "your OS"
+    }
+  },
+  "features": {
+    "heading": "Everything you need, nothing you don't",
+    "subheading": "QSave stays out of your way. Install it, sign in to Google Drive, and your saves are backed up.",
+    "search": {
+      "title": "Find your games instantly",
+      "description": "Search across your installed games and the 19,000+ titles in our detection database. Filter by platform — Steam, GOG, Epic, Battle.net.",
+      "alt": "QSave search screen showing game results"
+    },
+    "restore": {
+      "title": "Restore anywhere, anytime",
+      "description": "Pick any backup from your Drive and restore it in one click. Cross-platform path remapping keeps your saves portable between computers.",
+      "alt": "QSave restore screen"
+    },
+    "manual": {
+      "title": "Track the games we don't know yet",
+      "description": "Add any game manually by pointing QSave at its save folder. Your custom games sync alongside the detected ones.",
+      "alt": "QSave manual game entry screen"
+    }
+  },
+  "faq": {
+    "heading": "Frequently asked questions",
+    "free": {
+      "question": "Is QSave free?",
+      "answer": "Yes — QSave is free and open source. The code is on GitHub and you can inspect or modify it."
+    },
+    "storage": {
+      "question": "Where are my save files stored?",
+      "answer": "In your own Google Drive, inside a dedicated QSave folder. QSave only has access to files it created in that folder — it cannot see or touch anything else in your Drive. You control the data, and we never see or store your saves on any server."
+    },
+    "os": {
+      "question": "Which operating systems are supported?",
+      "answer": "Windows 10/11 and macOS (both Apple Silicon and Intel). Linux builds aren't distributed yet."
+    },
+    "background": {
+      "question": "Does QSave run in the background?",
+      "answer": "Optionally. You can launch QSave only when you want to back up, or configure it to start with your system and sync automatically."
+    },
+    "signing": {
+      "question": "Why does my computer warn me when I open the installer?",
+      "intro": "Windows SmartScreen and macOS Gatekeeper show a warning because QSave isn't yet signed with a paid code-signing certificate. The app itself is safe — the warning is just your OS saying \"I don't recognize this publisher yet.\"",
+      "windows": "<strong>Windows:</strong> Click <em>More info</em>, then <em>Run anyway</em>.",
+      "macos": "<strong>macOS:</strong> Try to open the app first (it will be blocked), then go to <em>System Settings → Privacy & Security</em>, scroll to the Security section and click <em>Open Anyway</em>. You'll need to enter your password.",
+      "outro": "If you'd like to help us buy code-signing certificates so these warnings go away, see the Support section below."
+    },
+    "uninstall": {
+      "question": "How do I uninstall QSave?",
+      "answer": "Uninstall like any other app: on Windows, use Settings → Apps; on macOS, drag QSave from Applications to the Trash. Your backups remain in your Google Drive until you delete them yourself."
+    }
+  },
+  "support": {
+    "heading": "Help remove the scary warning",
+    "body": "Windows and macOS show a warning when you install QSave because code-signing certificates cost money every year. Contributions on Ko-fi go directly toward buying them, so future installs are smooth for everyone.",
+    "button": "Support QSave on Ko-fi"
+  },
+  "footer": {
+    "tagline": "QSave is free and open source. Your saves stay in your Google Drive.",
+    "github": "GitHub",
+    "language": "Language"
+  }
+}

@@ -1,2 +1,6 @@
+packages:
+  - "."
+  - "landing"
+
 allowBuilds:
   esbuild: false

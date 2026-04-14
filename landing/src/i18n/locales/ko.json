@@ -1,0 +1,78 @@
+{
+  "hero": {
+    "tagline1": "게임 세이브를 백업하세요.",
+    "tagline2": "자동으로.",
+    "subheadline": "QSave는 당신의 세이브 파일을 당신의 Google 드라이브로 동기화합니다. Steam, GOG, Epic, Battle.net에서 19,000개 이상의 게임을 지원합니다. 무료, 오픈 소스."
+  },
+  "downloads": {
+    "downloadFor": "{{platform}}용 다운로드",
+    "downloadFromGitHub": "GitHub에서 다운로드",
+    "versionLine": "버전 {{version}} · {{date}} 출시",
+    "viewAllReleases": "모든 릴리스 보기",
+    "platform": {
+      "windows": "Windows",
+      "macos-arm": "macOS (Apple Silicon)",
+      "macos-intel": "macOS (Intel)",
+      "unknown": "사용 중인 OS"
+    }
+  },
+  "features": {
+    "heading": "필요한 것은 모두, 불필요한 것은 없이",
+    "subheading": "QSave는 방해하지 않습니다. 설치하고 Google 드라이브에 로그인하면 세이브가 자동으로 백업됩니다.",
+    "search": {
+      "title": "게임을 즉시 찾아보세요",
+      "description": "설치된 게임과 19,000개 이상의 인식 데이터베이스에서 검색하세요. Steam, GOG, Epic, Battle.net 등 플랫폼별로 필터링할 수 있습니다.",
+      "alt": "게임 결과를 표시하는 QSave 검색 화면"
+    },
+    "restore": {
+      "title": "언제 어디서나 복원",
+      "description": "드라이브의 어떤 백업이든 선택해 한 번의 클릭으로 복원하세요. 크로스 플랫폼 경로 재매핑으로 세이브를 컴퓨터 간에 쉽게 이동할 수 있습니다.",
+      "alt": "QSave 복원 화면"
+    },
+    "manual": {
+      "title": "아직 인식되지 않은 게임도 추적",
+      "description": "게임의 세이브 폴더를 QSave에 알려주기만 하면 됩니다. 수동으로 추가한 게임도 인식된 게임과 함께 동기화됩니다.",
+      "alt": "QSave 수동 게임 추가 화면"
+    }
+  },
+  "faq": {
+    "heading": "자주 묻는 질문",
+    "free": {
+      "question": "QSave는 무료인가요?",
+      "answer": "네 — QSave는 무료이고 오픈 소스입니다. 코드는 GitHub에 공개되어 있으며, 열람하거나 수정할 수 있습니다."
+    },
+    "storage": {
+      "question": "내 세이브 파일은 어디에 저장되나요?",
+      "answer": "당신의 Google 드라이브 안의 전용 QSave 폴더에 저장됩니다. QSave는 해당 폴더 안에서 스스로 만든 파일에만 접근할 수 있으며, 드라이브의 다른 어떤 것도 보거나 건드릴 수 없습니다. 데이터는 당신의 통제 아래 있으며, 우리는 어떤 서버에서도 당신의 세이브를 보거나 저장하지 않습니다."
+    },
+    "os": {
+      "question": "지원되는 운영체제는 무엇인가요?",
+      "answer": "Windows 10/11과 macOS (Apple Silicon 및 Intel 모두)를 지원합니다. Linux 빌드는 아직 배포되지 않습니다."
+    },
+    "background": {
+      "question": "QSave는 백그라운드에서 실행되나요?",
+      "answer": "선택 사항입니다. 백업할 때만 QSave를 실행하거나, 시스템과 함께 시작해 자동으로 동기화하도록 설정할 수 있습니다."
+    },
+    "signing": {
+      "question": "설치 파일을 열면 왜 경고가 표시되나요?",
+      "intro": "Windows SmartScreen과 macOS Gatekeeper는 QSave가 아직 유료 코드 서명 인증서로 서명되지 않았기 때문에 경고를 표시합니다. 앱 자체는 안전하며, 경고는 단지 OS가 \"아직 이 게시자를 모른다\"라고 말하는 것일 뿐입니다.",
+      "windows": "<strong>Windows:</strong> <em>추가 정보</em>를 클릭한 뒤 <em>실행</em>을 선택하세요.",
+      "macos": "<strong>macOS:</strong> 먼저 앱을 열어 보세요(차단됩니다). 그런 다음 <em>시스템 설정 → 개인정보 보호 및 보안</em>으로 이동하여 '보안' 섹션까지 스크롤한 뒤 <em>그래도 열기</em>를 클릭합니다. 비밀번호를 입력해야 합니다.",
+      "outro": "이 경고가 사라지도록 코드 서명 인증서 구매에 도움을 주고 싶다면, 아래 후원 섹션을 확인해 주세요."
+    },
+    "uninstall": {
+      "question": "QSave는 어떻게 제거하나요?",
+      "answer": "다른 앱과 동일하게 제거하면 됩니다: Windows에서는 설정 → 앱에서, macOS에서는 응용 프로그램 폴더의 QSave를 휴지통으로 드래그하세요. 백업은 직접 삭제하기 전까지 Google 드라이브에 그대로 남아 있습니다."
+    }
+  },
+  "support": {
+    "heading": "무서운 경고를 없애는 데 도움을 주세요",
+    "body": "코드 서명 인증서는 매년 비용이 들기 때문에 Windows와 macOS는 QSave 설치 시 경고를 표시합니다. Ko-fi 후원은 바로 이 인증서 구매에 사용되어, 앞으로의 설치가 모두에게 더 매끄러워집니다.",
+    "button": "Ko-fi에서 QSave 후원하기"
+  },
+  "footer": {
+    "tagline": "QSave는 무료이며 오픈 소스입니다. 세이브는 당신의 Google 드라이브에 그대로 남아 있습니다.",
+    "github": "GitHub",
+    "language": "언어"
+  }
+}

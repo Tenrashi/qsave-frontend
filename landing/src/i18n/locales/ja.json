@@ -1,0 +1,78 @@
+{
+  "hero": {
+    "tagline1": "ゲームのセーブデータをバックアップ。",
+    "tagline2": "自動で。",
+    "subheadline": "QSaveは、セーブファイルをあなた自身のGoogleドライブに同期します。Steam、GOG、Epic、Battle.netで19,000本以上のゲームに対応。無料・オープンソース。"
+  },
+  "downloads": {
+    "downloadFor": "{{platform}} 版をダウンロード",
+    "downloadFromGitHub": "GitHubからダウンロード",
+    "versionLine": "バージョン {{version}} ・ {{date}} 公開",
+    "viewAllReleases": "すべてのリリースを見る",
+    "platform": {
+      "windows": "Windows",
+      "macos-arm": "macOS(Apple Silicon)",
+      "macos-intel": "macOS(Intel)",
+      "unknown": "お使いのOS"
+    }
+  },
+  "features": {
+    "heading": "必要なものだけ、余計なものなし",
+    "subheading": "QSaveは邪魔をしません。インストールしてGoogleドライブにサインインするだけで、セーブデータがバックアップされます。",
+    "search": {
+      "title": "ゲームを即座に見つける",
+      "description": "インストール済みのゲームと、検出データベースの19,000本以上のタイトルから検索できます。Steam、GOG、Epic、Battle.netなどのプラットフォーム別に絞り込めます。",
+      "alt": "ゲームの検索結果を表示するQSaveの検索画面"
+    },
+    "restore": {
+      "title": "いつでも、どこでも復元",
+      "description": "ドライブ内の任意のバックアップを選んで、ワンクリックで復元できます。プラットフォーム間のパス変換により、セーブデータはPC間で持ち運び可能です。",
+      "alt": "QSaveの復元画面"
+    },
+    "manual": {
+      "title": "まだ認識していないゲームにも対応",
+      "description": "保存フォルダを指定するだけで、どんなゲームでも手動で追加できます。カスタム登録のゲームも検出済みのゲームと同じように同期されます。",
+      "alt": "QSaveの手動ゲーム追加画面"
+    }
+  },
+  "faq": {
+    "heading": "よくある質問",
+    "free": {
+      "question": "QSaveは無料ですか?",
+      "answer": "はい — QSaveは無料でオープンソースです。コードはGitHubで公開されており、閲覧や改変が可能です。"
+    },
+    "storage": {
+      "question": "セーブファイルはどこに保存されますか?",
+      "answer": "あなた自身のGoogleドライブ内の、QSave専用フォルダに保存されます。QSaveはそのフォルダ内で自身が作成したファイルにのみアクセスでき、ドライブ上の他のものを参照・変更することはできません。データはあなたの管理下にあり、私たちはあなたのセーブをいかなるサーバーにも保存・閲覧しません。"
+    },
+    "os": {
+      "question": "対応OSは?",
+      "answer": "Windows 10/11 と macOS(Apple Silicon、Intel の両方)に対応しています。Linux向けのビルドはまだ配布していません。"
+    },
+    "background": {
+      "question": "QSaveはバックグラウンドで動作しますか?",
+      "answer": "任意です。バックアップしたいときだけ起動することも、システム起動時に自動起動して自動同期する設定も可能です。"
+    },
+    "signing": {
+      "question": "インストーラーを開くと警告が出るのはなぜ?",
+      "intro": "Windows SmartScreen や macOS Gatekeeper が警告を表示するのは、QSaveがまだ有料のコード署名証明書で署名されていないためです。アプリ自体は安全で、警告は「まだこの発行者を認識していない」というOSのメッセージにすぎません。",
+      "windows": "<strong>Windows:</strong> <em>詳細情報</em> をクリックし、<em>実行</em> を選びます。",
+      "macos": "<strong>macOS:</strong> まずアプリを開こうとすると(ブロックされます)、<em>システム設定 → プライバシーとセキュリティ</em> を開き、セキュリティセクションまでスクロールして <em>このまま開く</em> をクリックします。パスワードの入力が必要です。",
+      "outro": "これらの警告をなくすためのコード署名証明書の購入にご協力いただける場合は、下のサポートのセクションをご覧ください。"
+    },
+    "uninstall": {
+      "question": "QSaveのアンインストール方法は?",
+      "answer": "他のアプリと同じです:Windowsでは 設定 → アプリ から、macOSでは アプリケーション フォルダからQSaveをゴミ箱にドラッグします。バックアップはご自身で削除するまでGoogleドライブに残ります。"
+    }
+  },
+  "support": {
+    "heading": "警告をなくすためにご協力ください",
+    "body": "コード署名証明書は毎年費用がかかるため、QSaveのインストール時にWindowsやmacOSが警告を表示します。Ko-fiでの支援はそれらの購入に直接使われ、今後のインストールが誰にとってもスムーズになります。",
+    "button": "Ko-fiでQSaveを支援する"
+  },
+  "footer": {
+    "tagline": "QSaveは無料・オープンソースです。セーブデータはあなたのGoogleドライブに保管されます。",
+    "github": "GitHub",
+    "language": "言語"
+  }
+}

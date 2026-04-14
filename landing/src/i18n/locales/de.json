@@ -1,0 +1,78 @@
+{
+  "hero": {
+    "tagline1": "Sichere deine Spielstände.",
+    "tagline2": "Automatisch.",
+    "subheadline": "QSave synchronisiert deine Spielstände mit deinem eigenen Google Drive. Über 19.000 Spiele werden unterstützt – Steam, GOG, Epic und Battle.net. Kostenlos und Open Source."
+  },
+  "downloads": {
+    "downloadFor": "Herunterladen für {{platform}}",
+    "downloadFromGitHub": "Von GitHub herunterladen",
+    "versionLine": "Version {{version}} · Veröffentlicht am {{date}}",
+    "viewAllReleases": "Alle Versionen anzeigen",
+    "platform": {
+      "windows": "Windows",
+      "macos-arm": "macOS (Apple Silicon)",
+      "macos-intel": "macOS (Intel)",
+      "unknown": "dein System"
+    }
+  },
+  "features": {
+    "heading": "Alles, was du brauchst – mehr nicht",
+    "subheading": "QSave hält sich zurück. Installieren, bei Google Drive anmelden, und deine Spielstände sind gesichert.",
+    "search": {
+      "title": "Finde deine Spiele sofort",
+      "description": "Suche in deinen installierten Spielen und den über 19.000 Titeln unserer Erkennungsdatenbank. Filtere nach Plattform – Steam, GOG, Epic, Battle.net.",
+      "alt": "Suchbildschirm von QSave mit Spielergebnissen"
+    },
+    "restore": {
+      "title": "Überall wiederherstellen, jederzeit",
+      "description": "Wähle eine beliebige Sicherung aus deinem Drive und stelle sie mit einem Klick wieder her. Plattformübergreifendes Pfad-Mapping macht deine Spielstände zwischen Rechnern portierbar.",
+      "alt": "Wiederherstellungsbildschirm von QSave"
+    },
+    "manual": {
+      "title": "Auch Spiele erfassen, die wir noch nicht kennen",
+      "description": "Füge jedes Spiel manuell hinzu, indem du QSave den Speicherordner zeigst. Deine eigenen Spiele werden neben den erkannten synchronisiert.",
+      "alt": "Manueller Spielzufügungs-Bildschirm von QSave"
+    }
+  },
+  "faq": {
+    "heading": "Häufig gestellte Fragen",
+    "free": {
+      "question": "Ist QSave kostenlos?",
+      "answer": "Ja – QSave ist kostenlos und Open Source. Der Code liegt auf GitHub und kann eingesehen oder geändert werden."
+    },
+    "storage": {
+      "question": "Wo werden meine Spielstände gespeichert?",
+      "answer": "In deinem eigenen Google Drive, in einem eigenen QSave-Ordner. QSave hat nur Zugriff auf die Dateien, die es in diesem Ordner erstellt hat – es kann nichts anderes in deinem Drive sehen oder verändern. Du behältst die Kontrolle über deine Daten, und wir sehen oder speichern deine Spielstände niemals auf einem Server."
+    },
+    "os": {
+      "question": "Welche Betriebssysteme werden unterstützt?",
+      "answer": "Windows 10/11 und macOS (Apple Silicon und Intel). Linux-Builds werden bisher nicht verteilt."
+    },
+    "background": {
+      "question": "Läuft QSave im Hintergrund?",
+      "answer": "Optional. Du kannst QSave nur starten, wenn du sichern möchtest, oder es so konfigurieren, dass es mit dem System startet und automatisch synchronisiert."
+    },
+    "signing": {
+      "question": "Warum warnt mich mein Computer beim Öffnen des Installers?",
+      "intro": "Windows SmartScreen und macOS Gatekeeper zeigen eine Warnung, weil QSave noch nicht mit einem kostenpflichtigen Code-Signing-Zertifikat signiert ist. Die App selbst ist sicher – die Warnung bedeutet nur, dass dein System den Herausgeber noch nicht kennt.",
+      "windows": "<strong>Windows:</strong> Klicke auf <em>Weitere Informationen</em> und dann auf <em>Trotzdem ausführen</em>.",
+      "macos": "<strong>macOS:</strong> Versuche zuerst, die App zu öffnen (sie wird blockiert), gehe dann zu <em>Systemeinstellungen → Datenschutz & Sicherheit</em>, scrolle zum Abschnitt Sicherheit und klicke auf <em>Dennoch öffnen</em>. Du musst dein Passwort eingeben.",
+      "outro": "Wenn du uns helfen möchtest, Code-Signing-Zertifikate zu kaufen, damit diese Warnungen verschwinden, siehe den Support-Abschnitt unten."
+    },
+    "uninstall": {
+      "question": "Wie deinstalliere ich QSave?",
+      "answer": "Deinstalliere wie jede andere App: Unter Windows über Einstellungen → Apps; unter macOS ziehst du QSave aus dem Programme-Ordner in den Papierkorb. Deine Sicherungen bleiben in deinem Google Drive, bis du sie selbst löschst."
+    }
+  },
+  "support": {
+    "heading": "Hilf mit, die Warnung loszuwerden",
+    "body": "Windows und macOS zeigen beim Installieren von QSave eine Warnung, weil Code-Signing-Zertifikate jedes Jahr Geld kosten. Spenden über Ko-fi fließen direkt in deren Kauf, damit zukünftige Installationen für alle reibungslos laufen.",
+    "button": "QSave auf Ko-fi unterstützen"
+  },
+  "footer": {
+    "tagline": "QSave ist kostenlos und Open Source. Deine Spielstände bleiben in deinem Google Drive.",
+    "github": "GitHub",
+    "language": "Sprache"
+  }
+}

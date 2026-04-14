@@ -1,0 +1,78 @@
+{
+  "hero": {
+    "tagline1": "Guarda tus partidas.",
+    "tagline2": "Automáticamente.",
+    "subheadline": "QSave sincroniza tus archivos de guardado con tu propio Google Drive. Más de 19 000 juegos compatibles en Steam, GOG, Epic y Battle.net. Gratis y de código abierto."
+  },
+  "downloads": {
+    "downloadFor": "Descargar para {{platform}}",
+    "downloadFromGitHub": "Descargar desde GitHub",
+    "versionLine": "Versión {{version}} · Publicada el {{date}}",
+    "viewAllReleases": "Ver todas las versiones",
+    "platform": {
+      "windows": "Windows",
+      "macos-arm": "macOS (Apple Silicon)",
+      "macos-intel": "macOS (Intel)",
+      "unknown": "tu sistema"
+    }
+  },
+  "features": {
+    "heading": "Todo lo que necesitas, nada más",
+    "subheading": "QSave no estorba. Instálalo, inicia sesión en Google Drive y tus partidas quedan respaldadas.",
+    "search": {
+      "title": "Encuentra tus juegos al instante",
+      "description": "Busca entre tus juegos instalados y los más de 19 000 títulos de nuestra base de detección. Filtra por plataforma — Steam, GOG, Epic, Battle.net.",
+      "alt": "Pantalla de búsqueda de QSave mostrando resultados de juegos"
+    },
+    "restore": {
+      "title": "Restaura en cualquier lugar, en cualquier momento",
+      "description": "Elige cualquier copia de seguridad de tu Drive y restáurala con un clic. La reasignación de rutas entre plataformas hace que tus partidas sean portables entre ordenadores.",
+      "alt": "Pantalla de restauración de QSave"
+    },
+    "manual": {
+      "title": "Sigue los juegos que aún no conocemos",
+      "description": "Añade cualquier juego manualmente indicándole a QSave su carpeta de guardado. Tus juegos personalizados se sincronizan junto a los detectados.",
+      "alt": "Pantalla de entrada manual de un juego en QSave"
+    }
+  },
+  "faq": {
+    "heading": "Preguntas frecuentes",
+    "free": {
+      "question": "¿QSave es gratuito?",
+      "answer": "Sí — QSave es gratuito y de código abierto. El código está en GitHub y puedes inspeccionarlo o modificarlo."
+    },
+    "storage": {
+      "question": "¿Dónde se guardan mis partidas?",
+      "answer": "En tu propio Google Drive, dentro de una carpeta dedicada a QSave. QSave solo tiene acceso a los archivos que creó en esa carpeta — no puede ver ni tocar nada más en tu Drive. Tú controlas los datos, y nosotros nunca vemos ni almacenamos tus partidas en ningún servidor."
+    },
+    "os": {
+      "question": "¿Qué sistemas operativos son compatibles?",
+      "answer": "Windows 10/11 y macOS (Apple Silicon e Intel). Las versiones para Linux aún no se distribuyen."
+    },
+    "background": {
+      "question": "¿QSave se ejecuta en segundo plano?",
+      "answer": "Opcionalmente. Puedes abrir QSave solo cuando quieras hacer copia, o configurarlo para que arranque con el sistema y sincronice automáticamente."
+    },
+    "signing": {
+      "question": "¿Por qué mi ordenador me avisa al abrir el instalador?",
+      "intro": "Windows SmartScreen y macOS Gatekeeper muestran una advertencia porque QSave aún no está firmado con un certificado de firma de código de pago. La aplicación es segura — la advertencia es solo tu sistema diciendo \"todavía no reconozco a este editor\".",
+      "windows": "<strong>Windows:</strong> haz clic en <em>Más información</em> y luego en <em>Ejecutar de todas formas</em>.",
+      "macos": "<strong>macOS:</strong> intenta abrir la aplicación primero (quedará bloqueada), luego ve a <em>Ajustes del Sistema → Privacidad y seguridad</em>, baja hasta la sección Seguridad y haz clic en <em>Abrir de todos modos</em>. Tendrás que introducir tu contraseña.",
+      "outro": "Si quieres ayudarnos a comprar certificados de firma para que estas advertencias desaparezcan, consulta la sección de Apoyo más abajo."
+    },
+    "uninstall": {
+      "question": "¿Cómo desinstalo QSave?",
+      "answer": "Desinstálalo como cualquier otra aplicación: en Windows, desde Configuración → Aplicaciones; en macOS, arrastra QSave desde Aplicaciones a la Papelera. Tus copias permanecen en tu Google Drive hasta que tú las borres."
+    }
+  },
+  "support": {
+    "heading": "Ayúdanos a eliminar la advertencia",
+    "body": "Windows y macOS muestran una advertencia al instalar QSave porque los certificados de firma de código cuestan dinero cada año. Las contribuciones en Ko-fi van directamente a comprarlos, para que futuras instalaciones sean fluidas para todos.",
+    "button": "Apoyar QSave en Ko-fi"
+  },
+  "footer": {
+    "tagline": "QSave es gratuito y de código abierto. Tus partidas permanecen en tu Google Drive.",
+    "github": "GitHub",
+    "language": "Idioma"
+  }
+}
