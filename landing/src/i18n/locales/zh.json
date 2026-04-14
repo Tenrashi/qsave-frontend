@@ -1,0 +1,78 @@
+{
+  "hero": {
+    "tagline1": "备份你的游戏存档。",
+    "tagline2": "自动完成。",
+    "subheadline": "QSave 会将你的游戏存档同步到你自己的 Google Drive。支持 Steam、GOG、Epic、Battle.net 上超过 19,000 款游戏。免费开源。"
+  },
+  "downloads": {
+    "downloadFor": "下载 {{platform}} 版",
+    "downloadFromGitHub": "从 GitHub 下载",
+    "versionLine": "版本 {{version}} · {{date}} 发布",
+    "viewAllReleases": "查看所有版本",
+    "platform": {
+      "windows": "Windows",
+      "macos-arm": "macOS(Apple Silicon)",
+      "macos-intel": "macOS(Intel)",
+      "unknown": "你的系统"
+    }
+  },
+  "features": {
+    "heading": "所需功能一应俱全,不多不少",
+    "subheading": "QSave 不会打扰你。安装后登录 Google Drive,你的存档就会自动备份。",
+    "search": {
+      "title": "瞬间找到你的游戏",
+      "description": "在你已安装的游戏以及我们识别库中超过 19,000 款游戏中搜索。可按平台筛选 —— Steam、GOG、Epic、Battle.net。",
+      "alt": "QSave 搜索界面显示游戏结果"
+    },
+    "restore": {
+      "title": "随时随地恢复",
+      "description": "从你的 Drive 中选择任意备份,一键还原。跨平台的路径重映射让你的存档在不同电脑间自由迁移。",
+      "alt": "QSave 恢复界面"
+    },
+    "manual": {
+      "title": "连我们还不认识的游戏也能记录",
+      "description": "将任意游戏的存档目录告诉 QSave 即可手动添加。你自定义的游戏会和已识别的一起同步。",
+      "alt": "QSave 手动添加游戏界面"
+    }
+  },
+  "faq": {
+    "heading": "常见问题",
+    "free": {
+      "question": "QSave 免费吗?",
+      "answer": "是的 —— QSave 免费且开源。代码托管在 GitHub,你可以查看或修改。"
+    },
+    "storage": {
+      "question": "我的存档文件保存在哪里?",
+      "answer": "在你自己的 Google Drive 中的一个专用 QSave 文件夹内。QSave 只能访问它自己在该文件夹中创建的文件 —— 它看不到、也无法操作你 Drive 里的其他任何内容。数据由你掌控,我们不会在任何服务器上查看或存储你的存档。"
+    },
+    "os": {
+      "question": "支持哪些操作系统?",
+      "answer": "Windows 10/11 和 macOS(Apple Silicon 与 Intel 均支持)。目前尚未发布 Linux 构建版本。"
+    },
+    "background": {
+      "question": "QSave 会在后台运行吗?",
+      "answer": "可选。你可以只在需要备份时启动 QSave,也可以设置为开机自启并自动同步。"
+    },
+    "signing": {
+      "question": "为什么打开安装程序时系统会弹出警告?",
+      "intro": "Windows SmartScreen 和 macOS Gatekeeper 会显示警告,是因为 QSave 尚未使用付费的代码签名证书进行签名。应用本身是安全的,警告只是系统说“暂时还不认识这个发布者”。",
+      "windows": "<strong>Windows:</strong>点击<em>更多信息</em>,然后选择<em>仍要运行</em>。",
+      "macos": "<strong>macOS:</strong>先尝试打开应用(系统会阻止),然后进入<em>系统设置 → 隐私与安全性</em>,滚动到“安全性”部分并点击<em>仍要打开</em>。需要输入你的密码。",
+      "outro": "如果你愿意帮助我们购买代码签名证书、让这些警告消失,请参见下方的支持部分。"
+    },
+    "uninstall": {
+      "question": "如何卸载 QSave?",
+      "answer": "与其他应用一样卸载即可:在 Windows 上,使用“设置 → 应用”;在 macOS 上,将 QSave 从“应用程序”拖入“废纸篓”。你的备份会一直保留在 Google Drive 中,直到你自行删除。"
+    }
+  },
+  "support": {
+    "heading": "帮助我们消除那个吓人的警告",
+    "body": "Windows 和 macOS 会在安装 QSave 时弹出警告,因为代码签名证书每年都要花钱。你在 Ko-fi 上的支持会直接用于购买证书,让今后的安装对每个人来说都顺滑无忧。",
+    "button": "在 Ko-fi 上支持 QSave"
+  },
+  "footer": {
+    "tagline": "QSave 免费且开源。你的存档始终留在你自己的 Google Drive 里。",
+    "github": "GitHub",
+    "language": "语言"
+  }
+}
