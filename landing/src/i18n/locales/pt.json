@@ -1,7 +1,7 @@
 {
   "hero": {
     "tagline1": "Faça backup dos seus saves.",
-    "tagline2": "Automaticamente.",
+    "tagline2": "Em um clique.",
     "subheadline": "O QSave sincroniza seus arquivos de save no seu próprio Google Drive. Mais de 19.000 jogos suportados em Steam, GOG, Epic e Battle.net. Grátis e de código aberto."
   },
   "downloads": {
@@ -18,7 +18,7 @@
   },
   "features": {
     "heading": "Tudo o que você precisa, nada demais",
-    "subheading": "O QSave não atrapalha. Instale, entre no Google Drive, e seus saves ficam seguros.",
+    "subheading": "O QSave não atrapalha. Instale, entre no Google Drive e faça backup dos seus saves em um clique.",
     "search": {
       "title": "Encontre seus jogos na hora",
       "description": "Busque entre os jogos instalados e os mais de 19.000 títulos da nossa base de detecção. Filtre por plataforma — Steam, GOG, Epic, Battle.net.",
@@ -51,7 +51,7 @@
     },
     "background": {
       "question": "O QSave roda em segundo plano?",
-      "answer": "À sua escolha. Você pode abrir o QSave só quando quiser fazer backup, ou configurá-lo para iniciar com o sistema e sincronizar automaticamente."
+      "answer": "À sua escolha. Você pode abrir o QSave só quando quiser fazer backup, ou configurá-lo para iniciar com o sistema e ficar sempre pronto. De qualquer forma, o QSave nunca faz backup automaticamente — você escolhe quando fazer."
     },
     "signing": {
       "question": "Por que meu computador me avisa ao abrir o instalador?",
