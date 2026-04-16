@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/Tenrashi/qsave/compare/v1.7.0...v1.7.1) (2026-04-16)
+
+### Bug Fixes
+
+- **tauri:** enforce single instance on desktop ([3ead2bb](https://github.com/Tenrashi/qsave/commit/3ead2bb57ccbb12cd0f202ff9d7031e971fd28af))
+
 # [1.7.0](https://github.com/Tenrashi/qsave/compare/v1.6.0...v1.7.0) (2026-04-12)
 
 ### Features
