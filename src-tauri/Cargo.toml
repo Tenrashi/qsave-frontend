@@ -36,6 +36,9 @@ tokio = { version = "1", features = ["fs"] }
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 urlencoding = "2"
 
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
 
