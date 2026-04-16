@@ -1,7 +1,7 @@
 {
   "hero": {
     "tagline1": "Guarda tus partidas.",
-    "tagline2": "Automáticamente.",
+    "tagline2": "En un clic.",
     "subheadline": "QSave sincroniza tus archivos de guardado con tu propio Google Drive. Más de 19 000 juegos compatibles en Steam, GOG, Epic y Battle.net. Gratis y de código abierto."
   },
   "downloads": {
@@ -18,7 +18,7 @@
   },
   "features": {
     "heading": "Todo lo que necesitas, nada más",
-    "subheading": "QSave no estorba. Instálalo, inicia sesión en Google Drive y tus partidas quedan respaldadas.",
+    "subheading": "QSave no estorba. Instálalo, inicia sesión en Google Drive y haz copia de tus partidas en un clic.",
     "search": {
       "title": "Encuentra tus juegos al instante",
       "description": "Busca entre tus juegos instalados y los más de 19 000 títulos de nuestra base de detección. Filtra por plataforma — Steam, GOG, Epic, Battle.net.",
@@ -51,7 +51,7 @@
     },
     "background": {
       "question": "¿QSave se ejecuta en segundo plano?",
-      "answer": "Opcionalmente. Puedes abrir QSave solo cuando quieras hacer copia, o configurarlo para que arranque con el sistema y sincronice automáticamente."
+      "answer": "Opcionalmente. Puedes abrir QSave solo cuando quieras hacer copia, o configurarlo para que arranque con el sistema y esté siempre listo. En cualquier caso, QSave nunca hace copias automáticamente — tú eliges cuándo hacerlas."
     },
     "signing": {
       "question": "¿Por qué mi ordenador me avisa al abrir el instalador?",

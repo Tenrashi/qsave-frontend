@@ -1,7 +1,7 @@
 {
   "hero": {
     "tagline1": "Sichere deine Spielstände.",
-    "tagline2": "Automatisch.",
+    "tagline2": "Mit einem Klick.",
     "subheadline": "QSave synchronisiert deine Spielstände mit deinem eigenen Google Drive. Über 19.000 Spiele werden unterstützt – Steam, GOG, Epic und Battle.net. Kostenlos und Open Source."
   },
   "downloads": {
@@ -18,7 +18,7 @@
   },
   "features": {
     "heading": "Alles, was du brauchst – mehr nicht",
-    "subheading": "QSave hält sich zurück. Installieren, bei Google Drive anmelden, und deine Spielstände sind gesichert.",
+    "subheading": "QSave hält sich zurück. Installieren, bei Google Drive anmelden und Spielstände mit einem Klick sichern.",
     "search": {
       "title": "Finde deine Spiele sofort",
       "description": "Suche in deinen installierten Spielen und den über 19.000 Titeln unserer Erkennungsdatenbank. Filtere nach Plattform – Steam, GOG, Epic, Battle.net.",
@@ -51,7 +51,7 @@
     },
     "background": {
       "question": "Läuft QSave im Hintergrund?",
-      "answer": "Optional. Du kannst QSave nur starten, wenn du sichern möchtest, oder es so konfigurieren, dass es mit dem System startet und automatisch synchronisiert."
+      "answer": "Optional. Du kannst QSave nur starten, wenn du sichern möchtest, oder es so konfigurieren, dass es mit dem System startet und jederzeit bereit ist. So oder so sichert QSave niemals automatisch — du entscheidest, wann gesichert wird."
     },
     "signing": {
       "question": "Warum warnt mich mein Computer beim Öffnen des Installers?",

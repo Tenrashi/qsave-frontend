@@ -1,7 +1,7 @@
 {
   "hero": {
     "tagline1": "게임 세이브를 백업하세요.",
-    "tagline2": "자동으로.",
+    "tagline2": "클릭 한 번으로.",
     "subheadline": "QSave는 당신의 세이브 파일을 당신의 Google 드라이브로 동기화합니다. Steam, GOG, Epic, Battle.net에서 19,000개 이상의 게임을 지원합니다. 무료, 오픈 소스."
   },
   "downloads": {
@@ -18,7 +18,7 @@
   },
   "features": {
     "heading": "필요한 것은 모두, 불필요한 것은 없이",
-    "subheading": "QSave는 방해하지 않습니다. 설치하고 Google 드라이브에 로그인하면 세이브가 자동으로 백업됩니다.",
+    "subheading": "QSave는 방해하지 않습니다. 설치하고 Google 드라이브에 로그인한 뒤, 클릭 한 번으로 세이브를 백업하세요.",
     "search": {
       "title": "게임을 즉시 찾아보세요",
       "description": "설치된 게임과 19,000개 이상의 인식 데이터베이스에서 검색하세요. Steam, GOG, Epic, Battle.net 등 플랫폼별로 필터링할 수 있습니다.",
@@ -51,7 +51,7 @@
     },
     "background": {
       "question": "QSave는 백그라운드에서 실행되나요?",
-      "answer": "선택 사항입니다. 백업할 때만 QSave를 실행하거나, 시스템과 함께 시작해 자동으로 동기화하도록 설정할 수 있습니다."
+      "answer": "선택 사항입니다. 백업할 때만 QSave를 실행할 수도 있고, 시스템과 함께 시작하도록 설정해 언제든 바로 쓸 수 있게 할 수도 있습니다. 어떤 방식이든 QSave는 자동으로 백업하지 않습니다 — 백업 시점은 당신이 정합니다."
     },
     "signing": {
       "question": "설치 파일을 열면 왜 경고가 표시되나요?",

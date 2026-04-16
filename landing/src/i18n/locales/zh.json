@@ -1,7 +1,7 @@
 {
   "hero": {
     "tagline1": "备份你的游戏存档。",
-    "tagline2": "自动完成。",
+    "tagline2": "一键完成。",
     "subheadline": "QSave 会将你的游戏存档同步到你自己的 Google Drive。支持 Steam、GOG、Epic、Battle.net 上超过 19,000 款游戏。免费开源。"
   },
   "downloads": {
@@ -18,7 +18,7 @@
   },
   "features": {
     "heading": "所需功能一应俱全,不多不少",
-    "subheading": "QSave 不会打扰你。安装后登录 Google Drive,你的存档就会自动备份。",
+    "subheading": "QSave 不会打扰你。安装后登录 Google Drive,一键备份你的存档。",
     "search": {
       "title": "瞬间找到你的游戏",
       "description": "在你已安装的游戏以及我们识别库中超过 19,000 款游戏中搜索。可按平台筛选 —— Steam、GOG、Epic、Battle.net。",
@@ -51,7 +51,7 @@
     },
     "background": {
       "question": "QSave 会在后台运行吗?",
-      "answer": "可选。你可以只在需要备份时启动 QSave,也可以设置为开机自启并自动同步。"
+      "answer": "可选。你可以只在需要备份时启动 QSave,也可以设置为开机自启,让它随时待命。无论哪种方式,QSave 都不会自动备份 —— 由你决定何时备份。"
     },
     "signing": {
       "question": "为什么打开安装程序时系统会弹出警告?",

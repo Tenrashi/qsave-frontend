@@ -1,7 +1,7 @@
 {
   "hero": {
     "tagline1": "Back up your game saves.",
-    "tagline2": "Automatically.",
+    "tagline2": "In one click.",
     "subheadline": "QSave syncs your save files to your own Google Drive. 19,000+ games supported across Steam, GOG, Epic, and Battle.net. Free and open source."
   },
   "downloads": {
@@ -18,7 +18,7 @@
   },
   "features": {
     "heading": "Everything you need, nothing you don't",
-    "subheading": "QSave stays out of your way. Install it, sign in to Google Drive, and your saves are backed up.",
+    "subheading": "QSave stays out of your way. Install it, sign in to Google Drive, and back up your saves in one click.",
     "search": {
       "title": "Find your games instantly",
       "description": "Search across your installed games and the 19,000+ titles in our detection database. Filter by platform — Steam, GOG, Epic, Battle.net.",
@@ -51,7 +51,7 @@
     },
     "background": {
       "question": "Does QSave run in the background?",
-      "answer": "Optionally. You can launch QSave only when you want to back up, or configure it to start with your system and sync automatically."
+      "answer": "Optionally. You can launch QSave only when you want to back up, or set it to start with your system so it's always ready. Either way, QSave never backs up automatically — you choose when to back up."
     },
     "signing": {
       "question": "Why does my computer warn me when I open the installer?",
