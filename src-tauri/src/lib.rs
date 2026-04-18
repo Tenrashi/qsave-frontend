@@ -175,10 +175,22 @@ fn keychain_delete_tokens() -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn start_oauth(auth_url_base: String, expected_state: Option<String>) -> Result<oauth::OAuthResult, String> {
-    tokio::task::spawn_blocking(move || oauth::wait_for_oauth_code(&auth_url_base, expected_state.as_deref()))
-        .await
-        .map_err(|e| format!("OAuth task failed: {}", e))?
+async fn start_oauth(
+    auth_url_base: String,
+    expected_state: Option<String>,
+    success_message: String,
+    state_mismatch_message: String,
+) -> Result<oauth::OAuthResult, String> {
+    tokio::task::spawn_blocking(move || {
+        oauth::wait_for_oauth_code(
+            &auth_url_base,
+            expected_state.as_deref(),
+            &success_message,
+            &state_mismatch_message,
+        )
+    })
+    .await
+    .map_err(|e| format!("OAuth task failed: {}", e))?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

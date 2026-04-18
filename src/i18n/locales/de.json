@@ -8,7 +8,9 @@
     "notConnected": "Google Drive nicht verbunden",
     "connect": "Verbinden",
     "disconnect": "Trennen",
-    "driveLabel": "Google Drive:"
+    "driveLabel": "Google Drive:",
+    "oauthSuccess": "Angemeldet! Du kannst diesen Tab schließen und zu QSave zurückkehren.",
+    "oauthStateMismatch": "Authentifizierung fehlgeschlagen — ungültiger Zustand. Bitte versuche es erneut über QSave."
   },
   "search": {
     "placeholder": "Spiel suchen..."

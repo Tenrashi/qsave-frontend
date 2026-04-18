@@ -8,7 +8,9 @@
     "notConnected": "Google Driveに未接続",
     "connect": "接続",
     "disconnect": "切断",
-    "driveLabel": "Google Drive："
+    "driveLabel": "Google Drive：",
+    "oauthSuccess": "サインインしました！このタブを閉じてQSaveに戻ることができます。",
+    "oauthStateMismatch": "認証に失敗しました — 無効な状態です。QSaveから再度お試しください。"
   },
   "search": {
     "placeholder": "ゲームを検索..."
