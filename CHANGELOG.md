@@ -1,3 +1,9 @@
+## [1.7.2](https://github.com/Tenrashi/qsave/compare/v1.7.1...v1.7.2) (2026-04-18)
+
+### Bug Fixes
+
+- **oauth:** localize callback page and fix UTF-8 rendering ([7349735](https://github.com/Tenrashi/qsave/commit/73497354b96ac2d6bcd2f1a9db37fbf3fc32679e))
+
 ## [1.7.1](https://github.com/Tenrashi/qsave/compare/v1.7.0...v1.7.1) (2026-04-16)
 
 ### Bug Fixes
