@@ -73,6 +73,12 @@
   "footer": {
     "tagline": "QSave бесплатен и с открытым кодом. Ваши сохранения остаются на вашем Google Диске.",
     "github": "GitHub",
-    "language": "Язык"
+    "language": "Язык",
+    "privacy": "Конфиденциальность",
+    "terms": "Условия"
+  },
+  "legal": {
+    "backToHome": "← На главную",
+    "lastUpdated": "Последнее обновление: {{date}}"
   }
 }

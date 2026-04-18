@@ -73,6 +73,12 @@
   "footer": {
     "tagline": "QSave is free and open source. Your saves stay in your Google Drive.",
     "github": "GitHub",
-    "language": "Language"
+    "language": "Language",
+    "privacy": "Privacy",
+    "terms": "Terms"
+  },
+  "legal": {
+    "backToHome": "← Back to home",
+    "lastUpdated": "Last updated: {{date}}"
   }
 }
