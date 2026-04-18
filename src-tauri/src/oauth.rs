@@ -44,7 +44,7 @@ fn extract_callback_params(request_line: &str) -> Result<CallbackParams, String>
 
 fn send_html_response(stream: &mut std::net::TcpStream, html: &str) {
     let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         html.len(),
         html
     );
@@ -62,7 +62,12 @@ pub struct OAuthResult {
 /// in the browser, waits for Google to redirect back with a `code`, and
 /// returns both the code and the redirect URI that was used.
 /// If `expected_state` is provided, validates the `state` parameter in the callback.
-pub fn wait_for_oauth_code(auth_url_base: &str, expected_state: Option<&str>) -> Result<OAuthResult, String> {
+pub fn wait_for_oauth_code(
+    auth_url_base: &str,
+    expected_state: Option<&str>,
+    success_message: &str,
+    state_mismatch_message: &str,
+) -> Result<OAuthResult, String> {
     let listener = TcpListener::bind("127.0.0.1:0")
         .map_err(|e| format!("Failed to bind OAuth listener: {}", e))?;
 
@@ -113,18 +118,24 @@ pub fn wait_for_oauth_code(auth_url_base: &str, expected_state: Option<&str>) ->
     if let Some(expected) = expected_state {
         let actual = params.state.as_deref().unwrap_or("");
         if actual != expected {
-            let html = r#"<html><body style="font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0">
-        <p>Authentication failed — invalid state. Please try again from QSave.</p>
-    </body></html>"#;
-            send_html_response(&mut stream, html);
+            let html = format!(
+                r#"<html><body style="font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0">
+        <p>{}</p>
+    </body></html>"#,
+                state_mismatch_message
+            );
+            send_html_response(&mut stream, &html);
             return Err("OAuth state mismatch — possible CSRF attack".to_string());
         }
     }
 
-    let html = r#"<html><body style="font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0">
-        <p>Signed in! You can close this tab and return to QSave.</p>
-    </body></html>"#;
-    send_html_response(&mut stream, html);
+    let html = format!(
+        r#"<html><body style="font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0">
+        <p>{}</p>
+    </body></html>"#,
+        success_message
+    );
+    send_html_response(&mut stream, &html);
 
     Ok(OAuthResult { code: params.code, redirect_uri })
 }

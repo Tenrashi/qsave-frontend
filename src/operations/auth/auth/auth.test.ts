@@ -251,6 +251,10 @@ describe("auth", () => {
       expect(startOAuthCall.expectedState).toBeDefined();
       expect(authUrlBase).toContain(`state=${startOAuthCall.expectedState}`);
       expect(authUrlBase).not.toContain("redirect_uri");
+      expect(startOAuthCall.successMessage).toBe("auth.oauthSuccess");
+      expect(startOAuthCall.stateMismatchMessage).toBe(
+        "auth.oauthStateMismatch",
+      );
       expect(mockGenerateCodeVerifier).toHaveBeenCalledOnce();
       expect(mockPostTokenExchange).toHaveBeenCalledWith(
         "auth-code-123",

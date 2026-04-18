@@ -8,7 +8,9 @@
     "notConnected": "Google Drive 未连接",
     "connect": "连接",
     "disconnect": "断开",
-    "driveLabel": "Google Drive："
+    "driveLabel": "Google Drive：",
+    "oauthSuccess": "登录成功！您可以关闭此标签页并返回 QSave。",
+    "oauthStateMismatch": "身份验证失败 — 无效状态。请从 QSave 重试。"
   },
   "search": {
     "placeholder": "搜索游戏..."

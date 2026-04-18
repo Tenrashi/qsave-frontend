@@ -46,6 +46,8 @@ export const startOAuthFlow = async (): Promise<AuthState> => {
   const result: OAuthResult = await invoke(TAURI_COMMANDS.startOAuth, {
     authUrlBase: authUrl.toString(),
     expectedState: oauthState,
+    successMessage: i18n.t("auth.oauthSuccess"),
+    stateMismatchMessage: i18n.t("auth.oauthStateMismatch"),
   });
 
   return exchangeCodeForTokens(result.code, result.redirect_uri, codeVerifier);
