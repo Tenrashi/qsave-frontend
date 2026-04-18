@@ -73,6 +73,12 @@
   "footer": {
     "tagline": "QSave 免费且开源。你的存档始终留在你自己的 Google Drive 里。",
     "github": "GitHub",
-    "language": "语言"
+    "language": "语言",
+    "privacy": "隐私政策",
+    "terms": "使用条款"
+  },
+  "legal": {
+    "backToHome": "← 返回首页",
+    "lastUpdated": "最后更新：{{date}}"
   }
 }

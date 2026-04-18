@@ -73,6 +73,12 @@
   "footer": {
     "tagline": "QSave는 무료이며 오픈 소스입니다. 세이브는 당신의 Google 드라이브에 그대로 남아 있습니다.",
     "github": "GitHub",
-    "language": "언어"
+    "language": "언어",
+    "privacy": "개인정보",
+    "terms": "이용약관"
+  },
+  "legal": {
+    "backToHome": "← 홈으로",
+    "lastUpdated": "최종 업데이트: {{date}}"
   }
 }

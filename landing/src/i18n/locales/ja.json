@@ -73,6 +73,12 @@
   "footer": {
     "tagline": "QSaveは無料・オープンソースです。セーブデータはあなたのGoogleドライブに保管されます。",
     "github": "GitHub",
-    "language": "言語"
+    "language": "言語",
+    "privacy": "プライバシー",
+    "terms": "利用規約"
+  },
+  "legal": {
+    "backToHome": "← ホームに戻る",
+    "lastUpdated": "最終更新: {{date}}"
   }
 }

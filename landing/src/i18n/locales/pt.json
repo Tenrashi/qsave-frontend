@@ -73,6 +73,12 @@
   "footer": {
     "tagline": "O QSave é gratuito e de código aberto. Seus saves ficam no seu Google Drive.",
     "github": "GitHub",
-    "language": "Idioma"
+    "language": "Idioma",
+    "privacy": "Privacidade",
+    "terms": "Termos"
+  },
+  "legal": {
+    "backToHome": "← Voltar ao início",
+    "lastUpdated": "Última atualização: {{date}}"
   }
 }

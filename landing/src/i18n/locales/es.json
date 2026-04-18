@@ -73,6 +73,12 @@
   "footer": {
     "tagline": "QSave es gratuito y de código abierto. Tus partidas permanecen en tu Google Drive.",
     "github": "GitHub",
-    "language": "Idioma"
+    "language": "Idioma",
+    "privacy": "Privacidad",
+    "terms": "Términos"
+  },
+  "legal": {
+    "backToHome": "← Volver al inicio",
+    "lastUpdated": "Última actualización: {{date}}"
   }
 }
