@@ -4,7 +4,7 @@ use std::sync::Mutex;
 const SERVICE: &str = "com.qsave.app";
 const TOKENS_KEY: &str = "tokens";
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct Tokens {
     pub access_token: Option<String>,
     pub refresh_token: Option<String>,
@@ -37,6 +37,9 @@ fn cache_clear() {
 
 pub fn set_tokens(access_token: Option<String>, refresh_token: Option<String>) -> Result<(), String> {
     let tokens = Tokens { access_token, refresh_token };
+    if cache_get().as_ref() == Some(&tokens) {
+        return Ok(());
+    }
     let json = serde_json::to_string(&tokens).map_err(|e| format!("Failed to serialize tokens: {}", e))?;
     entry()?.set_password(&json).map_err(|e| keychain_error("set", e))?;
     cache_set(tokens);

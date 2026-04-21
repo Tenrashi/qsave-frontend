@@ -107,10 +107,27 @@ describe("auth", () => {
       await expect(getValidToken()).rejects.toThrow("Not authenticated");
     });
 
-    it("throws when authenticated but accessToken is missing", async () => {
+    it("throws when authenticated but both tokens are missing", async () => {
       mockAuthState.current = { isAuthenticated: true };
 
       await expect(getValidToken()).rejects.toThrow("Not authenticated");
+    });
+
+    it("refreshes when accessToken is missing but refreshToken exists", async () => {
+      mockAuthState.current = {
+        isAuthenticated: true,
+        refreshToken: "rt",
+      };
+
+      mockPostTokenRefresh.mockResolvedValueOnce({
+        access_token: "fresh-token",
+        expires_in: 3600,
+      });
+
+      const token = await getValidToken();
+
+      expect(token).toBe("fresh-token");
+      expect(mockPostTokenRefresh).toHaveBeenCalledWith("rt");
     });
 
     it("refreshes token when expiring within buffer", async () => {

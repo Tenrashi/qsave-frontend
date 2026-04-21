@@ -60,17 +60,15 @@ describe("store", () => {
   });
 
   describe("auth", () => {
-    it("returns persisted auth state with tokens from keychain", async () => {
-      const meta = { isAuthenticated: true, email: "a@b.com", expiresAt: 123 };
+    it("returns persisted auth state with refresh token from keychain", async () => {
+      const meta = { isAuthenticated: true, email: "a@b.com" };
       mockGet.mockResolvedValueOnce(meta);
       mockGetTokens.mockResolvedValueOnce({
-        accessToken: "at",
         refreshToken: "rt",
       });
 
       expect(await getAuthState()).toEqual({
         ...meta,
-        accessToken: "at",
         refreshToken: "rt",
       });
     });
@@ -88,7 +86,7 @@ describe("store", () => {
       expect(await getAuthState()).toEqual({ isAuthenticated: false });
     });
 
-    it("stores tokens in keychain and metadata in store", async () => {
+    it("stores only refresh token in keychain and non-sensitive metadata in store", async () => {
       const auth = {
         isAuthenticated: true,
         email: "a@b.com",
@@ -98,11 +96,10 @@ describe("store", () => {
       };
       await setAuthState(auth);
 
-      expect(mockSetTokens).toHaveBeenCalledWith("at", "rt");
+      expect(mockSetTokens).toHaveBeenCalledWith(undefined, "rt");
       expect(mockSet).toHaveBeenCalledWith("auth", {
         isAuthenticated: true,
         email: "a@b.com",
-        expiresAt: 123,
       });
     });
 
