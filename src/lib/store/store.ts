@@ -20,11 +20,12 @@ const getStore = async (): Promise<Store> => {
   return store;
 };
 
-// Auth — tokens go to OS keychain, non-sensitive metadata to JSON store
+// Only the refresh token is persisted to the keychain. Access tokens are
+// short-lived and always re-derived via postTokenRefresh on first use — this
+// keeps launch to a single keychain prompt (read) instead of read + refresh-write.
 type StoredAuthMeta = {
   isAuthenticated: boolean;
   email?: string;
-  expiresAt?: number;
 };
 
 export const getAuthState = async (): Promise<AuthState> => {
@@ -34,7 +35,7 @@ export const getAuthState = async (): Promise<AuthState> => {
     if (!meta?.isAuthenticated) return { isAuthenticated: false };
 
     const tokens = await getTokens();
-    return { ...meta, ...tokens };
+    return { ...meta, refreshToken: tokens.refreshToken };
   } catch {
     return { isAuthenticated: false };
   }
@@ -42,13 +43,12 @@ export const getAuthState = async (): Promise<AuthState> => {
 
 export const setAuthState = async (auth: AuthState): Promise<void> => {
   try {
-    await setTokens(auth.accessToken, auth.refreshToken);
+    await setTokens(undefined, auth.refreshToken);
 
     const s = await getStore();
     const meta: StoredAuthMeta = {
       isAuthenticated: auth.isAuthenticated,
       email: auth.email,
-      expiresAt: auth.expiresAt,
     };
     await s.set(STORE_KEYS.auth, meta);
   } catch {

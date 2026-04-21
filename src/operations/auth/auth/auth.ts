@@ -98,13 +98,19 @@ export const refreshAccessToken = async (): Promise<AuthState> => {
 
 export const getValidToken = async (): Promise<string> => {
   const auth = useAuthStore.getState().auth;
-  if (!auth.isAuthenticated || !auth.accessToken) {
+  if (!auth.isAuthenticated || (!auth.accessToken && !auth.refreshToken)) {
     throw new Error("Not authenticated");
   }
 
-  if (auth.expiresAt && auth.expiresAt - Date.now() < TOKEN_EXPIRY_BUFFER_MS) {
+  const expiring =
+    auth.expiresAt !== undefined &&
+    auth.expiresAt - Date.now() < TOKEN_EXPIRY_BUFFER_MS;
+
+  if (!auth.accessToken || expiring) {
     const refreshed = await refreshAccessToken();
-    return refreshed.accessToken ?? auth.accessToken;
+    if (refreshed.accessToken) return refreshed.accessToken;
+    if (auth.accessToken) return auth.accessToken;
+    throw new Error("Not authenticated");
   }
 
   return auth.accessToken;
