@@ -1,3 +1,9 @@
+## [1.7.3](https://github.com/Tenrashi/qsave/compare/v1.7.2...v1.7.3) (2026-04-21)
+
+### Bug Fixes
+
+- **auth:** reduce launch to a single keychain prompt ([0490fe4](https://github.com/Tenrashi/qsave/commit/0490fe41b1d2475788620b0c47f5b070f6076bbc))
+
 ## [1.7.2](https://github.com/Tenrashi/qsave/compare/v1.7.1...v1.7.2) (2026-04-18)
 
 ### Bug Fixes
